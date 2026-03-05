@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
-import '@/App.css';
+import '@/index.css';
 
 // Pages
 import Login from './pages/Login';
@@ -65,8 +65,10 @@ const AuthProvider = ({ children }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      <div data-theme="dark" className="hero is-fullheight">
+        <div className="hero-body is-justify-content-center">
+          <span className="loader"></span>
+        </div>
       </div>
     );
   }
@@ -94,9 +96,6 @@ const ThemeProvider = ({ children }) => {
   });
 
   useEffect(() => {
-    const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
-    root.classList.add(theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
 
@@ -106,7 +105,9 @@ const ThemeProvider = ({ children }) => {
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
-      {children}
+      <div data-theme={theme}>
+        {children}
+      </div>
     </ThemeContext.Provider>
   );
 };
@@ -118,7 +119,7 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-// Public Route (redirect if authenticated)
+// Public Route
 const PublicRoute = ({ children }) => {
   const { isAuthenticated } = useAuth();
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;

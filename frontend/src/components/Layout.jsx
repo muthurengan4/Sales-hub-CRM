@@ -1,26 +1,13 @@
 import React from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth, useTheme } from '../App';
-import { Button } from './ui/button';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Kanban, 
-  Settings, 
-  LogOut, 
-  Moon, 
-  Sun,
-  Sparkles,
-  Menu,
-  X
-} from 'lucide-react';
 import { useState } from 'react';
 
 const navItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/leads', icon: Users, label: 'Leads' },
-  { to: '/pipeline', icon: Kanban, label: 'Pipeline' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
+  { to: '/dashboard', icon: '📊', label: 'Dashboard' },
+  { to: '/leads', icon: '👥', label: 'Leads' },
+  { to: '/pipeline', icon: '📋', label: 'Pipeline' },
+  { to: '/settings', icon: '⚙️', label: 'Settings' },
 ];
 
 export default function Layout() {
@@ -35,152 +22,141 @@ export default function Layout() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Sidebar - Desktop */}
-      <aside className="hidden lg:flex w-64 h-screen border-r border-border bg-card/95 backdrop-blur-sm fixed left-0 top-0 z-30 flex-col">
+    <div data-theme={theme} style={{ minHeight: '100vh', background: 'var(--bulma-scheme-main)' }}>
+      {/* Sidebar */}
+      <aside className={`sidebar ${mobileOpen ? 'is-active' : ''}`} style={{ display: 'flex', flexDirection: 'column' }}>
         {/* Logo */}
-        <div className="p-6 border-b border-border">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl ai-gradient flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-white" />
+        <div className="p-4" style={{ borderBottom: '1px solid var(--bulma-border)' }}>
+          <div className="is-flex is-align-items-center">
+            <div 
+              className="ai-gradient mr-3" 
+              style={{ 
+                width: '40px', 
+                height: '40px', 
+                borderRadius: '10px', 
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <span style={{ color: 'white', fontSize: '18px' }}>✦</span>
             </div>
             <div>
-              <h1 className="font-bold text-lg">SalesCRM</h1>
-              <p className="text-xs text-muted-foreground">AI-Powered</p>
+              <p className="has-text-weight-bold is-size-5">SalesCRM</p>
+              <p className="is-size-7 has-text-grey">AI-Powered</p>
             </div>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  isActive
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                }`
-              }
-              data-testid={`nav-${item.label.toLowerCase()}`}
-            >
-              <item.icon className="w-5 h-5" />
-              {item.label}
-            </NavLink>
-          ))}
+        <nav className="menu p-4" style={{ flex: 1 }}>
+          <ul className="menu-list">
+            {navItems.map((item) => (
+              <li key={item.to}>
+                <NavLink
+                  to={item.to}
+                  className={({ isActive }) => isActive ? 'is-active' : ''}
+                  onClick={() => setMobileOpen(false)}
+                  data-testid={`nav-${item.label.toLowerCase()}`}
+                  style={{ borderRadius: '8px', marginBottom: '4px' }}
+                >
+                  <span className="mr-2">{item.icon}</span>
+                  {item.label}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
         </nav>
 
         {/* User section */}
-        <div className="p-4 border-t border-border">
-          <div className="flex items-center gap-3 px-2 py-2 mb-3">
-            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-              <span className="text-sm font-semibold text-primary">
+        <div className="p-4" style={{ borderTop: '1px solid var(--bulma-border)' }}>
+          <div className="is-flex is-align-items-center mb-3">
+            <div 
+              style={{ 
+                width: '36px', 
+                height: '36px', 
+                borderRadius: '50%', 
+                background: 'rgba(99, 102, 241, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: '12px'
+              }}
+            >
+              <span className="has-text-link has-text-weight-semibold">
                 {user?.name?.charAt(0)?.toUpperCase() || 'U'}
               </span>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.name}</p>
-              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p className="is-size-7 has-text-weight-medium" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {user?.name}
+              </p>
+              <p className="is-size-7 has-text-grey" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {user?.email}
+              </p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
+          <div className="buttons are-small">
+            <button
+              className="button is-light is-small"
               onClick={toggleTheme}
-              className="flex-1"
               data-testid="theme-toggle"
             >
-              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
+            <button
+              className="button is-danger is-light is-small"
               onClick={handleLogout}
-              className="flex-1 text-destructive hover:text-destructive"
               data-testid="logout-btn"
             >
-              <LogOut className="w-4 h-4" />
-            </Button>
+              Logout
+            </button>
           </div>
         </div>
       </aside>
 
       {/* Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-card/95 backdrop-blur-sm border-b border-border z-40 flex items-center px-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setMobileOpen(!mobileOpen)}
-          data-testid="mobile-menu-btn"
-        >
-          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </Button>
-        <div className="flex items-center gap-2 ml-3">
-          <div className="w-8 h-8 rounded-lg ai-gradient flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-white" />
-          </div>
-          <span className="font-bold">SalesCRM</span>
-        </div>
-        <div className="ml-auto flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={toggleTheme}>
-            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </Button>
-        </div>
-      </header>
-
-      {/* Mobile Sidebar */}
-      {mobileOpen && (
-        <div className="lg:hidden fixed inset-0 z-30 bg-background/80 backdrop-blur-sm" onClick={() => setMobileOpen(false)}>
-          <aside className="w-64 h-full bg-card border-r border-border" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-border">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl ai-gradient flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h1 className="font-bold text-lg">SalesCRM</h1>
-                  <p className="text-xs text-muted-foreground">AI-Powered</p>
-                </div>
+      <nav className="navbar is-hidden-desktop is-fixed-top" style={{ background: 'var(--bulma-scheme-main-bis)' }}>
+        <div className="navbar-brand">
+          <button 
+            className="navbar-burger"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            data-testid="mobile-menu-btn"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+          <div className="navbar-item">
+            <div className="is-flex is-align-items-center">
+              <div className="ai-gradient mr-2" style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ color: 'white' }}>✦</span>
               </div>
+              <span className="has-text-weight-bold">SalesCRM</span>
             </div>
-            <nav className="p-4 space-y-1">
-              {navItems.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  onClick={() => setMobileOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
-                      isActive
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                    }`
-                  }
-                >
-                  <item.icon className="w-5 h-5" />
-                  {item.label}
-                </NavLink>
-              ))}
-            </nav>
-            <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
-              <Button variant="ghost" className="w-full justify-start text-destructive" onClick={handleLogout}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Sign out
-              </Button>
-            </div>
-          </aside>
+          </div>
         </div>
+      </nav>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div 
+          className="is-hidden-desktop"
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 20 }}
+          onClick={() => setMobileOpen(false)}
+        />
       )}
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-64 pt-16 lg:pt-0">
-        <div className="p-6 lg:p-8">
-          <Outlet />
-        </div>
+      <main className="main-content" style={{ paddingTop: 'calc(52px + 2rem)' }}>
+        <Outlet />
       </main>
+
+      <style>{`
+        @media screen and (min-width: 1024px) {
+          .main-content { padding-top: 2rem !important; }
+        }
+      `}</style>
     </div>
   );
 }

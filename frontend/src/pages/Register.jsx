@@ -2,11 +2,6 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
 import { toast } from 'sonner';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Loader2, Sparkles } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -54,80 +49,100 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
-      {/* Background glow */}
-      <div className="absolute inset-0 hero-glow opacity-50" />
-      
-      <Card className="w-full max-w-md relative z-10 border-border/50 shadow-xl">
-        <CardHeader className="text-center space-y-2">
-          <div className="mx-auto w-12 h-12 rounded-xl ai-gradient flex items-center justify-center mb-2">
-            <Sparkles className="w-6 h-6 text-white" />
+    <div data-theme="dark">
+      <section className="hero is-fullheight">
+        <div className="hero-body">
+          <div className="container">
+            <div className="columns is-centered">
+              <div className="column is-5-tablet is-4-desktop">
+                <div className="box" style={{ borderRadius: '12px' }}>
+                  <div className="has-text-centered mb-5">
+                    <div 
+                      className="ai-gradient" 
+                      style={{ 
+                        width: '60px', 
+                        height: '60px', 
+                        borderRadius: '12px', 
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: '1rem'
+                      }}
+                    >
+                      <span style={{ fontSize: '24px', color: 'white' }}>✦</span>
+                    </div>
+                    <h1 className="title is-4">Create account</h1>
+                    <p className="subtitle is-6 has-text-grey">Get started with AI-powered CRM</p>
+                  </div>
+
+                  <form onSubmit={handleSubmit}>
+                    <div className="field">
+                      <label className="label is-small">Full Name</label>
+                      <div className="control">
+                        <input
+                          className="input"
+                          type="text"
+                          placeholder="John Doe"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          data-testid="register-name-input"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="field">
+                      <label className="label is-small">Email</label>
+                      <div className="control">
+                        <input
+                          className="input"
+                          type="email"
+                          placeholder="you@company.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          data-testid="register-email-input"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="field">
+                      <label className="label is-small">Password</label>
+                      <div className="control">
+                        <input
+                          className="input"
+                          type="password"
+                          placeholder="••••••••"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          data-testid="register-password-input"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="field mt-5">
+                      <button
+                        type="submit"
+                        className={`button is-link is-fullwidth ${loading ? 'is-loading' : ''}`}
+                        disabled={loading}
+                        data-testid="register-submit-btn"
+                        style={{ background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', border: 'none' }}
+                      >
+                        Create account
+                      </button>
+                    </div>
+                  </form>
+
+                  <p className="has-text-centered mt-4 is-size-7">
+                    Already have an account?{' '}
+                    <Link to="/login" className="has-text-link" data-testid="login-link">
+                      Sign in
+                    </Link>
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Create account</CardTitle>
-          <CardDescription>Get started with AI-powered CRM</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="John Doe"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                data-testid="register-name-input"
-                className="h-11"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                data-testid="register-email-input"
-                className="h-11"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                data-testid="register-password-input"
-                className="h-11"
-              />
-            </div>
-            <Button 
-              type="submit" 
-              className="w-full h-11 ai-gradient hover:opacity-90 transition-opacity"
-              disabled={loading}
-              data-testid="register-submit-btn"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Creating account...
-                </>
-              ) : (
-                'Create account'
-              )}
-            </Button>
-          </form>
-          <p className="text-center text-sm text-muted-foreground mt-6">
-            Already have an account?{' '}
-            <Link to="/login" className="text-primary hover:underline font-medium" data-testid="login-link">
-              Sign in
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
     </div>
   );
 }

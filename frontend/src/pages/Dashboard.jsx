@@ -1,26 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../App';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { 
-  Users, 
-  DollarSign, 
-  TrendingUp, 
-  Target,
-  Sparkles,
-  ArrowUpRight,
-  ArrowDownRight
-} from 'lucide-react';
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  BarChart,
-  Bar
-} from 'recharts';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -58,224 +37,131 @@ export default function Dashboard() {
     }).format(value);
   };
 
-  const stats = analytics ? [
-    {
-      title: 'Total Leads',
-      value: analytics.total_leads,
-      icon: Users,
-      change: '+12%',
-      positive: true,
-      color: 'text-blue-500'
-    },
-    {
-      title: 'Pipeline Value',
-      value: formatCurrency(analytics.total_pipeline_value),
-      icon: DollarSign,
-      change: '+8%',
-      positive: true,
-      color: 'text-emerald-500'
-    },
-    {
-      title: 'Won Revenue',
-      value: formatCurrency(analytics.won_deals_value),
-      icon: TrendingUp,
-      change: '+23%',
-      positive: true,
-      color: 'text-purple-500'
-    },
-    {
-      title: 'Conversion Rate',
-      value: `${analytics.conversion_rate}%`,
-      icon: Target,
-      change: analytics.conversion_rate > 20 ? '+5%' : '-2%',
-      positive: analytics.conversion_rate > 20,
-      color: 'text-amber-500'
-    }
-  ] : [];
-
-  const pipelineData = analytics ? Object.entries(analytics.deals_by_stage).map(([stage, count]) => ({
-    name: stage.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
-    deals: count
-  })) : [];
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="has-text-centered p-6">
+        <span className="loader"></span>
       </div>
     );
   }
 
+  const stats = analytics ? [
+    { title: 'Total Leads', value: analytics.total_leads, icon: '👥', color: 'is-info' },
+    { title: 'Pipeline Value', value: formatCurrency(analytics.total_pipeline_value), icon: '💰', color: 'is-success' },
+    { title: 'Won Revenue', value: formatCurrency(analytics.won_deals_value), icon: '📈', color: 'is-link' },
+    { title: 'Conversion Rate', value: `${analytics.conversion_rate}%`, icon: '🎯', color: 'is-warning' }
+  ] : [];
+
   return (
-    <div className="space-y-8" data-testid="dashboard">
+    <div data-testid="dashboard">
       {/* Header */}
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Welcome back, {user?.name?.split(' ')[0]}
-        </h1>
-        <p className="text-muted-foreground">
-          Here's what's happening with your sales pipeline today.
-        </p>
+      <div className="mb-5">
+        <h1 className="title is-3">Welcome back, {user?.name?.split(' ')[0]}</h1>
+        <p className="subtitle is-6 has-text-grey">Here's what's happening with your sales pipeline today.</p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="columns is-multiline">
         {stats.map((stat, index) => (
-          <Card 
-            key={stat.title} 
-            className="relative overflow-hidden hover:shadow-md transition-shadow duration-200"
-            style={{ animationDelay: `${index * 100}ms` }}
-          >
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {stat.title}
-              </CardTitle>
-              <div className={`p-2 rounded-lg bg-accent ${stat.color}`}>
-                <stat.icon className="w-4 h-4" />
+          <div className="column is-6-tablet is-3-desktop" key={index}>
+            <div className="box">
+              <div className="is-flex is-justify-content-space-between is-align-items-center mb-3">
+                <span className="is-size-7 has-text-grey has-text-weight-medium">{stat.title}</span>
+                <span className={`tag ${stat.color} is-light`}>{stat.icon}</span>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <div className={`flex items-center text-xs mt-1 ${stat.positive ? 'text-emerald-500' : 'text-red-500'}`}>
-                {stat.positive ? (
-                  <ArrowUpRight className="w-3 h-3 mr-1" />
-                ) : (
-                  <ArrowDownRight className="w-3 h-3 mr-1" />
-                )}
-                {stat.change} from last month
-              </div>
-            </CardContent>
-          </Card>
+              <p className="title is-4 mb-1">{stat.value}</p>
+              <p className="is-size-7 has-text-success">
+                ↑ +12% from last month
+              </p>
+            </div>
+          </div>
         ))}
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Revenue Chart */}
-        <Card className="col-span-1">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-primary" />
+      {/* Charts Row */}
+      <div className="columns">
+        <div className="column is-6">
+          <div className="box">
+            <h2 className="title is-5 mb-4">
+              <span className="mr-2">📈</span>
               Revenue Trend
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={analytics?.monthly_revenue || []}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis 
-                    dataKey="month" 
-                    className="text-xs"
-                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                  />
-                  <YAxis 
-                    className="text-xs"
-                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                    tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px'
-                    }}
-                    formatter={(value) => [formatCurrency(value), 'Revenue']}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="revenue" 
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2}
-                    dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Pipeline Chart */}
-        <Card className="col-span-1">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <Target className="w-5 h-5 text-primary" />
-              Pipeline Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={pipelineData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis 
-                    dataKey="name" 
-                    className="text-xs"
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
-                    angle={-20}
-                    textAnchor="end"
-                    height={60}
-                  />
-                  <YAxis 
-                    className="text-xs"
-                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px'
+            </h2>
+            <div style={{ height: '200px', display: 'flex', alignItems: 'flex-end', gap: '8px', padding: '1rem 0' }}>
+              {analytics?.monthly_revenue?.map((item, i) => (
+                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div 
+                    style={{ 
+                      width: '100%', 
+                      background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                      borderRadius: '4px 4px 0 0',
+                      height: `${Math.max(20, (item.revenue / (analytics.won_deals_value * 0.3 || 1)) * 150)}px`,
+                      maxHeight: '150px'
                     }}
                   />
-                  <Bar 
-                    dataKey="deals" 
-                    fill="hsl(var(--primary))"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* AI Insights Card */}
-      <Card className="relative overflow-hidden border-primary/20">
-        <div className="absolute inset-0 hero-glow opacity-30" />
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <div className="p-2 rounded-lg ai-gradient">
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
-            <span className="ai-text">AI Insights</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="relative">
-          <div className="space-y-3">
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-accent/50">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 mt-2" />
-              <div>
-                <p className="text-sm font-medium">Strong pipeline momentum</p>
-                <p className="text-xs text-muted-foreground">Your pipeline value has grown by 8% this month.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-accent/50">
-              <div className="w-2 h-2 rounded-full bg-amber-500 mt-2" />
-              <div>
-                <p className="text-sm font-medium">Focus on qualified leads</p>
-                <p className="text-xs text-muted-foreground">3 leads have high AI scores and are ready for demos.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-accent/50">
-              <div className="w-2 h-2 rounded-full bg-blue-500 mt-2" />
-              <div>
-                <p className="text-sm font-medium">Follow up recommended</p>
-                <p className="text-xs text-muted-foreground">2 deals in negotiation stage need attention.</p>
-              </div>
+                  <span className="is-size-7 has-text-grey mt-2">{item.month}</span>
+                </div>
+              ))}
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        <div className="column is-6">
+          <div className="box">
+            <h2 className="title is-5 mb-4">
+              <span className="mr-2">🎯</span>
+              Pipeline Overview
+            </h2>
+            <div style={{ padding: '1rem 0' }}>
+              {analytics && Object.entries(analytics.deals_by_stage).map(([stage, count]) => (
+                <div key={stage} className="mb-3">
+                  <div className="is-flex is-justify-content-space-between mb-1">
+                    <span className="is-size-7 has-text-weight-medium" style={{ textTransform: 'capitalize' }}>
+                      {stage.replace('_', ' ')}
+                    </span>
+                    <span className="is-size-7 has-text-grey">{count}</span>
+                  </div>
+                  <progress 
+                    className="progress is-small is-link" 
+                    value={count} 
+                    max={Math.max(...Object.values(analytics.deals_by_stage), 1)}
+                  />
+                </div>
+              ))}
+              {(!analytics || Object.keys(analytics.deals_by_stage).length === 0) && (
+                <p className="has-text-grey has-text-centered">No deals yet</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* AI Insights */}
+      <div className="box" style={{ border: '1px solid rgba(99, 102, 241, 0.3)' }}>
+        <h2 className="title is-5 mb-4">
+          <span className="ai-gradient mr-2" style={{ width: '28px', height: '28px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ color: 'white', fontSize: '12px' }}>✦</span>
+          </span>
+          <span className="ai-text">AI Insights</span>
+        </h2>
+        
+        <div className="content">
+          <div className="message is-success is-small mb-3">
+            <div className="message-body">
+              <strong>Strong pipeline momentum</strong> - Your pipeline value has grown this month.
+            </div>
+          </div>
+          <div className="message is-warning is-small mb-3">
+            <div className="message-body">
+              <strong>Focus on qualified leads</strong> - Review leads with high AI scores for demos.
+            </div>
+          </div>
+          <div className="message is-info is-small">
+            <div className="message-body">
+              <strong>Follow up recommended</strong> - Deals in negotiation stage need attention.
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
