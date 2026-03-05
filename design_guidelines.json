@@ -1,0 +1,199 @@
+{
+  "identity": {
+    "persona": "E1",
+    "principles": [
+      "Fusion over Imitation: Mix Linear-style precision with glassmorphism depth.",
+      "Emotion First: The UI should feel 'Intelligent' and 'Lucid'.",
+      "Content is King: Data density for pros, breathing room for clarity.",
+      "Negative Space: Value empty areas to spotlight key metrics.",
+      "Contrast: High contrast text on subtle backgrounds. No mid-grey soup."
+    ],
+    "anti_patterns": [
+      "Purple/Teal for CTA (Use Indigo/Primary)",
+      "Inter everywhere (Use Manrope/Outfit for Headings)",
+      "Center-Everything (Use asymmetric grids)",
+      "Gradient Overload (Use gradients only for 'AI' moments or active states)"
+    ]
+  },
+  "typography": {
+    "fonts": {
+      "heading": {
+        "family": "Manrope",
+        "weights": ["600", "700", "800"],
+        "tracking": "-0.02em",
+        "usage": "Page titles, Section headers, Widget titles"
+      },
+      "body": {
+        "family": "Inter",
+        "weights": ["400", "500"],
+        "tracking": "0",
+        "usage": "Table data, paragraphs, labels"
+      },
+      "mono": {
+        "family": "JetBrains Mono",
+        "weights": ["400"],
+        "usage": "IDs, API keys, Code snippets, Data values"
+      }
+    },
+    "scale": {
+      "h1": "text-4xl md:text-5xl font-bold tracking-tight",
+      "h2": "text-3xl font-semibold tracking-tight",
+      "h3": "text-2xl font-semibold tracking-tight",
+      "body_lg": "text-lg leading-relaxed",
+      "body_base": "text-sm leading-normal",
+      "caption": "text-xs text-muted-foreground uppercase tracking-wider"
+    }
+  },
+  "colors": {
+    "theme_strategy": "Toggle (Dark/Light)",
+    "palette": {
+      "primary": {
+        "DEFAULT": "#6366f1",
+        "foreground": "#ffffff",
+        "hover": "#4f46e5",
+        "light": "#818cf8"
+      },
+      "secondary": {
+        "DEFAULT": "#f1f5f9",
+        "foreground": "#0f172a",
+        "dark": "#1e293b",
+        "dark_foreground": "#f8fafc"
+      },
+      "background": {
+        "light": "#ffffff",
+        "dark": "#09090b",
+        "subtle_light": "#f8fafc",
+        "subtle_dark": "#0c0a09"
+      },
+      "surface": {
+        "light": "#ffffff",
+        "dark": "#18181b",
+        "glass_light": "rgba(255, 255, 255, 0.7)",
+        "glass_dark": "rgba(24, 24, 27, 0.6)"
+      },
+      "border": {
+        "light": "#e2e8f0",
+        "dark": "#27272a",
+        "glass_light": "rgba(255, 255, 255, 0.4)",
+        "glass_dark": "rgba(255, 255, 255, 0.1)"
+      },
+      "status": {
+        "success": "#10b981",
+        "warning": "#f59e0b",
+        "error": "#ef4444",
+        "info": "#3b82f6",
+        "ai_magic": "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)"
+      }
+    }
+  },
+  "layout": {
+    "spacing_scale": ["px", "1", "2", "4", "6", "8", "12", "16", "24", "32", "48", "64"],
+    "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+    "grid_system": {
+      "dashboard": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6",
+      "bento_hero": "grid grid-cols-1 md:grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)]"
+    },
+    "z_index": {
+      "toast": 100,
+      "modal": 50,
+      "dropdown": 40,
+      "sticky_nav": 30,
+      "default": 1
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm rounded-md px-4 py-2 text-sm font-medium transition-all active:scale-95",
+      "secondary": "bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-md px-4 py-2 text-sm font-medium transition-all",
+      "ghost": "hover:bg-accent hover:text-accent-foreground rounded-md px-4 py-2 text-sm font-medium transition-all",
+      "glass": "bg-white/10 hover:bg-white/20 text-foreground backdrop-blur-md border border-white/10 shadow-sm rounded-md px-4 py-2 text-sm font-medium transition-all"
+    },
+    "cards": {
+      "base": "rounded-xl border border-border bg-card text-card-foreground shadow-sm",
+      "glass": "rounded-xl border border-white/20 bg-white/10 backdrop-blur-lg shadow-xl",
+      "hover_effect": "hover:shadow-md hover:border-primary/50 transition-all duration-300"
+    },
+    "inputs": {
+      "base": "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+    },
+    "sidebar": {
+      "container": "w-64 h-screen border-r border-border bg-background/95 backdrop-blur-sm fixed left-0 top-0 z-30 hidden lg:flex flex-col"
+    },
+    "kanban": {
+      "column": "flex-1 min-w-[300px] bg-secondary/30 rounded-lg p-4 border border-border/50",
+      "card": "bg-card p-3 rounded-md shadow-sm border border-border cursor-grab active:cursor-grabbing hover:ring-2 hover:ring-primary/20 transition-all"
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": {
+      "light": "bg-white/70 backdrop-blur-xl border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.12)]",
+      "dark": "bg-black/60 backdrop-blur-xl border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+    },
+    "gradients": {
+      "hero_glow": "radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.15) 0%, transparent 50%)",
+      "ai_text": "bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-600"
+    },
+    "borders": {
+      "subtle": "border border-border/50",
+      "highlight": "border-l-4 border-l-primary"
+    }
+  },
+  "motion": {
+    "transitions": "transition-all duration-200 ease-in-out",
+    "micro_interactions": {
+      "hover_lift": "hover:-translate-y-1 transition-transform duration-200",
+      "button_press": "active:scale-95 transition-transform duration-75"
+    }
+  },
+  "images": {
+    "avatars": [
+      {
+        "url": "https://images.unsplash.com/photo-1576558656222-ba66febe3dec?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "category": "Lead/User",
+        "description": "Professional male in grey jacket"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1562228802-4b1052d0f845?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "category": "Lead/User",
+        "description": "Person in helmet (maybe avoid or use for 'creative' lead)"
+      },
+      {
+        "url": "https://images.pexels.com/photos/30004324/pexels-photo-30004324.jpeg",
+        "category": "Lead/User",
+        "description": "Professional woman in black"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1762522926157-bcc04bf0b10a?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "category": "Lead/User",
+        "description": "Man in white shirt"
+      }
+    ],
+    "logos": [
+      {
+        "url": "https://images.unsplash.com/photo-1628760584600-6c31148991e9?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "category": "Company Logo",
+        "description": "Abstract blue/white oval"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1771714430947-21ed58a2b763?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "category": "Company Logo",
+        "description": "Neon Chevron"
+      }
+    ]
+  },
+  "ai_features": {
+    "lead_score_visualization": "Circular progress with gradient stroke (Indigo to Purple). Score inside.",
+    "insights_card": "Card with 'sparkles' icon (Lucide). subtle purple border glow. Content in bullet points.",
+    "prediction_graph": "Line chart with 'dashed' line for future projection."
+  },
+  "universal_guidelines": [
+    "Do NOT use 'transition: all'. Use specific properties.",
+    "Do NOT center align the app container.",
+    "Use 'sonner' for toasts.",
+    "Use 'lucide-react' for icons.",
+    "Interactive elements MUST have 'data-testid'.",
+    "Marketing pages = Custom HTML/Tailwind. App pages = Shadcn components.",
+    "Dark mode should not be 'pure black' (#000) but rich dark grey (#09090b) or obsidian."
+  ],
+  "instructions_to_main_agent": "1. Set up the theme toggle first. 2. Build the Layout (Sidebar + Main Content Area) using the 'glass' strategy. 3. Implement the Dashboard with Bento Grid. 4. Build Leads List with high density. 5. Build Kanban with horizontal scroll. 6. Integrate AI features visually (gradients, sparkles)."
+}
