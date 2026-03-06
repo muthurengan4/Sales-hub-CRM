@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../App';
 import { toast } from 'sonner';
+import Modal from '../components/Modal';
 import { Loader2, Building2, Users, Globe, Briefcase, Save, Plus, Check } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -32,6 +33,15 @@ export default function Organization() {
     } catch (error) { toast.error('Failed to fetch organizations'); }
     finally { setLoading(false); }
   };
+
+  // Stable callback to prevent re-renders
+  const handleFormChange = useCallback((field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  const handleEditChange = useCallback((field, value) => {
+    setEditData(prev => ({ ...prev, [field]: value }));
+  }, []);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -110,58 +120,70 @@ export default function Organization() {
         </div>
 
         {/* Create Modal */}
-        {isCreateOpen && (
-          <div className="elstar-modal-overlay" onClick={() => setIsCreateOpen(false)}>
-            <div className="elstar-modal animate-fade-in max-w-md" onClick={e => e.stopPropagation()}>
-              <div className="elstar-modal-header">
-                <h3 className="font-semibold text-lg">Create Organization</h3>
+        <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create Organization">
+          <form onSubmit={handleCreate}>
+            <div className="elstar-modal-body space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Organization Name *</label>
+                <input 
+                  className="elstar-input" 
+                  value={formData.name} 
+                  onChange={(e) => handleFormChange('name', e.target.value)} 
+                  placeholder="Acme Inc" 
+                  data-testid="org-name-input" 
+                />
               </div>
-              <form onSubmit={handleCreate}>
-                <div className="elstar-modal-body space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Organization Name *</label>
-                    <input className="elstar-input" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Acme Inc" data-testid="org-name-input" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Domain</label>
-                    <input className="elstar-input" value={formData.domain} onChange={(e) => setFormData({...formData, domain: e.target.value})} placeholder="acme.com" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Industry</label>
-                      <select className="elstar-select" value={formData.industry} onChange={(e) => setFormData({...formData, industry: e.target.value})}>
-                        <option value="">Select...</option>
-                        <option value="technology">Technology</option>
-                        <option value="finance">Finance</option>
-                        <option value="healthcare">Healthcare</option>
-                        <option value="retail">Retail</option>
-                        <option value="manufacturing">Manufacturing</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Company Size</label>
-                      <select className="elstar-select" value={formData.size} onChange={(e) => setFormData({...formData, size: e.target.value})}>
-                        <option value="">Select...</option>
-                        <option value="1-10">1-10</option>
-                        <option value="11-50">11-50</option>
-                        <option value="51-200">51-200</option>
-                        <option value="201-500">201-500</option>
-                        <option value="500+">500+</option>
-                      </select>
-                    </div>
-                  </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Domain</label>
+                <input 
+                  className="elstar-input" 
+                  value={formData.domain} 
+                  onChange={(e) => handleFormChange('domain', e.target.value)} 
+                  placeholder="acme.com" 
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Industry</label>
+                  <select 
+                    className="elstar-select" 
+                    value={formData.industry} 
+                    onChange={(e) => handleFormChange('industry', e.target.value)}
+                  >
+                    <option value="">Select...</option>
+                    <option value="technology">Technology</option>
+                    <option value="finance">Finance</option>
+                    <option value="healthcare">Healthcare</option>
+                    <option value="retail">Retail</option>
+                    <option value="manufacturing">Manufacturing</option>
+                    <option value="other">Other</option>
+                  </select>
                 </div>
-                <div className="elstar-modal-footer">
-                  <button type="button" onClick={() => setIsCreateOpen(false)} className="elstar-btn-ghost">Cancel</button>
-                  <button type="submit" disabled={saving} className="elstar-btn-primary flex items-center gap-2" data-testid="submit-org-btn">
-                    {saving && <Loader2 className="w-4 h-4 animate-spin" />} Create
-                  </button>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Company Size</label>
+                  <select 
+                    className="elstar-select" 
+                    value={formData.size} 
+                    onChange={(e) => handleFormChange('size', e.target.value)}
+                  >
+                    <option value="">Select...</option>
+                    <option value="1-10">1-10</option>
+                    <option value="11-50">11-50</option>
+                    <option value="51-200">51-200</option>
+                    <option value="201-500">201-500</option>
+                    <option value="500+">500+</option>
+                  </select>
                 </div>
-              </form>
+              </div>
             </div>
-          </div>
-        )}
+            <div className="elstar-modal-footer">
+              <button type="button" onClick={() => setIsCreateOpen(false)} className="elstar-btn-ghost">Cancel</button>
+              <button type="submit" disabled={saving} className="elstar-btn-primary flex items-center gap-2" data-testid="submit-org-btn">
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />} Create
+              </button>
+            </div>
+          </form>
+        </Modal>
       </div>
     );
   }
@@ -169,42 +191,72 @@ export default function Organization() {
   return (
     <div className="space-y-6 max-w-3xl" data-testid="organization-page">
       <div>
-        <h1 className="text-2xl font-bold">Organization</h1>
-        <p className="text-muted-foreground mt-1">Manage your organization settings</p>
+        <h1 className="text-2xl font-bold">Organization Settings</h1>
+        <p className="text-muted-foreground mt-1">Manage your organization details</p>
       </div>
 
       {/* Organization Overview */}
       <div className="elstar-card p-6">
         <div className="flex items-center gap-4 mb-6">
-          <div className="w-14 h-14 ai-gradient rounded-xl flex items-center justify-center">
-            <Building2 className="w-7 h-7 text-white" />
+          <div className="w-16 h-16 ai-gradient rounded-lg flex items-center justify-center">
+            <Building2 className="w-8 h-8 text-white" />
           </div>
           <div>
-            <h2 className="text-xl font-bold">{currentOrg?.name}</h2>
-            <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1"><Users className="w-4 h-4" /> {currentOrg?.member_count} members</span>
-              {currentOrg?.industry && <span className="flex items-center gap-1"><Briefcase className="w-4 h-4" /> {currentOrg.industry}</span>}
-              {currentOrg?.domain && <span className="flex items-center gap-1"><Globe className="w-4 h-4" /> {currentOrg.domain}</span>}
+            <h2 className="text-xl font-semibold">{currentOrg?.name}</h2>
+            <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+              {currentOrg?.domain && <span className="flex items-center gap-1"><Globe className="w-4 h-4" />{currentOrg.domain}</span>}
+              {currentOrg?.industry && <span className="flex items-center gap-1"><Briefcase className="w-4 h-4" />{currentOrg.industry}</span>}
+              {currentOrg?.size && <span className="flex items-center gap-1"><Users className="w-4 h-4" />{currentOrg.size} employees</span>}
             </div>
           </div>
         </div>
+        
+        <div className="grid grid-cols-3 gap-4 p-4 bg-secondary/30 rounded-lg">
+          <div className="text-center">
+            <p className="text-2xl font-bold text-primary">{currentOrg?.member_count || 1}</p>
+            <p className="text-xs text-muted-foreground">Members</p>
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-bold text-emerald-500">{currentOrg?.lead_count || 0}</p>
+            <p className="text-xs text-muted-foreground">Leads</p>
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-bold text-amber-500">{currentOrg?.deal_count || 0}</p>
+            <p className="text-xs text-muted-foreground">Deals</p>
+          </div>
+        </div>
+      </div>
 
-        {canManageSettings ? (
+      {/* Edit Form */}
+      {canManageSettings && (
+        <div className="elstar-card p-6">
+          <h3 className="font-semibold mb-4">Organization Details</h3>
           <form onSubmit={handleUpdate} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Organization Name</label>
-                <input className="elstar-input" value={editData.name} onChange={(e) => setEditData({...editData, name: e.target.value})} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Domain</label>
-                <input className="elstar-input" value={editData.domain} onChange={(e) => setEditData({...editData, domain: e.target.value})} placeholder="example.com" />
-              </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Organization Name</label>
+              <input 
+                className="elstar-input" 
+                value={editData.name} 
+                onChange={(e) => handleEditChange('name', e.target.value)} 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Domain</label>
+              <input 
+                className="elstar-input" 
+                value={editData.domain} 
+                onChange={(e) => handleEditChange('domain', e.target.value)} 
+                placeholder="company.com" 
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Industry</label>
-                <select className="elstar-select" value={editData.industry} onChange={(e) => setEditData({...editData, industry: e.target.value})}>
+                <select 
+                  className="elstar-select" 
+                  value={editData.industry} 
+                  onChange={(e) => handleEditChange('industry', e.target.value)}
+                >
                   <option value="">Select...</option>
                   <option value="technology">Technology</option>
                   <option value="finance">Finance</option>
@@ -216,7 +268,11 @@ export default function Organization() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Company Size</label>
-                <select className="elstar-select" value={editData.size} onChange={(e) => setEditData({...editData, size: e.target.value})}>
+                <select 
+                  className="elstar-select" 
+                  value={editData.size} 
+                  onChange={(e) => handleEditChange('size', e.target.value)}
+                >
                   <option value="">Select...</option>
                   <option value="1-10">1-10</option>
                   <option value="11-50">11-50</option>
@@ -226,39 +282,28 @@ export default function Organization() {
                 </select>
               </div>
             </div>
-            <div className="pt-4">
+            <div className="flex justify-end">
               <button type="submit" disabled={saving} className="elstar-btn-primary flex items-center gap-2">
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Save Changes
               </button>
             </div>
           </form>
-        ) : (
-          <div className="p-4 bg-secondary/50 rounded-lg">
-            <p className="text-sm text-muted-foreground">You don't have permission to edit organization settings. Contact your organization admin.</p>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Features */}
+      {/* Membership Status */}
       <div className="elstar-card p-6">
-        <h3 className="font-semibold mb-4">Platform Features</h3>
-        <div className="grid grid-cols-2 gap-4">
-          {[
-            { name: 'Multi-tenant Data Isolation', enabled: true },
-            { name: 'Role-based Access Control', enabled: true },
-            { name: 'Team Collaboration', enabled: true },
-            { name: 'AI Lead Scoring', enabled: true },
-            { name: 'Pipeline Management', enabled: true },
-            { name: 'Contact Management', enabled: true }
-          ].map(feature => (
-            <div key={feature.name} className="flex items-center gap-2 p-3 bg-secondary/30 rounded-lg">
-              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${feature.enabled ? 'bg-emerald-500/20' : 'bg-secondary'}`}>
-                {feature.enabled && <Check className="w-3 h-3 text-emerald-500" />}
-              </div>
-              <span className="text-sm">{feature.name}</span>
+        <h3 className="font-semibold mb-4">Your Membership</h3>
+        <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-lg">
+          <div className="flex items-center gap-3">
+            <div className="elstar-avatar w-10 h-10">{user?.name?.charAt(0)?.toUpperCase()}</div>
+            <div>
+              <p className="font-medium">{user?.name}</p>
+              <p className="text-sm text-muted-foreground">{user?.email}</p>
             </div>
-          ))}
+          </div>
+          <span className="elstar-badge elstar-badge-primary capitalize">{user?.role?.replace('_', ' ')}</span>
         </div>
       </div>
     </div>

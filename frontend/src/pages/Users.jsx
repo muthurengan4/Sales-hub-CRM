@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../App';
 import { toast } from 'sonner';
-import { Plus, Loader2, MoreHorizontal, Trash2, Edit, X, UserPlus, Shield, Mail, Clock } from 'lucide-react';
+import Modal from '../components/Modal';
+import { Plus, Loader2, MoreHorizontal, Trash2, Edit, UserPlus, Shield, Mail, Clock } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -44,6 +45,15 @@ export default function Users() {
     } catch (error) { toast.error('Failed to fetch users'); }
     finally { setLoading(false); }
   };
+
+  // Stable callbacks to prevent re-renders
+  const handleInviteChange = useCallback((field, value) => {
+    setInviteData(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  const handleEditChange = useCallback((field, value) => {
+    setEditData(prev => ({ ...prev, [field]: value }));
+  }, []);
 
   const handleInvite = async (e) => {
     e.preventDefault();
@@ -89,44 +99,43 @@ export default function Users() {
   };
 
   const handleDelete = async (userId) => {
-    if (!window.confirm('Delete this user? This action cannot be undone.')) return;
+    if (!window.confirm('Remove this user from your organization?')) return;
     try {
-      const response = await fetch(`${API}/api/users/${userId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-      if (response.ok) { toast.success('User deleted'); fetchUsers(); }
-      else { const data = await response.json(); toast.error(data.detail || 'Failed'); }
-    } catch (error) { toast.error('Failed to delete user'); }
+      await fetch(`${API}/api/users/${userId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      toast.success('User removed');
+      fetchUsers();
+    } catch (error) { toast.error('Failed to remove user'); }
   };
 
   const openEditDialog = (user) => {
     setSelectedUser(user);
-    setEditData({ role: user.role, is_active: user.is_active });
+    setEditData({ role: user.role, is_active: user.is_active !== false });
     setIsEditOpen(true);
     setDropdownOpen(null);
   };
 
-  const Modal = ({ isOpen, onClose, title, children }) => {
-    if (!isOpen) return null;
+  const canInvite = hasPermission('manage_users');
+  const canManageUsers = hasPermission('manage_users');
+
+  if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+
+  if (!currentUser?.organization_id) {
     return (
-      <div className="elstar-modal-overlay" onClick={onClose}>
-        <div className="elstar-modal animate-fade-in" onClick={e => e.stopPropagation()}>
-          <div className="elstar-modal-header flex items-center justify-between">
-            <h3 className="font-semibold text-lg">{title}</h3>
-            <button onClick={onClose} className="p-1 hover:bg-secondary rounded"><X className="w-5 h-5" /></button>
-          </div>
-          {children}
+      <div className="space-y-6" data-testid="users-page">
+        <div>
+          <h1 className="text-2xl font-bold">Team Management</h1>
+          <p className="text-muted-foreground mt-1">You need to join an organization first</p>
         </div>
       </div>
     );
-  };
-
-  const canManageUsers = hasPermission('manage_users');
-  const canInvite = hasPermission('invite_users');
+  }
 
   return (
     <div className="space-y-6" data-testid="users-page">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Team Members</h1>
+          <h1 className="text-2xl font-bold">Team Management</h1>
           <p className="text-muted-foreground mt-1">Manage your organization's users and roles</p>
         </div>
         {canInvite && (
@@ -232,15 +241,33 @@ export default function Users() {
           <div className="elstar-modal-body space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">Full Name *</label>
-              <input className="elstar-input" value={inviteData.name} onChange={(e) => setInviteData({...inviteData, name: e.target.value})} placeholder="John Doe" data-testid="invite-name-input" />
+              <input 
+                className="elstar-input" 
+                value={inviteData.name} 
+                onChange={(e) => handleInviteChange('name', e.target.value)} 
+                placeholder="John Doe" 
+                data-testid="invite-name-input" 
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Email Address *</label>
-              <input className="elstar-input" type="email" value={inviteData.email} onChange={(e) => setInviteData({...inviteData, email: e.target.value})} placeholder="john@company.com" data-testid="invite-email-input" />
+              <input 
+                className="elstar-input" 
+                type="email" 
+                value={inviteData.email} 
+                onChange={(e) => handleInviteChange('email', e.target.value)} 
+                placeholder="john@company.com" 
+                data-testid="invite-email-input" 
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Role</label>
-              <select className="elstar-select" value={inviteData.role} onChange={(e) => setInviteData({...inviteData, role: e.target.value})} data-testid="invite-role-select">
+              <select 
+                className="elstar-select" 
+                value={inviteData.role} 
+                onChange={(e) => handleInviteChange('role', e.target.value)} 
+                data-testid="invite-role-select"
+              >
                 {ROLES.map(role => <option key={role.id} value={role.id}>{role.name}</option>)}
               </select>
             </div>
@@ -270,13 +297,21 @@ export default function Users() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Role</label>
-              <select className="elstar-select" value={editData.role} onChange={(e) => setEditData({...editData, role: e.target.value})}>
+              <select 
+                className="elstar-select" 
+                value={editData.role} 
+                onChange={(e) => handleEditChange('role', e.target.value)}
+              >
                 {ROLES.map(role => <option key={role.id} value={role.id}>{role.name}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Status</label>
-              <select className="elstar-select" value={editData.is_active ? 'active' : 'inactive'} onChange={(e) => setEditData({...editData, is_active: e.target.value === 'active'})}>
+              <select 
+                className="elstar-select" 
+                value={editData.is_active ? 'active' : 'inactive'} 
+                onChange={(e) => handleEditChange('is_active', e.target.value === 'active')}
+              >
                 <option value="active">Active</option>
                 <option value="inactive">Inactive (Suspended)</option>
               </select>

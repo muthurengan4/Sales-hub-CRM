@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useAuth } from '../App';
 import { toast } from 'sonner';
 import Modal from '../components/Modal';
-import { Plus, Search, Loader2, Mail, Phone, Building2, MoreHorizontal, Trash2, Edit, MapPin, User, Upload, FileSpreadsheet } from 'lucide-react';
+import { Plus, Search, Loader2, Mail, Phone, Building2, MoreHorizontal, Trash2, Edit, MapPin, User, Upload, FileSpreadsheet, X } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -10,6 +10,135 @@ const initialFormData = {
   first_name: '', last_name: '', email: '', phone: '', company: '',
   job_title: '', linkedin: '', address: '', city: '', state: '', postcode: '', country: '', notes: '', tags: [], is_public: false
 };
+
+// Form Fields Component - MOVED OUTSIDE to prevent re-renders
+const FormFields = memo(({ data, onChange }) => (
+  <div className="space-y-4">
+    <div className="grid grid-cols-2 gap-4">
+      <div>
+        <label className="block text-sm font-medium mb-2">First Name / Clinic Name *</label>
+        <input 
+          className="elstar-input" 
+          value={data.first_name || ''} 
+          onChange={(e) => onChange('first_name', e.target.value)} 
+          placeholder="Clinic Name" 
+          data-testid="contact-first-name" 
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-2">Last Name</label>
+        <input 
+          className="elstar-input" 
+          value={data.last_name || ''} 
+          onChange={(e) => onChange('last_name', e.target.value)} 
+        />
+      </div>
+    </div>
+    <div className="grid grid-cols-2 gap-4">
+      <div>
+        <label className="block text-sm font-medium mb-2">Email</label>
+        <input 
+          className="elstar-input" 
+          type="email" 
+          value={data.email || ''} 
+          onChange={(e) => onChange('email', e.target.value)} 
+          data-testid="contact-email" 
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-2">Phone / Contact Number</label>
+        <input 
+          className="elstar-input" 
+          value={data.phone || ''} 
+          onChange={(e) => onChange('phone', e.target.value)} 
+          placeholder="+60 123 456 789" 
+        />
+      </div>
+    </div>
+    <div className="grid grid-cols-2 gap-4">
+      <div>
+        <label className="block text-sm font-medium mb-2">Company</label>
+        <input 
+          className="elstar-input" 
+          value={data.company || ''} 
+          onChange={(e) => onChange('company', e.target.value)} 
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-2">Job Title</label>
+        <input 
+          className="elstar-input" 
+          value={data.job_title || ''} 
+          onChange={(e) => onChange('job_title', e.target.value)} 
+        />
+      </div>
+    </div>
+    <div>
+      <label className="block text-sm font-medium mb-2">Address</label>
+      <input 
+        className="elstar-input" 
+        value={data.address || ''} 
+        onChange={(e) => onChange('address', e.target.value)} 
+        placeholder="Full address" 
+      />
+    </div>
+    <div className="grid grid-cols-3 gap-4">
+      <div>
+        <label className="block text-sm font-medium mb-2">City</label>
+        <input 
+          className="elstar-input" 
+          value={data.city || ''} 
+          onChange={(e) => onChange('city', e.target.value)} 
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-2">Postcode</label>
+        <input 
+          className="elstar-input" 
+          value={data.postcode || ''} 
+          onChange={(e) => onChange('postcode', e.target.value)} 
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-2">State</label>
+        <input 
+          className="elstar-input" 
+          value={data.state || ''} 
+          onChange={(e) => onChange('state', e.target.value)} 
+        />
+      </div>
+    </div>
+    <div>
+      <label className="block text-sm font-medium mb-2">Country</label>
+      <input 
+        className="elstar-input" 
+        value={data.country || ''} 
+        onChange={(e) => onChange('country', e.target.value)} 
+        placeholder="Malaysia" 
+      />
+    </div>
+    <div className="flex items-center gap-2">
+      <input 
+        type="checkbox" 
+        id="contact_is_public" 
+        checked={data.is_public || false} 
+        onChange={(e) => onChange('is_public', e.target.checked)}
+        className="w-4 h-4 rounded border-input text-primary focus:ring-primary"
+      />
+      <label htmlFor="contact_is_public" className="text-sm">Is Public</label>
+    </div>
+    <div>
+      <label className="block text-sm font-medium mb-2">Notes</label>
+      <textarea 
+        className="elstar-input min-h-[80px]" 
+        value={data.notes || ''} 
+        onChange={(e) => onChange('notes', e.target.value)} 
+      />
+    </div>
+  </div>
+));
+
+FormFields.displayName = 'FormFields';
 
 export default function Contacts() {
   const { token } = useAuth();
@@ -38,6 +167,7 @@ export default function Contacts() {
     finally { setLoading(false); }
   };
 
+  // Stable callback to prevent re-renders
   const handleInputChange = useCallback((field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   }, []);
@@ -119,77 +249,6 @@ export default function Contacts() {
       setImportLoading(false);
     }
   };
-
-  const FormFields = ({ data, onChange }) => (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-2">First Name / Clinic Name *</label>
-          <input className="elstar-input" value={data.first_name} onChange={(e) => onChange('first_name', e.target.value)} placeholder="Clinic Name" data-testid="contact-first-name" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">Last Name</label>
-          <input className="elstar-input" value={data.last_name} onChange={(e) => onChange('last_name', e.target.value)} />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-2">Email</label>
-          <input className="elstar-input" type="email" value={data.email} onChange={(e) => onChange('email', e.target.value)} data-testid="contact-email" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">Phone / Contact Number</label>
-          <input className="elstar-input" value={data.phone} onChange={(e) => onChange('phone', e.target.value)} placeholder="+60 123 456 789" />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-2">Company</label>
-          <input className="elstar-input" value={data.company} onChange={(e) => onChange('company', e.target.value)} />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">Job Title</label>
-          <input className="elstar-input" value={data.job_title} onChange={(e) => onChange('job_title', e.target.value)} />
-        </div>
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-2">Address</label>
-        <input className="elstar-input" value={data.address || ''} onChange={(e) => onChange('address', e.target.value)} placeholder="Full address" />
-      </div>
-      <div className="grid grid-cols-3 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-2">City</label>
-          <input className="elstar-input" value={data.city} onChange={(e) => onChange('city', e.target.value)} />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">Postcode</label>
-          <input className="elstar-input" value={data.postcode || ''} onChange={(e) => onChange('postcode', e.target.value)} />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">State</label>
-          <input className="elstar-input" value={data.state || ''} onChange={(e) => onChange('state', e.target.value)} />
-        </div>
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-2">Country</label>
-        <input className="elstar-input" value={data.country} onChange={(e) => onChange('country', e.target.value)} placeholder="Malaysia" />
-      </div>
-      <div className="flex items-center gap-2">
-        <input 
-          type="checkbox" 
-          id="contact_is_public" 
-          checked={data.is_public || false} 
-          onChange={(e) => onChange('is_public', e.target.checked)}
-          className="w-4 h-4 rounded border-input text-primary focus:ring-primary"
-        />
-        <label htmlFor="contact_is_public" className="text-sm">Is Public</label>
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-2">Notes</label>
-        <textarea className="elstar-input min-h-[80px]" value={data.notes} onChange={(e) => onChange('notes', e.target.value)} />
-      </div>
-    </div>
-  );
 
   return (
     <div className="space-y-6" data-testid="contacts-page">

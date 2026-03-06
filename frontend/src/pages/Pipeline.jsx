@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useAuth } from '../App';
 import { toast } from 'sonner';
-import { Plus, Loader2, DollarSign, Calendar, MoreHorizontal, Trash2, Edit, Sparkles, Building2, X } from 'lucide-react';
+import Modal from '../components/Modal';
+import { Plus, Loader2, DollarSign, Calendar, MoreHorizontal, Trash2, Edit, Sparkles, Building2 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -21,6 +22,89 @@ const getHealthClass = (score) => {
   return 'score-low';
 };
 
+const initialFormData = {
+  title: '', value: '', company: '', contact_name: '', stage: 'lead', expected_close_date: '', notes: ''
+};
+
+// Deal Form Fields - MOVED OUTSIDE to prevent re-renders
+const DealFormFields = memo(({ data, onChange, isEdit = false }) => (
+  <div className="space-y-4">
+    <div>
+      <label className="block text-sm font-medium mb-2">Title *</label>
+      <input 
+        className="elstar-input" 
+        value={data.title || ''} 
+        onChange={(e) => onChange('title', e.target.value)} 
+        placeholder="Enterprise License" 
+        data-testid="deal-title-input"
+      />
+    </div>
+    <div className="grid grid-cols-2 gap-4">
+      <div>
+        <label className="block text-sm font-medium mb-2">Value *</label>
+        <input 
+          className="elstar-input" 
+          type="number" 
+          value={data.value || ''} 
+          onChange={(e) => onChange('value', e.target.value)} 
+          placeholder="10000"
+          data-testid="deal-value-input"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-2">Stage</label>
+        <select 
+          className="elstar-select" 
+          value={data.stage || 'lead'} 
+          onChange={(e) => onChange('stage', e.target.value)}
+        >
+          {STAGES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+        </select>
+      </div>
+    </div>
+    <div className="grid grid-cols-2 gap-4">
+      <div>
+        <label className="block text-sm font-medium mb-2">Company</label>
+        <input 
+          className="elstar-input" 
+          value={data.company || ''} 
+          onChange={(e) => onChange('company', e.target.value)} 
+          placeholder="Acme Inc"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-2">Contact Name</label>
+        <input 
+          className="elstar-input" 
+          value={data.contact_name || ''} 
+          onChange={(e) => onChange('contact_name', e.target.value)} 
+          placeholder="John Doe"
+        />
+      </div>
+    </div>
+    <div>
+      <label className="block text-sm font-medium mb-2">Expected Close Date</label>
+      <input 
+        className="elstar-input" 
+        type="date" 
+        value={data.expected_close_date || ''} 
+        onChange={(e) => onChange('expected_close_date', e.target.value)}
+      />
+    </div>
+    <div>
+      <label className="block text-sm font-medium mb-2">Notes</label>
+      <textarea 
+        className="elstar-input min-h-[80px]" 
+        value={data.notes || ''} 
+        onChange={(e) => onChange('notes', e.target.value)} 
+        placeholder="Additional notes..."
+      />
+    </div>
+  </div>
+));
+
+DealFormFields.displayName = 'DealFormFields';
+
 export default function Pipeline() {
   const { token } = useAuth();
   const [deals, setDeals] = useState([]);
@@ -31,9 +115,7 @@ export default function Pipeline() {
   const [formLoading, setFormLoading] = useState(false);
   const [draggedDeal, setDraggedDeal] = useState(null);
   const [dropdownOpen, setDropdownOpen] = useState(null);
-  const [formData, setFormData] = useState({
-    title: '', value: '', company: '', contact_name: '', stage: 'lead', expected_close_date: '', notes: ''
-  });
+  const [formData, setFormData] = useState(initialFormData);
 
   useEffect(() => { fetchDeals(); }, []);
 
@@ -45,6 +127,11 @@ export default function Pipeline() {
     finally { setLoading(false); }
   };
 
+  // Stable callback to prevent re-renders
+  const handleInputChange = useCallback((field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
+
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!formData.title || !formData.value) { toast.error('Title and value are required'); return; }
@@ -55,7 +142,7 @@ export default function Pipeline() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ ...formData, value: parseFloat(formData.value) })
       });
-      if (response.ok) { toast.success('Deal created'); setIsCreateOpen(false); resetForm(); fetchDeals(); }
+      if (response.ok) { toast.success('Deal created'); setIsCreateOpen(false); setFormData(initialFormData); fetchDeals(); }
     } catch (error) { toast.error('Failed to create deal'); }
     finally { setFormLoading(false); }
   };
@@ -70,7 +157,7 @@ export default function Pipeline() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ ...formData, value: parseFloat(formData.value) })
       });
-      if (response.ok) { toast.success('Deal updated'); setIsEditOpen(false); setSelectedDeal(null); resetForm(); fetchDeals(); }
+      if (response.ok) { toast.success('Deal updated'); setIsEditOpen(false); setSelectedDeal(null); setFormData(initialFormData); fetchDeals(); }
     } catch (error) { toast.error('Failed to update deal'); }
     finally { setFormLoading(false); }
   };
@@ -106,28 +193,9 @@ export default function Pipeline() {
     setDropdownOpen(null);
   };
 
-  const resetForm = () => {
-    setFormData({ title: '', value: '', company: '', contact_name: '', stage: 'lead', expected_close_date: '', notes: '' });
-  };
-
   const getDealsByStage = (stageId) => deals.filter(d => d.stage === stageId);
   const getStageValue = (stageId) => getDealsByStage(stageId).reduce((sum, d) => sum + (d.value || 0), 0);
   const formatCurrency = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(value);
-
-  const Modal = ({ isOpen, onClose, title, children }) => {
-    if (!isOpen) return null;
-    return (
-      <div className="elstar-modal-overlay" onClick={onClose}>
-        <div className="elstar-modal animate-fade-in" onClick={e => e.stopPropagation()}>
-          <div className="elstar-modal-header flex items-center justify-between">
-            <h3 className="font-semibold text-lg">{title}</h3>
-            <button onClick={onClose} className="p-1 hover:bg-secondary rounded"><X className="w-5 h-5" /></button>
-          </div>
-          {children}
-        </div>
-      </div>
-    );
-  };
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
 
@@ -139,7 +207,7 @@ export default function Pipeline() {
           <h1 className="text-2xl font-bold">Pipeline</h1>
           <p className="text-muted-foreground mt-1">Drag and drop deals to update stages</p>
         </div>
-        <button onClick={() => { resetForm(); setIsCreateOpen(true); }} className="elstar-btn-primary flex items-center gap-2" data-testid="add-deal-btn">
+        <button onClick={() => { setFormData(initialFormData); setIsCreateOpen(true); }} className="elstar-btn-primary flex items-center gap-2" data-testid="add-deal-btn">
           <Plus className="w-4 h-4" /> Add Deal
         </button>
       </div>
@@ -198,31 +266,26 @@ export default function Pipeline() {
                         )}
                       </div>
                     </div>
-                    {deal.company && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mb-3">
-                        <Building2 className="w-3 h-3" /> {deal.company}
+                    <div className="space-y-2 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1.5">
+                        <DollarSign className="w-3.5 h-3.5" />
+                        <span className="font-mono font-medium text-foreground">{formatCurrency(deal.value)}</span>
                       </div>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1 text-sm font-semibold text-emerald-500">
-                        <DollarSign className="w-4 h-4" /> {formatCurrency(deal.value)}
-                      </div>
+                      {deal.company && <div className="flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5" /><span>{deal.company}</span></div>}
+                      {deal.expected_close_date && <div className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /><span>{deal.expected_close_date}</span></div>}
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Health Score</span>
                       <div className="flex items-center gap-1">
-                        <Sparkles className={`w-4 h-4 ${getHealthClass(deal.ai_health_score)}`} />
-                        <span className={`text-xs font-mono font-bold ${getHealthClass(deal.ai_health_score)}`}>{deal.ai_health_score}</span>
+                        <Sparkles className={`w-3.5 h-3.5 ${getHealthClass(deal.ai_health_score)}`} />
+                        <span className={`font-mono text-xs font-bold ${getHealthClass(deal.ai_health_score)}`}>{deal.ai_health_score}</span>
                       </div>
                     </div>
-                    {deal.expected_close_date && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
-                        <Calendar className="w-3 h-3" /> {new Date(deal.expected_close_date).toLocaleDateString()}
-                      </div>
-                    )}
                   </div>
                 ))}
                 {getDealsByStage(stage.id).length === 0 && (
-                  <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                    <p className="text-xs text-muted-foreground">No deals</p>
-                    <p className="text-xs text-muted-foreground">Drag here</p>
+                  <div className="flex items-center justify-center h-24 border-2 border-dashed border-border rounded-lg text-sm text-muted-foreground">
+                    Drop deals here
                   </div>
                 )}
               </div>
@@ -234,31 +297,8 @@ export default function Pipeline() {
       {/* Create Modal */}
       <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create New Deal">
         <form onSubmit={handleCreate}>
-          <div className="elstar-modal-body space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Deal Title *</label>
-              <input className="elstar-input" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} placeholder="Enterprise License" data-testid="deal-title-input" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Value ($) *</label>
-                <input className="elstar-input" type="number" value={formData.value} onChange={(e) => setFormData({...formData, value: e.target.value})} placeholder="50000" data-testid="deal-value-input" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Expected Close</label>
-                <input className="elstar-input" type="date" value={formData.expected_close_date} onChange={(e) => setFormData({...formData, expected_close_date: e.target.value})} data-testid="deal-close-date-input" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Company</label>
-                <input className="elstar-input" value={formData.company} onChange={(e) => setFormData({...formData, company: e.target.value})} placeholder="Acme Corp" data-testid="deal-company-input" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Contact</label>
-                <input className="elstar-input" value={formData.contact_name} onChange={(e) => setFormData({...formData, contact_name: e.target.value})} placeholder="John Doe" data-testid="deal-contact-input" />
-              </div>
-            </div>
+          <div className="elstar-modal-body">
+            <DealFormFields data={formData} onChange={handleInputChange} />
           </div>
           <div className="elstar-modal-footer">
             <button type="button" onClick={() => setIsCreateOpen(false)} className="elstar-btn-ghost">Cancel</button>
@@ -272,35 +312,12 @@ export default function Pipeline() {
       {/* Edit Modal */}
       <Modal isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} title="Edit Deal">
         <form onSubmit={handleEdit}>
-          <div className="elstar-modal-body space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Deal Title *</label>
-              <input className="elstar-input" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} data-testid="edit-deal-title-input" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Value ($) *</label>
-                <input className="elstar-input" type="number" value={formData.value} onChange={(e) => setFormData({...formData, value: e.target.value})} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Expected Close</label>
-                <input className="elstar-input" type="date" value={formData.expected_close_date} onChange={(e) => setFormData({...formData, expected_close_date: e.target.value})} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Company</label>
-                <input className="elstar-input" value={formData.company} onChange={(e) => setFormData({...formData, company: e.target.value})} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Contact</label>
-                <input className="elstar-input" value={formData.contact_name} onChange={(e) => setFormData({...formData, contact_name: e.target.value})} />
-              </div>
-            </div>
+          <div className="elstar-modal-body">
+            <DealFormFields data={formData} onChange={handleInputChange} isEdit />
           </div>
           <div className="elstar-modal-footer">
             <button type="button" onClick={() => setIsEditOpen(false)} className="elstar-btn-ghost">Cancel</button>
-            <button type="submit" disabled={formLoading} className="elstar-btn-primary flex items-center gap-2" data-testid="update-deal-btn">
+            <button type="submit" disabled={formLoading} className="elstar-btn-primary flex items-center gap-2">
               {formLoading && <Loader2 className="w-4 h-4 animate-spin" />} Update Deal
             </button>
           </div>
