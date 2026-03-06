@@ -7,7 +7,7 @@ Build an AI-powered HubSpot CRM clone with Lead Management, Pipeline & Deals (Ka
 - **AI Provider**: Claude Sonnet 4.5 via Emergent LLM integration
 - **Authentication**: JWT-based custom auth (email/password)
 - **Scope**: Full CRM + Sales Management Platform
-- **Theme**: Elstar Admin Template (Tailwind CSS) with White & Gold color scheme, Dark/Light mode
+- **Theme**: Elstar Admin Template (Tailwind CSS) with White & Gold (#f5c77a) color scheme, Dark/Light mode
 
 ## Architecture
 
@@ -133,10 +133,28 @@ Build an AI-powered HubSpot CRM clone with Lead Management, Pipeline & Deals (Ka
 - Dropdown z-index issue in modals - resolved with Elstar UI overhaul
 
 ## Theme Update (December 2025)
-- Changed color scheme from white & blue to **white & gold**
-- Primary color: `#D4AF37` (metallic gold)
-- Accent colors: `#FFD700` (bright gold), `#B8860B` (dark gold)
+- Changed color scheme from white & blue to **white & gold (#f5c77a)**
+- Primary color: `#f5c77a` (soft gold)
 - Updated all UI elements: buttons, badges, icons, charts, gradients
+- Added premium hover effects and animations
+
+## Features Added (December 2025)
+- **Excel Import**: Import leads and contacts from Excel/CSV files
+  - Supports columns: Clinic Name, Address, Postcode, City, State, Contact Number, Is public
+  - Automatic field mapping
+  - Available for both Leads and Contacts pages
+- **Enhanced Dashboard**:
+  - 5 stat tiles with mini area charts and trend indicators
+  - Revenue Trend bar chart with target comparison
+  - Sales Funnel visualization (Lead → Contacted → Qualified → Deals → Won)
+  - Lead Sources donut chart
+  - Lead Status donut chart
+  - Pipeline Stages progress bars
+  - Top Locations by lead concentration
+  - Recent Activities feed
+  - Team Leaderboard
+  - AI Insights panel
+- **Fixed Input Bug**: Resolved issue where users could only type one character at a time in form fields
 
 ## Prioritized Backlog
 

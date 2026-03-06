@@ -1,19 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../App';
 import { toast } from 'sonner';
+import Modal from '../components/Modal';
 import { 
-  Plus, 
-  Search, 
-  Loader2,
-  Sparkles,
-  Mail,
-  Phone,
-  Building2,
-  MoreHorizontal,
-  Trash2,
-  Edit,
-  RefreshCw,
-  X
+  Plus, Search, Loader2, Sparkles, Mail, Phone, Building2, 
+  MoreHorizontal, Trash2, Edit, RefreshCw, Upload, Download, FileSpreadsheet
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -31,6 +22,12 @@ const getScoreClass = (score) => {
   return 'score-low';
 };
 
+const initialFormData = {
+  name: '', email: '', phone: '', company: '', title: '',
+  linkedin: '', company_size: '', industry: '', source: '', notes: '',
+  address: '', postcode: '', city: '', state: '', is_public: false
+};
+
 export default function Leads() {
   const { token } = useAuth();
   const [leads, setLeads] = useState([]);
@@ -39,13 +36,13 @@ export default function Leads() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '', email: '', phone: '', company: '', title: '',
-    linkedin: '', company_size: '', industry: '', source: '', notes: ''
-  });
+  const [formData, setFormData] = useState(initialFormData);
+  const [importFile, setImportFile] = useState(null);
+  const [importLoading, setImportLoading] = useState(false);
 
   useEffect(() => {
     fetchLeads();
@@ -64,6 +61,11 @@ export default function Leads() {
     }
   };
 
+  // Use useCallback to prevent unnecessary re-renders
+  const handleInputChange = useCallback((field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
+
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!formData.name) { toast.error('Name is required'); return; }
@@ -77,8 +79,11 @@ export default function Leads() {
       if (response.ok) {
         toast.success('Lead created successfully');
         setIsCreateOpen(false);
-        resetForm();
+        setFormData(initialFormData);
         fetchLeads();
+      } else {
+        const data = await response.json();
+        toast.error(data.detail || 'Failed to create lead');
       }
     } catch (error) {
       toast.error('Failed to create lead');
@@ -101,7 +106,7 @@ export default function Leads() {
         toast.success('Lead updated');
         setIsEditOpen(false);
         setSelectedLead(null);
-        resetForm();
+        setFormData(initialFormData);
         fetchLeads();
       }
     } catch (error) {
@@ -134,13 +139,47 @@ export default function Leads() {
 
   const openEditDialog = (lead) => {
     setSelectedLead(lead);
-    setFormData({ ...lead, status: lead.status || 'new' });
+    setFormData({ ...initialFormData, ...lead });
     setIsEditOpen(true);
     setDropdownOpen(null);
   };
 
-  const resetForm = () => {
-    setFormData({ name: '', email: '', phone: '', company: '', title: '', linkedin: '', company_size: '', industry: '', source: '', notes: '' });
+  const openCreateDialog = () => {
+    setFormData(initialFormData);
+    setIsCreateOpen(true);
+  };
+
+  // Excel Import Handler
+  const handleImport = async (e) => {
+    e.preventDefault();
+    if (!importFile) { toast.error('Please select a file'); return; }
+    
+    setImportLoading(true);
+    const formDataUpload = new FormData();
+    formDataUpload.append('file', importFile);
+    
+    try {
+      const response = await fetch(`${API}/api/leads/import`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formDataUpload
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(`Successfully imported ${result.imported} leads`);
+        setIsImportOpen(false);
+        setImportFile(null);
+        fetchLeads();
+      } else {
+        const data = await response.json();
+        toast.error(data.detail || 'Failed to import leads');
+      }
+    } catch (error) {
+      toast.error('Failed to import leads');
+    } finally {
+      setImportLoading(false);
+    }
   };
 
   const filteredLeads = leads.filter(lead => {
@@ -149,22 +188,199 @@ export default function Leads() {
     return lead.name?.toLowerCase().includes(s) || lead.company?.toLowerCase().includes(s) || lead.email?.toLowerCase().includes(s);
   });
 
-  const Modal = ({ isOpen, onClose, title, children }) => {
-    if (!isOpen) return null;
-    return (
-      <div className="elstar-modal-overlay" onClick={onClose}>
-        <div className="elstar-modal animate-fade-in" onClick={e => e.stopPropagation()}>
-          <div className="elstar-modal-header flex items-center justify-between">
-            <h3 className="font-semibold text-lg">{title}</h3>
-            <button onClick={onClose} className="p-1 hover:bg-secondary rounded">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          {children}
+  // Form Fields Component
+  const FormFields = ({ data, onChange, isEdit = false }) => (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">Name *</label>
+          <input 
+            className="elstar-input" 
+            value={data.name} 
+            onChange={(e) => onChange('name', e.target.value)} 
+            placeholder="Clinic Name / Contact Name" 
+            data-testid="lead-name-input" 
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Email</label>
+          <input 
+            className="elstar-input" 
+            type="email" 
+            value={data.email} 
+            onChange={(e) => onChange('email', e.target.value)} 
+            placeholder="email@company.com" 
+            data-testid="lead-email-input" 
+          />
         </div>
       </div>
-    );
-  };
+      
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">Phone / Contact Number</label>
+          <input 
+            className="elstar-input" 
+            value={data.phone} 
+            onChange={(e) => onChange('phone', e.target.value)} 
+            placeholder="+60 123 456 789" 
+            data-testid="lead-phone-input" 
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Company</label>
+          <input 
+            className="elstar-input" 
+            value={data.company} 
+            onChange={(e) => onChange('company', e.target.value)} 
+            placeholder="Company Name" 
+            data-testid="lead-company-input" 
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-2">Address</label>
+        <input 
+          className="elstar-input" 
+          value={data.address || ''} 
+          onChange={(e) => onChange('address', e.target.value)} 
+          placeholder="Full address" 
+          data-testid="lead-address-input" 
+        />
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">City</label>
+          <input 
+            className="elstar-input" 
+            value={data.city || ''} 
+            onChange={(e) => onChange('city', e.target.value)} 
+            placeholder="City" 
+            data-testid="lead-city-input" 
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Postcode</label>
+          <input 
+            className="elstar-input" 
+            value={data.postcode || ''} 
+            onChange={(e) => onChange('postcode', e.target.value)} 
+            placeholder="Postcode" 
+            data-testid="lead-postcode-input" 
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">State</label>
+          <input 
+            className="elstar-input" 
+            value={data.state || ''} 
+            onChange={(e) => onChange('state', e.target.value)} 
+            placeholder="State" 
+            data-testid="lead-state-input" 
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">Job Title</label>
+          <input 
+            className="elstar-input" 
+            value={data.title} 
+            onChange={(e) => onChange('title', e.target.value)} 
+            placeholder="Sales Director" 
+            data-testid="lead-title-input" 
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Industry</label>
+          <input 
+            className="elstar-input" 
+            value={data.industry} 
+            onChange={(e) => onChange('industry', e.target.value)} 
+            placeholder="Healthcare / Technology" 
+            data-testid="lead-industry-input" 
+          />
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">Company Size</label>
+          <select 
+            className="elstar-select" 
+            value={data.company_size} 
+            onChange={(e) => onChange('company_size', e.target.value)} 
+            data-testid="lead-company-size-select"
+          >
+            <option value="">Select size</option>
+            <option value="1-10">1-10</option>
+            <option value="11-50">11-50</option>
+            <option value="51-200">51-200</option>
+            <option value="201-500">201-500</option>
+            <option value="500+">500+</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Source</label>
+          <select 
+            className="elstar-select" 
+            value={data.source} 
+            onChange={(e) => onChange('source', e.target.value)} 
+            data-testid="lead-source-select"
+          >
+            <option value="">Select source</option>
+            <option value="website">Website</option>
+            <option value="referral">Referral</option>
+            <option value="linkedin">LinkedIn</option>
+            <option value="cold_outreach">Cold Outreach</option>
+            <option value="event">Event</option>
+            <option value="import">Excel Import</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <input 
+          type="checkbox" 
+          id="is_public" 
+          checked={data.is_public || false} 
+          onChange={(e) => onChange('is_public', e.target.checked)}
+          className="w-4 h-4 rounded border-input text-primary focus:ring-primary"
+        />
+        <label htmlFor="is_public" className="text-sm">Is Public</label>
+      </div>
+
+      {isEdit && (
+        <div>
+          <label className="block text-sm font-medium mb-2">Status</label>
+          <select 
+            className="elstar-select" 
+            value={data.status} 
+            onChange={(e) => onChange('status', e.target.value)} 
+            data-testid="edit-lead-status-select"
+          >
+            <option value="new">New</option>
+            <option value="contacted">Contacted</option>
+            <option value="qualified">Qualified</option>
+            <option value="lost">Lost</option>
+          </select>
+        </div>
+      )}
+
+      <div>
+        <label className="block text-sm font-medium mb-2">Notes</label>
+        <textarea 
+          className="elstar-input min-h-[80px]" 
+          value={data.notes || ''} 
+          onChange={(e) => onChange('notes', e.target.value)} 
+          placeholder="Additional notes..."
+          data-testid="lead-notes-input"
+        />
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6" data-testid="leads-page">
@@ -174,10 +390,24 @@ export default function Leads() {
           <h1 className="text-2xl font-bold">Leads</h1>
           <p className="text-muted-foreground mt-1">Manage and track your sales leads</p>
         </div>
-        <button onClick={() => { resetForm(); setIsCreateOpen(true); }} className="elstar-btn-primary flex items-center gap-2" data-testid="add-lead-btn">
-          <Plus className="w-4 h-4" />
-          Add Lead
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setIsImportOpen(true)} 
+            className="elstar-btn-ghost flex items-center gap-2"
+            data-testid="import-lead-btn"
+          >
+            <Upload className="w-4 h-4" />
+            Import Excel
+          </button>
+          <button 
+            onClick={openCreateDialog} 
+            className="elstar-btn-primary flex items-center gap-2" 
+            data-testid="add-lead-btn"
+          >
+            <Plus className="w-4 h-4" />
+            Add Lead
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -194,7 +424,12 @@ export default function Leads() {
               data-testid="search-leads-input"
             />
           </div>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="elstar-select w-full sm:w-44" data-testid="status-filter">
+          <select 
+            value={statusFilter} 
+            onChange={(e) => setStatusFilter(e.target.value)} 
+            className="elstar-select w-full sm:w-44" 
+            data-testid="status-filter"
+          >
             <option value="all">All Statuses</option>
             <option value="new">New</option>
             <option value="contacted">Contacted</option>
@@ -213,14 +448,20 @@ export default function Leads() {
         ) : filteredLeads.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-center">
             <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mb-4">
-              <Users className="w-8 h-8 text-muted-foreground" />
+              <UsersIcon className="w-8 h-8 text-muted-foreground" />
             </div>
             <p className="font-medium">No leads found</p>
-            <p className="text-sm text-muted-foreground mb-4">Get started by adding your first lead</p>
-            <button onClick={() => { resetForm(); setIsCreateOpen(true); }} className="elstar-btn-primary">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Lead
-            </button>
+            <p className="text-sm text-muted-foreground mb-4">Get started by adding your first lead or importing from Excel</p>
+            <div className="flex gap-2">
+              <button onClick={() => setIsImportOpen(true)} className="elstar-btn-ghost">
+                <Upload className="w-4 h-4 mr-2" />
+                Import Excel
+              </button>
+              <button onClick={openCreateDialog} className="elstar-btn-primary">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Lead
+              </button>
+            </div>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -230,6 +471,7 @@ export default function Leads() {
                   <th>Name</th>
                   <th className="hidden md:table-cell">Company</th>
                   <th className="hidden sm:table-cell">Contact</th>
+                  <th className="hidden lg:table-cell">Location</th>
                   <th>Status</th>
                   <th className="text-center">AI Score</th>
                   <th className="w-12"></th>
@@ -252,6 +494,13 @@ export default function Leads() {
                       <div className="space-y-1">
                         {lead.email && <div className="flex items-center gap-1 text-xs text-muted-foreground"><Mail className="w-3 h-3" />{lead.email}</div>}
                         {lead.phone && <div className="flex items-center gap-1 text-xs text-muted-foreground"><Phone className="w-3 h-3" />{lead.phone}</div>}
+                      </div>
+                    </td>
+                    <td className="hidden lg:table-cell">
+                      <div className="text-xs text-muted-foreground">
+                        {lead.city && <span>{lead.city}</span>}
+                        {lead.city && lead.state && <span>, </span>}
+                        {lead.state && <span>{lead.state}</span>}
                       </div>
                     </td>
                     <td>
@@ -297,61 +546,10 @@ export default function Leads() {
       </div>
 
       {/* Create Modal */}
-      <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Add New Lead">
+      <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Add New Lead" size="lg">
         <form onSubmit={handleCreate}>
-          <div className="elstar-modal-body space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Name *</label>
-              <input className="elstar-input" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="John Doe" data-testid="lead-name-input" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Email</label>
-                <input className="elstar-input" type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} placeholder="john@company.com" data-testid="lead-email-input" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Phone</label>
-                <input className="elstar-input" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} placeholder="+1 234 567 890" data-testid="lead-phone-input" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Company</label>
-                <input className="elstar-input" value={formData.company} onChange={(e) => setFormData({...formData, company: e.target.value})} placeholder="Acme Inc" data-testid="lead-company-input" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Job Title</label>
-                <input className="elstar-input" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} placeholder="Sales Director" data-testid="lead-title-input" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Company Size</label>
-                <select className="elstar-select" value={formData.company_size} onChange={(e) => setFormData({...formData, company_size: e.target.value})} data-testid="lead-company-size-select">
-                  <option value="">Select size</option>
-                  <option value="1-10">1-10</option>
-                  <option value="11-50">11-50</option>
-                  <option value="51-200">51-200</option>
-                  <option value="201-500">201-500</option>
-                  <option value="500+">500+</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Industry</label>
-                <input className="elstar-input" value={formData.industry} onChange={(e) => setFormData({...formData, industry: e.target.value})} placeholder="Technology" data-testid="lead-industry-input" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Source</label>
-              <select className="elstar-select" value={formData.source} onChange={(e) => setFormData({...formData, source: e.target.value})} data-testid="lead-source-select">
-                <option value="">Select source</option>
-                <option value="website">Website</option>
-                <option value="referral">Referral</option>
-                <option value="linkedin">LinkedIn</option>
-                <option value="cold_outreach">Cold Outreach</option>
-                <option value="event">Event</option>
-              </select>
-            </div>
+          <div className="elstar-modal-body">
+            <FormFields data={formData} onChange={handleInputChange} />
           </div>
           <div className="elstar-modal-footer">
             <button type="button" onClick={() => setIsCreateOpen(false)} className="elstar-btn-ghost">Cancel</button>
@@ -364,42 +562,10 @@ export default function Leads() {
       </Modal>
 
       {/* Edit Modal */}
-      <Modal isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} title="Edit Lead">
+      <Modal isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} title="Edit Lead" size="lg">
         <form onSubmit={handleEdit}>
-          <div className="elstar-modal-body space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Name *</label>
-              <input className="elstar-input" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} data-testid="edit-lead-name-input" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Email</label>
-                <input className="elstar-input" type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Phone</label>
-                <input className="elstar-input" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Company</label>
-                <input className="elstar-input" value={formData.company} onChange={(e) => setFormData({...formData, company: e.target.value})} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Job Title</label>
-                <input className="elstar-input" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Status</label>
-              <select className="elstar-select" value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})} data-testid="edit-lead-status-select">
-                <option value="new">New</option>
-                <option value="contacted">Contacted</option>
-                <option value="qualified">Qualified</option>
-                <option value="lost">Lost</option>
-              </select>
-            </div>
+          <div className="elstar-modal-body">
+            <FormFields data={formData} onChange={handleInputChange} isEdit />
           </div>
           <div className="elstar-modal-footer">
             <button type="button" onClick={() => setIsEditOpen(false)} className="elstar-btn-ghost">Cancel</button>
@@ -410,11 +576,59 @@ export default function Leads() {
           </div>
         </form>
       </Modal>
+
+      {/* Import Modal */}
+      <Modal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} title="Import Leads from Excel">
+        <form onSubmit={handleImport}>
+          <div className="elstar-modal-body space-y-4">
+            <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
+              <FileSpreadsheet className="w-12 h-12 mx-auto mb-4 text-primary" />
+              <p className="font-medium mb-2">Upload Excel File</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                Supported columns: Clinic Name, Address, Postcode, City, State, Contact Number, Is public
+              </p>
+              <input
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                onChange={(e) => setImportFile(e.target.files[0])}
+                className="hidden"
+                id="excel-upload"
+              />
+              <label htmlFor="excel-upload" className="elstar-btn-primary cursor-pointer inline-flex items-center gap-2">
+                <Upload className="w-4 h-4" />
+                Choose File
+              </label>
+              {importFile && (
+                <p className="mt-4 text-sm text-primary font-medium">{importFile.name}</p>
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              <p className="font-medium mb-1">Expected columns:</p>
+              <ul className="list-disc list-inside space-y-0.5">
+                <li>Clinic Name → Name</li>
+                <li>Address → Address</li>
+                <li>Postcode → Postcode</li>
+                <li>City → City</li>
+                <li>State → State</li>
+                <li>Contact Number → Phone</li>
+                <li>Is public → Is Public</li>
+              </ul>
+            </div>
+          </div>
+          <div className="elstar-modal-footer">
+            <button type="button" onClick={() => { setIsImportOpen(false); setImportFile(null); }} className="elstar-btn-ghost">Cancel</button>
+            <button type="submit" disabled={importLoading || !importFile} className="elstar-btn-primary flex items-center gap-2">
+              {importLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+              Import Leads
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
 
-const Users = ({ className }) => (
+const UsersIcon = ({ className }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
   </svg>

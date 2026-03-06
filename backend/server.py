@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Header
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Header, UploadFile, File
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -12,6 +12,7 @@ from datetime import datetime, timezone, timedelta
 import bcrypt
 import jwt
 from enum import Enum
+import io
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -170,10 +171,13 @@ class ContactCreate(BaseModel):
     linkedin: Optional[str] = None
     address: Optional[str] = None
     city: Optional[str] = None
+    state: Optional[str] = None
+    postcode: Optional[str] = None
     country: Optional[str] = None
     notes: Optional[str] = None
     tags: List[str] = []
     custom_fields: Dict[str, Any] = {}
+    is_public: Optional[bool] = False
 
 class ContactUpdate(BaseModel):
     first_name: Optional[str] = None
@@ -202,11 +206,14 @@ class ContactResponse(BaseModel):
     linkedin: Optional[str] = None
     address: Optional[str] = None
     city: Optional[str] = None
+    state: Optional[str] = None
+    postcode: Optional[str] = None
     country: Optional[str] = None
     notes: Optional[str] = None
     tags: List[str] = []
     custom_fields: Dict[str, Any] = {}
-    organization_id: Optional[str] = None  # Optional for legacy contacts
+    is_public: Optional[bool] = False
+    organization_id: Optional[str] = None
     owner_id: str
     owner_name: Optional[str] = None
     created_at: str
@@ -225,6 +232,11 @@ class LeadCreate(BaseModel):
     source: Optional[str] = None
     notes: Optional[str] = None
     contact_id: Optional[str] = None
+    address: Optional[str] = None
+    postcode: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    is_public: Optional[bool] = False
 
 class LeadUpdate(BaseModel):
     name: Optional[str] = None
@@ -239,6 +251,11 @@ class LeadUpdate(BaseModel):
     notes: Optional[str] = None
     status: Optional[str] = None
     assigned_to: Optional[str] = None
+    address: Optional[str] = None
+    postcode: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    is_public: Optional[bool] = None
 
 class LeadResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -257,7 +274,12 @@ class LeadResponse(BaseModel):
     ai_score: int
     ai_insights: Optional[str] = None
     contact_id: Optional[str] = None
-    organization_id: Optional[str] = None  # Optional for legacy leads
+    address: Optional[str] = None
+    postcode: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    is_public: Optional[bool] = False
+    organization_id: Optional[str] = None
     owner_id: str
     owner_name: Optional[str] = None
     assigned_to: Optional[str] = None
@@ -855,6 +877,102 @@ async def delete_contact(contact_id: str, user: dict = Depends(get_current_user)
     
     return {"message": "Contact deleted"}
 
+@api_router.post("/contacts/import")
+async def import_contacts(file: UploadFile = File(...), user: dict = Depends(get_current_user)):
+    """Import contacts from Excel file"""
+    check_permission(user, Permission.MANAGE_CONTACTS)
+    
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="You must belong to an organization")
+    
+    try:
+        import pandas as pd
+        
+        contents = await file.read()
+        
+        # Determine file type and read accordingly
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(io.BytesIO(contents))
+        else:
+            df = pd.read_excel(io.BytesIO(contents))
+        
+        # Column mapping from Excel to our schema
+        column_mapping = {
+            'Clinic Name': 'first_name',
+            'clinic name': 'first_name',
+            'Name': 'first_name',
+            'name': 'first_name',
+            'First Name': 'first_name',
+            'first_name': 'first_name',
+            'Last Name': 'last_name',
+            'last_name': 'last_name',
+            'Address': 'address',
+            'address': 'address',
+            'Postcode': 'postcode',
+            'postcode': 'postcode',
+            'City': 'city',
+            'city': 'city',
+            'State': 'state',
+            'state': 'state',
+            'Contact Number': 'phone',
+            'contact number': 'phone',
+            'Phone': 'phone',
+            'phone': 'phone',
+            'Email': 'email',
+            'email': 'email',
+            'Is public': 'is_public',
+            'is public': 'is_public',
+            'Company': 'company',
+            'company': 'company',
+            'Job Title': 'job_title',
+            'job_title': 'job_title',
+        }
+        
+        # Rename columns
+        df = df.rename(columns={k: v for k, v in column_mapping.items() if k in df.columns})
+        
+        now = datetime.now(timezone.utc).isoformat()
+        imported_count = 0
+        
+        for _, row in df.iterrows():
+            contact_data = {
+                'id': str(uuid.uuid4()),
+                'first_name': str(row.get('first_name', '')).strip() if pd.notna(row.get('first_name')) else '',
+                'last_name': str(row.get('last_name', '')).strip() if pd.notna(row.get('last_name')) else '',
+                'email': str(row.get('email', '')).strip() if pd.notna(row.get('email')) else '',
+                'phone': str(row.get('phone', '')).strip() if pd.notna(row.get('phone')) else '',
+                'company': str(row.get('company', '')).strip() if pd.notna(row.get('company')) else '',
+                'job_title': str(row.get('job_title', '')).strip() if pd.notna(row.get('job_title')) else '',
+                'address': str(row.get('address', '')).strip() if pd.notna(row.get('address')) else '',
+                'postcode': str(row.get('postcode', '')).strip() if pd.notna(row.get('postcode')) else '',
+                'city': str(row.get('city', '')).strip() if pd.notna(row.get('city')) else '',
+                'state': str(row.get('state', '')).strip() if pd.notna(row.get('state')) else '',
+                'country': 'Malaysia',
+                'is_public': str(row.get('is_public', '')).lower() in ['yes', 'true', '1'] if pd.notna(row.get('is_public')) else False,
+                'linkedin': '',
+                'notes': f"Imported from {file.filename}",
+                'tags': [],
+                'custom_fields': {},
+                'organization_id': user['organization_id'],
+                'owner_id': user['id'],
+                'owner_name': user['name'],
+                'created_at': now,
+                'updated_at': now
+            }
+            
+            # Skip rows without a name
+            if not contact_data['first_name']:
+                continue
+            
+            await db.contacts.insert_one(contact_data)
+            imported_count += 1
+        
+        return {"imported": imported_count, "message": f"Successfully imported {imported_count} contacts"}
+    
+    except Exception as e:
+        logging.error(f"Import error: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Failed to import file: {str(e)}")
+
 # ============= LEAD ROUTES =============
 
 @api_router.post("/leads", response_model=LeadResponse)
@@ -969,6 +1087,99 @@ async def delete_lead(lead_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Lead not found")
     
     return {"message": "Lead deleted"}
+
+@api_router.post("/leads/import")
+async def import_leads(file: UploadFile = File(...), user: dict = Depends(get_current_user)):
+    """Import leads from Excel file"""
+    if Permission.MANAGE_ALL_LEADS.value not in user['permissions'] and Permission.MANAGE_OWN_LEADS.value not in user['permissions']:
+        raise HTTPException(status_code=403, detail="Permission denied")
+    
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="You must belong to an organization")
+    
+    try:
+        import pandas as pd
+        
+        contents = await file.read()
+        
+        # Determine file type and read accordingly
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(io.BytesIO(contents))
+        else:
+            df = pd.read_excel(io.BytesIO(contents))
+        
+        # Column mapping from Excel to our schema
+        column_mapping = {
+            'Clinic Name': 'name',
+            'clinic name': 'name',
+            'Name': 'name',
+            'name': 'name',
+            'Address': 'address',
+            'address': 'address',
+            'Postcode': 'postcode',
+            'postcode': 'postcode',
+            'City': 'city',
+            'city': 'city',
+            'State': 'state',
+            'state': 'state',
+            'Contact Number': 'phone',
+            'contact number': 'phone',
+            'Phone': 'phone',
+            'phone': 'phone',
+            'Email': 'email',
+            'email': 'email',
+            'Is public': 'is_public',
+            'is public': 'is_public',
+            'Company': 'company',
+            'company': 'company',
+            'Industry': 'industry',
+            'industry': 'industry',
+        }
+        
+        # Rename columns
+        df = df.rename(columns={k: v for k, v in column_mapping.items() if k in df.columns})
+        
+        now = datetime.now(timezone.utc).isoformat()
+        imported_count = 0
+        
+        for _, row in df.iterrows():
+            lead_data = {
+                'id': str(uuid.uuid4()),
+                'name': str(row.get('name', '')).strip() if pd.notna(row.get('name')) else '',
+                'email': str(row.get('email', '')).strip() if pd.notna(row.get('email')) else '',
+                'phone': str(row.get('phone', '')).strip() if pd.notna(row.get('phone')) else '',
+                'company': str(row.get('company', '')).strip() if pd.notna(row.get('company')) else '',
+                'address': str(row.get('address', '')).strip() if pd.notna(row.get('address')) else '',
+                'postcode': str(row.get('postcode', '')).strip() if pd.notna(row.get('postcode')) else '',
+                'city': str(row.get('city', '')).strip() if pd.notna(row.get('city')) else '',
+                'state': str(row.get('state', '')).strip() if pd.notna(row.get('state')) else '',
+                'industry': str(row.get('industry', '')).strip() if pd.notna(row.get('industry')) else 'Healthcare',
+                'is_public': str(row.get('is_public', '')).lower() in ['yes', 'true', '1'] if pd.notna(row.get('is_public')) else False,
+                'title': '',
+                'company_size': '',
+                'source': 'import',
+                'status': 'new',
+                'notes': f"Imported from {file.filename}",
+                'ai_score': 50,  # Default score for imports
+                'organization_id': user['organization_id'],
+                'owner_id': user['id'],
+                'owner_name': user['name'],
+                'created_at': now,
+                'updated_at': now
+            }
+            
+            # Skip rows without a name
+            if not lead_data['name']:
+                continue
+            
+            await db.leads.insert_one(lead_data)
+            imported_count += 1
+        
+        return {"imported": imported_count, "message": f"Successfully imported {imported_count} leads"}
+    
+    except Exception as e:
+        logging.error(f"Import error: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Failed to import file: {str(e)}")
 
 # ============= DEAL ROUTES =============
 

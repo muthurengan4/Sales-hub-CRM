@@ -1,9 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../App';
 import { toast } from 'sonner';
-import { Plus, Search, Loader2, Mail, Phone, Building2, MoreHorizontal, Trash2, Edit, X, MapPin, User } from 'lucide-react';
+import Modal from '../components/Modal';
+import { Plus, Search, Loader2, Mail, Phone, Building2, MoreHorizontal, Trash2, Edit, MapPin, User, Upload, FileSpreadsheet } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
+
+const initialFormData = {
+  first_name: '', last_name: '', email: '', phone: '', company: '',
+  job_title: '', linkedin: '', address: '', city: '', state: '', postcode: '', country: '', notes: '', tags: [], is_public: false
+};
 
 export default function Contacts() {
   const { token } = useAuth();
@@ -12,13 +18,13 @@ export default function Contacts() {
   const [search, setSearch] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(null);
-  const [formData, setFormData] = useState({
-    first_name: '', last_name: '', email: '', phone: '', company: '',
-    job_title: '', linkedin: '', address: '', city: '', country: '', notes: '', tags: []
-  });
+  const [formData, setFormData] = useState(initialFormData);
+  const [importFile, setImportFile] = useState(null);
+  const [importLoading, setImportLoading] = useState(false);
 
   useEffect(() => { fetchContacts(); }, [search]);
 
@@ -32,6 +38,10 @@ export default function Contacts() {
     finally { setLoading(false); }
   };
 
+  const handleInputChange = useCallback((field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
+
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!formData.first_name) { toast.error('First name is required'); return; }
@@ -42,7 +52,7 @@ export default function Contacts() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(formData)
       });
-      if (response.ok) { toast.success('Contact created'); setIsCreateOpen(false); resetForm(); fetchContacts(); }
+      if (response.ok) { toast.success('Contact created'); setIsCreateOpen(false); setFormData(initialFormData); fetchContacts(); }
       else { const data = await response.json(); toast.error(data.detail || 'Failed'); }
     } catch (error) { toast.error('Failed to create contact'); }
     finally { setFormLoading(false); }
@@ -58,7 +68,7 @@ export default function Contacts() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(formData)
       });
-      if (response.ok) { toast.success('Contact updated'); setIsEditOpen(false); setSelectedContact(null); resetForm(); fetchContacts(); }
+      if (response.ok) { toast.success('Contact updated'); setIsEditOpen(false); setSelectedContact(null); setFormData(initialFormData); fetchContacts(); }
     } catch (error) { toast.error('Failed to update contact'); }
     finally { setFormLoading(false); }
   };
@@ -73,29 +83,113 @@ export default function Contacts() {
 
   const openEditDialog = (contact) => {
     setSelectedContact(contact);
-    setFormData({ ...contact });
+    setFormData({ ...initialFormData, ...contact });
     setIsEditOpen(true);
     setDropdownOpen(null);
   };
 
-  const resetForm = () => {
-    setFormData({ first_name: '', last_name: '', email: '', phone: '', company: '', job_title: '', linkedin: '', address: '', city: '', country: '', notes: '', tags: [] });
+  const handleImport = async (e) => {
+    e.preventDefault();
+    if (!importFile) { toast.error('Please select a file'); return; }
+    
+    setImportLoading(true);
+    const formDataUpload = new FormData();
+    formDataUpload.append('file', importFile);
+    
+    try {
+      const response = await fetch(`${API}/api/contacts/import`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formDataUpload
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(`Successfully imported ${result.imported} contacts`);
+        setIsImportOpen(false);
+        setImportFile(null);
+        fetchContacts();
+      } else {
+        const data = await response.json();
+        toast.error(data.detail || 'Failed to import contacts');
+      }
+    } catch (error) {
+      toast.error('Failed to import contacts');
+    } finally {
+      setImportLoading(false);
+    }
   };
 
-  const Modal = ({ isOpen, onClose, title, children }) => {
-    if (!isOpen) return null;
-    return (
-      <div className="elstar-modal-overlay" onClick={onClose}>
-        <div className="elstar-modal animate-fade-in max-w-lg" onClick={e => e.stopPropagation()}>
-          <div className="elstar-modal-header flex items-center justify-between">
-            <h3 className="font-semibold text-lg">{title}</h3>
-            <button onClick={onClose} className="p-1 hover:bg-secondary rounded"><X className="w-5 h-5" /></button>
-          </div>
-          {children}
+  const FormFields = ({ data, onChange }) => (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">First Name / Clinic Name *</label>
+          <input className="elstar-input" value={data.first_name} onChange={(e) => onChange('first_name', e.target.value)} placeholder="Clinic Name" data-testid="contact-first-name" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Last Name</label>
+          <input className="elstar-input" value={data.last_name} onChange={(e) => onChange('last_name', e.target.value)} />
         </div>
       </div>
-    );
-  };
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">Email</label>
+          <input className="elstar-input" type="email" value={data.email} onChange={(e) => onChange('email', e.target.value)} data-testid="contact-email" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Phone / Contact Number</label>
+          <input className="elstar-input" value={data.phone} onChange={(e) => onChange('phone', e.target.value)} placeholder="+60 123 456 789" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">Company</label>
+          <input className="elstar-input" value={data.company} onChange={(e) => onChange('company', e.target.value)} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Job Title</label>
+          <input className="elstar-input" value={data.job_title} onChange={(e) => onChange('job_title', e.target.value)} />
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-2">Address</label>
+        <input className="elstar-input" value={data.address || ''} onChange={(e) => onChange('address', e.target.value)} placeholder="Full address" />
+      </div>
+      <div className="grid grid-cols-3 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">City</label>
+          <input className="elstar-input" value={data.city} onChange={(e) => onChange('city', e.target.value)} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Postcode</label>
+          <input className="elstar-input" value={data.postcode || ''} onChange={(e) => onChange('postcode', e.target.value)} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">State</label>
+          <input className="elstar-input" value={data.state || ''} onChange={(e) => onChange('state', e.target.value)} />
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-2">Country</label>
+        <input className="elstar-input" value={data.country} onChange={(e) => onChange('country', e.target.value)} placeholder="Malaysia" />
+      </div>
+      <div className="flex items-center gap-2">
+        <input 
+          type="checkbox" 
+          id="contact_is_public" 
+          checked={data.is_public || false} 
+          onChange={(e) => onChange('is_public', e.target.checked)}
+          className="w-4 h-4 rounded border-input text-primary focus:ring-primary"
+        />
+        <label htmlFor="contact_is_public" className="text-sm">Is Public</label>
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-2">Notes</label>
+        <textarea className="elstar-input min-h-[80px]" value={data.notes} onChange={(e) => onChange('notes', e.target.value)} />
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6" data-testid="contacts-page">
@@ -104,9 +198,14 @@ export default function Contacts() {
           <h1 className="text-2xl font-bold">Contacts</h1>
           <p className="text-muted-foreground mt-1">Manage your customer database</p>
         </div>
-        <button onClick={() => { resetForm(); setIsCreateOpen(true); }} className="elstar-btn-primary flex items-center gap-2" data-testid="add-contact-btn">
-          <Plus className="w-4 h-4" /> Add Contact
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setIsImportOpen(true)} className="elstar-btn-ghost flex items-center gap-2" data-testid="import-contact-btn">
+            <Upload className="w-4 h-4" /> Import Excel
+          </button>
+          <button onClick={() => { setFormData(initialFormData); setIsCreateOpen(true); }} className="elstar-btn-primary flex items-center gap-2" data-testid="add-contact-btn">
+            <Plus className="w-4 h-4" /> Add Contact
+          </button>
+        </div>
       </div>
 
       <div className="elstar-card p-4">
@@ -126,12 +225,15 @@ export default function Contacts() {
             </div>
             <p className="font-medium">No contacts found</p>
             <p className="text-sm text-muted-foreground mb-4">Start building your customer database</p>
-            <button onClick={() => { resetForm(); setIsCreateOpen(true); }} className="elstar-btn-primary"><Plus className="w-4 h-4 mr-2" />Add Contact</button>
+            <div className="flex gap-2">
+              <button onClick={() => setIsImportOpen(true)} className="elstar-btn-ghost"><Upload className="w-4 h-4 mr-2" />Import Excel</button>
+              <button onClick={() => { setFormData(initialFormData); setIsCreateOpen(true); }} className="elstar-btn-primary"><Plus className="w-4 h-4 mr-2" />Add Contact</button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
             {contacts.map((contact) => (
-              <div key={contact.id} className="elstar-card p-4 hover:border-primary/30 transition-colors" data-testid={`contact-card-${contact.id}`}>
+              <div key={contact.id} className="elstar-card p-4" data-testid={`contact-card-${contact.id}`}>
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className="elstar-avatar w-10 h-10">{contact.first_name?.charAt(0)?.toUpperCase()}</div>
@@ -159,7 +261,12 @@ export default function Contacts() {
                   {contact.company && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Building2 className="w-4 h-4" />{contact.company}</div>}
                   {contact.email && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Mail className="w-4 h-4" /><span className="truncate">{contact.email}</span></div>}
                   {contact.phone && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Phone className="w-4 h-4" />{contact.phone}</div>}
-                  {contact.city && <div className="flex items-center gap-2 text-sm text-muted-foreground"><MapPin className="w-4 h-4" />{contact.city}, {contact.country}</div>}
+                  {(contact.city || contact.state) && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <MapPin className="w-4 h-4" />
+                      {contact.city}{contact.city && contact.state && ', '}{contact.state}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -168,54 +275,57 @@ export default function Contacts() {
       </div>
 
       {/* Create Modal */}
-      <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Add New Contact">
+      <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Add New Contact" size="lg">
         <form onSubmit={handleCreate}>
-          <div className="elstar-modal-body space-y-4 max-h-96 overflow-y-auto">
-            <div className="grid grid-cols-2 gap-4">
-              <div><label className="block text-sm font-medium mb-2">First Name *</label><input className="elstar-input" value={formData.first_name} onChange={(e) => setFormData({...formData, first_name: e.target.value})} data-testid="contact-first-name" /></div>
-              <div><label className="block text-sm font-medium mb-2">Last Name</label><input className="elstar-input" value={formData.last_name} onChange={(e) => setFormData({...formData, last_name: e.target.value})} /></div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><label className="block text-sm font-medium mb-2">Email</label><input className="elstar-input" type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} data-testid="contact-email" /></div>
-              <div><label className="block text-sm font-medium mb-2">Phone</label><input className="elstar-input" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} /></div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><label className="block text-sm font-medium mb-2">Company</label><input className="elstar-input" value={formData.company} onChange={(e) => setFormData({...formData, company: e.target.value})} /></div>
-              <div><label className="block text-sm font-medium mb-2">Job Title</label><input className="elstar-input" value={formData.job_title} onChange={(e) => setFormData({...formData, job_title: e.target.value})} /></div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><label className="block text-sm font-medium mb-2">City</label><input className="elstar-input" value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})} /></div>
-              <div><label className="block text-sm font-medium mb-2">Country</label><input className="elstar-input" value={formData.country} onChange={(e) => setFormData({...formData, country: e.target.value})} /></div>
-            </div>
-            <div><label className="block text-sm font-medium mb-2">Notes</label><textarea className="elstar-input min-h-[80px]" value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} /></div>
+          <div className="elstar-modal-body max-h-96 overflow-y-auto">
+            <FormFields data={formData} onChange={handleInputChange} />
           </div>
           <div className="elstar-modal-footer">
             <button type="button" onClick={() => setIsCreateOpen(false)} className="elstar-btn-ghost">Cancel</button>
-            <button type="submit" disabled={formLoading} className="elstar-btn-primary flex items-center gap-2" data-testid="submit-contact-btn">{formLoading && <Loader2 className="w-4 h-4 animate-spin" />}Create Contact</button>
+            <button type="submit" disabled={formLoading} className="elstar-btn-primary flex items-center gap-2" data-testid="submit-contact-btn">
+              {formLoading && <Loader2 className="w-4 h-4 animate-spin" />}Create Contact
+            </button>
           </div>
         </form>
       </Modal>
 
       {/* Edit Modal */}
-      <Modal isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} title="Edit Contact">
+      <Modal isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} title="Edit Contact" size="lg">
         <form onSubmit={handleEdit}>
-          <div className="elstar-modal-body space-y-4 max-h-96 overflow-y-auto">
-            <div className="grid grid-cols-2 gap-4">
-              <div><label className="block text-sm font-medium mb-2">First Name *</label><input className="elstar-input" value={formData.first_name} onChange={(e) => setFormData({...formData, first_name: e.target.value})} /></div>
-              <div><label className="block text-sm font-medium mb-2">Last Name</label><input className="elstar-input" value={formData.last_name} onChange={(e) => setFormData({...formData, last_name: e.target.value})} /></div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><label className="block text-sm font-medium mb-2">Email</label><input className="elstar-input" type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} /></div>
-              <div><label className="block text-sm font-medium mb-2">Phone</label><input className="elstar-input" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} /></div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><label className="block text-sm font-medium mb-2">Company</label><input className="elstar-input" value={formData.company} onChange={(e) => setFormData({...formData, company: e.target.value})} /></div>
-              <div><label className="block text-sm font-medium mb-2">Job Title</label><input className="elstar-input" value={formData.job_title} onChange={(e) => setFormData({...formData, job_title: e.target.value})} /></div>
-            </div>
+          <div className="elstar-modal-body max-h-96 overflow-y-auto">
+            <FormFields data={formData} onChange={handleInputChange} />
           </div>
           <div className="elstar-modal-footer">
             <button type="button" onClick={() => setIsEditOpen(false)} className="elstar-btn-ghost">Cancel</button>
-            <button type="submit" disabled={formLoading} className="elstar-btn-primary flex items-center gap-2">{formLoading && <Loader2 className="w-4 h-4 animate-spin" />}Update Contact</button>
+            <button type="submit" disabled={formLoading} className="elstar-btn-primary flex items-center gap-2">
+              {formLoading && <Loader2 className="w-4 h-4 animate-spin" />}Update Contact
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Import Modal */}
+      <Modal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} title="Import Contacts from Excel">
+        <form onSubmit={handleImport}>
+          <div className="elstar-modal-body space-y-4">
+            <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
+              <FileSpreadsheet className="w-12 h-12 mx-auto mb-4 text-primary" />
+              <p className="font-medium mb-2">Upload Excel File</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                Supported columns: Clinic Name, Address, Postcode, City, State, Contact Number, Is public
+              </p>
+              <input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => setImportFile(e.target.files[0])} className="hidden" id="contact-excel-upload" />
+              <label htmlFor="contact-excel-upload" className="elstar-btn-primary cursor-pointer inline-flex items-center gap-2">
+                <Upload className="w-4 h-4" /> Choose File
+              </label>
+              {importFile && <p className="mt-4 text-sm text-primary font-medium">{importFile.name}</p>}
+            </div>
+          </div>
+          <div className="elstar-modal-footer">
+            <button type="button" onClick={() => { setIsImportOpen(false); setImportFile(null); }} className="elstar-btn-ghost">Cancel</button>
+            <button type="submit" disabled={importLoading || !importFile} className="elstar-btn-primary flex items-center gap-2">
+              {importLoading && <Loader2 className="w-4 h-4 animate-spin" />} Import Contacts
+            </button>
           </div>
         </form>
       </Modal>
