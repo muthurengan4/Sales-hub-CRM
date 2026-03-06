@@ -7,7 +7,7 @@ Build an AI-powered HubSpot CRM clone with Lead Management, Pipeline & Deals (Ka
 - **AI Provider**: Claude Sonnet 4.5 via Emergent LLM integration
 - **Authentication**: JWT-based custom auth (email/password)
 - **Scope**: Full CRM + Sales Management Platform
-- **Theme**: Elstar Admin Template (Tailwind CSS) with Dark/Light mode
+- **Theme**: Elstar Admin Template (Tailwind CSS) with White & Gold color scheme, Dark/Light mode
 
 ## Architecture
 
@@ -131,6 +131,12 @@ Build an AI-powered HubSpot CRM clone with Lead Management, Pipeline & Deals (Ka
 ## Bug Fixes Applied (December 2025)
 - Fixed `organization_id` validation error in DealResponse, LeadResponse, ContactResponse, ActivityResponse models - made field optional for legacy data compatibility
 - Dropdown z-index issue in modals - resolved with Elstar UI overhaul
+
+## Theme Update (December 2025)
+- Changed color scheme from white & blue to **white & gold**
+- Primary color: `#D4AF37` (metallic gold)
+- Accent colors: `#FFD700` (bright gold), `#B8860B` (dark gold)
+- Updated all UI elements: buttons, badges, icons, charts, gradients
 
 ## Prioritized Backlog
 

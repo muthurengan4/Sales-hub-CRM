@@ -7,9 +7,9 @@ const API = process.env.REACT_APP_BACKEND_URL;
 
 const STAGES = [
   { id: 'lead', label: 'Lead', color: 'bg-slate-500' },
-  { id: 'qualified', label: 'Qualified', color: 'bg-blue-500' },
-  { id: 'demo', label: 'Demo', color: 'bg-purple-500' },
-  { id: 'proposal', label: 'Proposal', color: 'bg-amber-500' },
+  { id: 'qualified', label: 'Qualified', color: 'bg-amber-400' },
+  { id: 'demo', label: 'Demo', color: 'bg-amber-500' },
+  { id: 'proposal', label: 'Proposal', color: 'bg-amber-600' },
   { id: 'negotiation', label: 'Negotiation', color: 'bg-orange-500' },
   { id: 'closed_won', label: 'Closed Won', color: 'bg-emerald-500' },
   { id: 'closed_lost', label: 'Closed Lost', color: 'bg-red-500' }

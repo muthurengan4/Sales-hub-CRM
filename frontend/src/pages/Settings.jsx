@@ -17,8 +17,8 @@ export default function Settings() {
       {/* Profile Card */}
       <div className="elstar-card p-6">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-            <User className="w-5 h-5 text-blue-500" />
+          <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+            <User className="w-5 h-5 text-amber-500" />
           </div>
           <div>
             <h2 className="font-semibold">Profile</h2>
@@ -43,8 +43,8 @@ export default function Settings() {
       {/* Appearance Card */}
       <div className="elstar-card p-6">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
-            {theme === 'dark' ? <Moon className="w-5 h-5 text-purple-500" /> : <Sun className="w-5 h-5 text-purple-500" />}
+          <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+            {theme === 'dark' ? <Moon className="w-5 h-5 text-amber-500" /> : <Sun className="w-5 h-5 text-amber-500" />}
           </div>
           <div>
             <h2 className="font-semibold">Appearance</h2>

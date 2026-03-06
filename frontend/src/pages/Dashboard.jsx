@@ -54,10 +54,10 @@ export default function Dashboard() {
   }
 
   const stats = analytics ? [
-    { title: 'Total Leads', value: analytics.total_leads, icon: Users, change: '+12%', positive: true, iconBg: 'bg-blue-500/10', iconColor: 'text-blue-500' },
+    { title: 'Total Leads', value: analytics.total_leads, icon: Users, change: '+12%', positive: true, iconBg: 'bg-amber-500/10', iconColor: 'text-amber-500' },
     { title: 'Pipeline Value', value: formatCurrency(analytics.total_pipeline_value), icon: DollarSign, change: '+8%', positive: true, iconBg: 'bg-emerald-500/10', iconColor: 'text-emerald-500' },
-    { title: 'Won Revenue', value: formatCurrency(analytics.won_deals_value), icon: TrendingUp, change: '+23%', positive: true, iconBg: 'bg-purple-500/10', iconColor: 'text-purple-500' },
-    { title: 'Contacts', value: analytics.total_contacts, icon: Contact2, change: '+5%', positive: true, iconBg: 'bg-amber-500/10', iconColor: 'text-amber-500' }
+    { title: 'Won Revenue', value: formatCurrency(analytics.won_deals_value), icon: TrendingUp, change: '+23%', positive: true, iconBg: 'bg-amber-600/10', iconColor: 'text-amber-600' },
+    { title: 'Contacts', value: analytics.total_contacts, icon: Contact2, change: '+5%', positive: true, iconBg: 'bg-amber-400/10', iconColor: 'text-amber-400' }
   ] : [];
 
   if (loading) {

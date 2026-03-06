@@ -28,10 +28,10 @@ export default function Layout() {
 
   const getRoleBadge = (role) => {
     const colors = {
-      super_admin: 'bg-purple-500/20 text-purple-400',
-      org_admin: 'bg-blue-500/20 text-blue-400',
+      super_admin: 'bg-amber-500/20 text-amber-500',
+      org_admin: 'bg-amber-400/20 text-amber-400',
       manager: 'bg-emerald-500/20 text-emerald-400',
-      sales_rep: 'bg-amber-500/20 text-amber-400',
+      sales_rep: 'bg-amber-600/20 text-amber-600',
       viewer: 'bg-slate-500/20 text-slate-400'
     };
     return colors[role] || colors.viewer;
