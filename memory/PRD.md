@@ -1,18 +1,18 @@
 # HubSpot CRM Clone - PRD
 
 ## Original Problem Statement
-Build an AI-powered HubSpot CRM clone with Lead Management, Pipeline & Deals (Kanban), Basic Analytics Dashboard, and AI features powered by Claude Sonnet 4.5.
+Build an AI-powered HubSpot CRM clone with Lead Management, Pipeline & Deals (Kanban), Basic Analytics Dashboard, and AI features powered by Claude Sonnet 4.5. Later expanded to include Multi-tenancy and Role-Based Access Control (RBAC).
 
 ## User Choices
 - **AI Provider**: Claude Sonnet 4.5 via Emergent LLM integration
 - **Authentication**: JWT-based custom auth (email/password)
-- **Scope**: Minimal MVP - Lead Management + Pipeline + Basic Analytics
-- **Theme**: Dark/Light mode with toggle
+- **Scope**: Full CRM + Sales Management Platform
+- **Theme**: Elstar Admin Template (Tailwind CSS) with Dark/Light mode
 
 ## Architecture
 
 ### Tech Stack
-- **Frontend**: React 19, TailwindCSS, Shadcn UI, Recharts
+- **Frontend**: React 19, TailwindCSS (Elstar theme), Lucide React icons, Recharts
 - **Backend**: FastAPI (Python)
 - **Database**: MongoDB
 - **AI**: Claude Sonnet 4.5 via emergentintegrations library
@@ -21,38 +21,51 @@ Build an AI-powered HubSpot CRM clone with Lead Management, Pipeline & Deals (Ka
 ```
 /app/
 ├── backend/
-│   ├── server.py          # FastAPI with JWT auth, Lead/Deal/Analytics APIs
+│   ├── server.py          # FastAPI with JWT auth, Multi-tenant, RBAC
 │   └── .env               # MONGO_URL, JWT_SECRET, EMERGENT_LLM_KEY
 ├── frontend/src/
 │   ├── App.js             # Auth/Theme providers, routing
-│   ├── components/Layout.jsx  # Sidebar navigation
+│   ├── components/Layout.jsx  # Elstar sidebar navigation
 │   ├── pages/
 │   │   ├── Login.jsx
 │   │   ├── Register.jsx
-│   │   ├── Dashboard.jsx  # Analytics widgets + charts
-│   │   ├── Leads.jsx      # Lead table + CRUD
-│   │   ├── Pipeline.jsx   # Kanban board
+│   │   ├── Dashboard.jsx  # Analytics widgets + organization setup
+│   │   ├── Leads.jsx      # Lead table + CRUD with AI scoring
+│   │   ├── Pipeline.jsx   # Kanban board for deals
+│   │   ├── Contacts.jsx   # Contact management
+│   │   ├── Users.jsx      # Team management + user invites
+│   │   ├── Organization.jsx # Organization settings
 │   │   └── Settings.jsx   # Theme toggle
+│   └── index.css          # Elstar theme styles
 ```
 
-## User Personas
-1. **Sales Rep**: Creates/manages leads, tracks deals through pipeline
-2. **Sales Manager**: Views analytics dashboard, monitors team performance
+## User Personas & Roles (RBAC)
+1. **Super Admin**: Platform-wide access (multi-org)
+2. **Org Admin**: Full access within organization, can invite users
+3. **Manager**: Can view team data, manage all leads/deals
+4. **Sales Rep**: Can manage own leads/deals
+5. **Viewer**: Read-only access
 
-## Core Requirements (Implemented)
+## Core Requirements - IMPLEMENTED
 
-### ✅ Authentication
+### ✅ Authentication & Authorization
 - JWT-based login/register
 - Protected routes
+- Role-Based Access Control (RBAC)
 - 24-hour token expiration
+
+### ✅ Multi-tenancy
+- Organization creation and management
+- Data isolation per organization
+- User invitation system with role assignment
 
 ### ✅ Lead Management
 - Create, Read, Update, Delete leads
 - Lead fields: name, email, phone, company, title, industry, source
-- AI-powered lead scoring (0-100)
-- AI-generated insights from Claude Sonnet 4.5
+- AI-powered lead scoring (0-100) via Claude Sonnet 4.5
 - Status tracking: new, contacted, qualified, lost
 - Search and filter capabilities
+- Organization-scoped data
 
 ### ✅ Pipeline & Deals
 - Visual Kanban board with 7 stages
@@ -61,43 +74,63 @@ Build an AI-powered HubSpot CRM clone with Lead Management, Pipeline & Deals (Ka
 - AI health score for deals
 - Stage value totals
 
+### ✅ Contact Management
+- Contact CRUD operations
+- Contact fields: name, email, phone, company, job title
+
+### ✅ Team Management
+- User listing per organization
+- Role assignment and updates
+- User invitation with email
+
 ### ✅ Analytics Dashboard
-- Stats cards: Total Leads, Pipeline Value, Won Revenue, Conversion Rate
-- Revenue Trend line chart
-- Pipeline Overview bar chart
-- AI Insights section
+- Stats cards: Total Leads, Pipeline Value, Won Revenue, Contacts
+- Organization context display
+- Role-based data visibility
 
 ### ✅ UI/UX
+- Elstar Admin Template design
 - Dark/Light mode toggle
-- Glassmorphism design
 - Responsive layout
-- Manrope + Inter + JetBrains Mono fonts
 - Toast notifications
+- Modal forms with working dropdowns
 
-## What's Been Implemented (March 2026)
+## What's Been Implemented (December 2025)
 
-### Backend APIs
+### Backend APIs (Multi-tenant)
 - POST /api/auth/register
 - POST /api/auth/login
 - GET /api/auth/me
-- GET/POST /api/leads
+- GET/POST /api/organizations
+- GET/PUT/DELETE /api/organizations/{id}
+- GET /api/users (org-scoped)
+- POST /api/users/invite
+- PUT/DELETE /api/users/{id}
+- GET/POST /api/leads (org-scoped)
 - GET/PUT/DELETE /api/leads/{id}
 - POST /api/leads/{id}/refresh-score
-- GET/POST /api/deals
+- GET/POST /api/deals (org-scoped)
 - GET/PUT/DELETE /api/deals/{id}
-- GET /api/analytics
+- GET/POST /api/contacts (org-scoped)
+- GET /api/analytics (org-scoped)
 
 ### Frontend Pages
 - Login/Register with validation
-- Dashboard with analytics charts
+- Dashboard with organization setup prompt
 - Leads table with CRUD dialogs
 - Pipeline Kanban board
+- Contacts management
+- Team (Users) management
+- Organization settings
 - Settings with theme toggle
 
 ### AI Features
 - Lead scoring algorithm (0-100)
-- AI insights generation via Claude Sonnet 4.5
 - Deal health scoring based on stage progression
+
+## Bug Fixes Applied (December 2025)
+- Fixed `organization_id` validation error in DealResponse, LeadResponse, ContactResponse, ActivityResponse models - made field optional for legacy data compatibility
+- Dropdown z-index issue in modals - resolved with Elstar UI overhaul
 
 ## Prioritized Backlog
 
@@ -106,6 +139,10 @@ Build an AI-powered HubSpot CRM clone with Lead Management, Pipeline & Deals (Ka
 - ✅ Lead CRUD operations
 - ✅ Pipeline Kanban board
 - ✅ Basic analytics
+- ✅ Multi-tenancy
+- ✅ RBAC system
+- ✅ Organization management
+- ✅ Team management
 
 ### P1 - Important (Next Phase)
 - Email generation with AI (AI Email Assistant)
@@ -119,12 +156,12 @@ Build an AI-powered HubSpot CRM clone with Lead Management, Pipeline & Deals (Ka
 - Conversational intelligence
 - Predictive forecasting
 - Workflow automation
-- Mobile responsive improvements
 - Calendar integration
+- Mobile responsive improvements
 
 ## Next Tasks
-1. Fix dropdown selection in modal forms (z-index issue)
-2. Add AI Email Assistant for automated outreach
-3. Implement lead activity timeline
-4. Add deal value forecasting
-5. Integrate calendar for meetings
+1. Add AI Email Assistant for automated outreach
+2. Implement lead activity timeline
+3. Add deal value forecasting
+4. Integrate calendar for meetings
+5. Backend refactoring (break server.py into modular routers)

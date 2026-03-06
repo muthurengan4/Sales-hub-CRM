@@ -206,7 +206,7 @@ class ContactResponse(BaseModel):
     notes: Optional[str] = None
     tags: List[str] = []
     custom_fields: Dict[str, Any] = {}
-    organization_id: str
+    organization_id: Optional[str] = None  # Optional for legacy contacts
     owner_id: str
     owner_name: Optional[str] = None
     created_at: str
@@ -257,7 +257,7 @@ class LeadResponse(BaseModel):
     ai_score: int
     ai_insights: Optional[str] = None
     contact_id: Optional[str] = None
-    organization_id: str
+    organization_id: Optional[str] = None  # Optional for legacy leads
     owner_id: str
     owner_name: Optional[str] = None
     assigned_to: Optional[str] = None
@@ -301,7 +301,7 @@ class DealResponse(BaseModel):
     notes: Optional[str] = None
     probability: Optional[int] = None
     ai_health_score: int
-    organization_id: str
+    organization_id: Optional[str] = None  # Optional for legacy deals
     owner_id: str
     owner_name: Optional[str] = None
     assigned_to: Optional[str] = None
@@ -331,7 +331,7 @@ class ActivityResponse(BaseModel):
     deal_id: Optional[str] = None
     scheduled_at: Optional[str] = None
     completed: bool
-    organization_id: str
+    organization_id: Optional[str] = None  # Optional for legacy activities
     owner_id: str
     owner_name: Optional[str] = None
     created_at: str
