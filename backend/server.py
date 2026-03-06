@@ -27,7 +27,7 @@ JWT_SECRET = os.environ.get('JWT_SECRET', 'hubspot-crm-secret-key-2024-very-secu
 JWT_ALGORITHM = 'HS256'
 JWT_EXPIRATION_HOURS = 24
 
-app = FastAPI(title="Unified CRM Platform", version="2.0.0")
+app = FastAPI(title="SalesHub Platform", version="2.0.0")
 api_router = APIRouter(prefix="/api")
 
 logging.basicConfig(level=logging.INFO)
@@ -1478,7 +1478,7 @@ async def get_roles():
 
 @api_router.get("/")
 async def root():
-    return {"message": "Unified CRM Platform API", "version": "2.0.0", "features": ["Multi-tenant", "RBAC", "CRM", "Sales"]}
+    return {"message": "SalesHub Platform API", "version": "2.0.0", "features": ["Multi-tenant", "RBAC", "CRM", "Sales"]}
 
 # Include router and middleware
 app.include_router(api_router)

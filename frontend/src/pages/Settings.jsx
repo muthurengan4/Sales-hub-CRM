@@ -75,7 +75,7 @@ export default function Settings() {
           </div>
           <div>
             <h2 className="font-semibold ai-text">AI Features</h2>
-            <p className="text-sm text-muted-foreground">AI-powered capabilities in your CRM</p>
+            <p className="text-sm text-muted-foreground">AI-powered capabilities in SalesHub</p>
           </div>
         </div>
         

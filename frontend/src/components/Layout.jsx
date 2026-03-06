@@ -54,7 +54,7 @@ export default function Layout() {
               </svg>
             </div>
             <div>
-              <span className="font-bold text-lg">CRM Platform</span>
+              <span className="font-bold text-lg">SalesHub</span>
               <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">v2.0</span>
             </div>
           </div>
