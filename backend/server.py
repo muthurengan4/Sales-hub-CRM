@@ -345,9 +345,12 @@ class AnalyticsResponse(BaseModel):
     won_deals_value: float
     conversion_rate: float
     leads_by_status: Dict[str, int]
+    leads_by_source: Dict[str, int] = {}
     deals_by_stage: Dict[str, int]
     monthly_revenue: List[Dict[str, Any]]
     team_performance: List[Dict[str, Any]] = []
+    recent_activities: List[Dict[str, Any]] = []
+    organization_stats: Dict[str, Any] = {}
 
 # ============= AUTH HELPERS =============
 
@@ -1121,7 +1124,8 @@ async def get_analytics(user: dict = Depends(get_current_user)):
         return AnalyticsResponse(
             total_leads=0, total_deals=0, total_contacts=0,
             total_pipeline_value=0, won_deals_value=0, conversion_rate=0,
-            leads_by_status={}, deals_by_stage={}, monthly_revenue=[], team_performance=[]
+            leads_by_status={}, leads_by_source={}, deals_by_stage={}, 
+            monthly_revenue=[], team_performance=[], recent_activities=[], organization_stats={}
         )
     
     org_filter = {'organization_id': user['organization_id']}
@@ -1134,9 +1138,12 @@ async def get_analytics(user: dict = Depends(get_current_user)):
     leads = await db.leads.find(org_filter, {'_id': 0}).to_list(10000)
     total_leads = len(leads)
     leads_by_status = {}
+    leads_by_source = {}
     for lead in leads:
         status = lead.get('status', 'new')
         leads_by_status[status] = leads_by_status.get(status, 0) + 1
+        source = lead.get('source', 'other') or 'other'
+        leads_by_source[source] = leads_by_source.get(source, 0) + 1
     
     # Get deals stats
     deals = await db.deals.find(org_filter, {'_id': 0}).to_list(10000)
@@ -1167,6 +1174,46 @@ async def get_analytics(user: dict = Depends(get_current_user)):
         {"month": "Jun", "revenue": won_deals_value * 0.25}
     ]
     
+    # Recent activities (simulated based on recent leads/deals)
+    recent_activities = []
+    recent_leads = sorted(leads, key=lambda x: x.get('created_at', ''), reverse=True)[:3]
+    recent_deals = sorted(deals, key=lambda x: x.get('created_at', ''), reverse=True)[:3]
+    
+    for lead in recent_leads:
+        recent_activities.append({
+            'type': 'lead_created',
+            'title': f"New lead: {lead.get('name', 'Unknown')}",
+            'description': f"From {lead.get('source', 'unknown')} source",
+            'time': lead.get('created_at', '')[:10] if lead.get('created_at') else 'Recently',
+            'icon': 'user'
+        })
+    
+    for deal in recent_deals:
+        recent_activities.append({
+            'type': 'deal_created',
+            'title': f"Deal: {deal.get('title', 'Unknown')}",
+            'description': f"${deal.get('value', 0):,.0f} - {deal.get('stage', 'lead').replace('_', ' ')}",
+            'time': deal.get('created_at', '')[:10] if deal.get('created_at') else 'Recently',
+            'icon': 'briefcase'
+        })
+    
+    # Sort activities by time
+    recent_activities = sorted(recent_activities, key=lambda x: x.get('time', ''), reverse=True)[:5]
+    
+    # Organization stats for multi-tenancy view
+    org_stats = {}
+    if user.get('organization_id'):
+        org = await db.organizations.find_one({'id': user['organization_id']}, {'_id': 0})
+        if org:
+            member_count = await db.users.count_documents({'organization_id': user['organization_id']})
+            org_stats = {
+                'name': org.get('name', 'Unknown'),
+                'member_count': member_count,
+                'domain': org.get('domain', ''),
+                'industry': org.get('industry', ''),
+                'created_at': org.get('created_at', '')[:10] if org.get('created_at') else ''
+            }
+    
     # Team performance (only for managers/admins)
     team_performance = []
     if Permission.VIEW_TEAM_ANALYTICS.value in user['permissions']:
@@ -1192,9 +1239,12 @@ async def get_analytics(user: dict = Depends(get_current_user)):
         won_deals_value=won_deals_value,
         conversion_rate=round(conversion_rate, 1),
         leads_by_status=leads_by_status,
+        leads_by_source=leads_by_source,
         deals_by_stage=deals_by_stage,
         monthly_revenue=monthly_revenue,
-        team_performance=team_performance
+        team_performance=team_performance,
+        recent_activities=recent_activities,
+        organization_stats=org_stats
     )
 
 # ============= ROLES INFO ROUTE =============
