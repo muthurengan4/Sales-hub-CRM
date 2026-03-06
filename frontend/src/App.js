@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
-import '@/index.css';
+import './index.css';
 
 // Pages
 import Login from './pages/Login';
@@ -65,10 +65,8 @@ const AuthProvider = ({ children }) => {
 
   if (loading) {
     return (
-      <div data-theme="dark" className="hero is-fullheight">
-        <div className="hero-body is-justify-content-center">
-          <span className="loader"></span>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -96,6 +94,9 @@ const ThemeProvider = ({ children }) => {
   });
 
   useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove('light', 'dark');
+    root.classList.add(theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
 
@@ -105,9 +106,7 @@ const ThemeProvider = ({ children }) => {
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
-      <div data-theme={theme}>
-        {children}
-      </div>
+      {children}
     </ThemeContext.Provider>
   );
 };
@@ -131,7 +130,14 @@ function App() {
     <ThemeProvider>
       <BrowserRouter>
         <AuthProvider>
-          <Toaster position="top-right" richColors closeButton />
+          <Toaster 
+            position="top-right" 
+            richColors 
+            closeButton 
+            toastOptions={{
+              style: { background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }
+            }}
+          />
           <Routes>
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
             <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />

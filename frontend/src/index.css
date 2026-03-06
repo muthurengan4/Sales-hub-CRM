@@ -1,211 +1,252 @@
-@import 'bulma/css/bulma.min.css';
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-/* Custom theme variables for dark mode */
-:root {
-  --bulma-scheme-main: #ffffff;
-  --bulma-scheme-main-bis: #fafafa;
-  --bulma-scheme-main-ter: #f5f5f5;
-  --bulma-text: #1a1a2e;
-  --bulma-text-strong: #0a0a1a;
-  --bulma-link: #6366f1;
-  --bulma-link-hover: #4f46e5;
-  --bulma-primary: #6366f1;
-  --bulma-primary-light: #818cf8;
-  --bulma-info: #3b82f6;
-  --bulma-success: #10b981;
-  --bulma-warning: #f59e0b;
-  --bulma-danger: #ef4444;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Elstar Light Theme - Clean Professional */
+    --background: 210 20% 98%;
+    --foreground: 224 71% 4%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71% 4%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71% 4%;
+    --primary: 243 75% 59%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 9% 46%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 220 14% 96%;
+    --accent-foreground: 224 71% 4%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 243 75% 59%;
+    --radius: 0.5rem;
+    
+    /* Elstar specific colors */
+    --sidebar-bg: 0 0% 100%;
+    --header-bg: 0 0% 100%;
+    --success: 142 71% 45%;
+    --warning: 38 92% 50%;
+    --info: 199 89% 48%;
+  }
+
+  .dark {
+    /* Elstar Dark Theme - Sleek Modern */
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
+    --card: 224 47% 8%;
+    --card-foreground: 213 31% 91%;
+    --popover: 224 47% 8%;
+    --popover-foreground: 213 31% 91%;
+    --primary: 243 75% 59%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 223 47% 11%;
+    --secondary-foreground: 215 20% 65%;
+    --muted: 223 47% 11%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 223 47% 11%;
+    --accent-foreground: 213 31% 91%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 223 47% 15%;
+    --input: 223 47% 15%;
+    --ring: 243 75% 59%;
+    
+    --sidebar-bg: 224 47% 6%;
+    --header-bg: 224 47% 8%;
+  }
 }
 
-[data-theme="dark"] {
-  --bulma-scheme-main: #09090b;
-  --bulma-scheme-main-bis: #18181b;
-  --bulma-scheme-main-ter: #27272a;
-  --bulma-text: #f4f4f5;
-  --bulma-text-strong: #ffffff;
-  --bulma-text-light: #a1a1aa;
-  --bulma-border: #27272a;
-  --bulma-border-hover: #3f3f46;
-  --bulma-background: #09090b;
-  --bulma-link: #818cf8;
-  --bulma-link-hover: #a5b4fc;
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
 }
 
-/* Base styles */
-html, body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background-color: var(--bulma-scheme-main);
-  color: var(--bulma-text);
-  min-height: 100vh;
+/* Elstar Component Styles */
+@layer components {
+  /* Card with soft shadow - Elstar signature */
+  .elstar-card {
+    @apply bg-card rounded-lg border border-border;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05);
+  }
+  
+  .dark .elstar-card {
+    box-shadow: none;
+  }
+  
+  /* Primary button with Elstar gradient effect */
+  .elstar-btn-primary {
+    @apply bg-primary text-primary-foreground font-medium px-4 py-2 rounded-lg transition-all duration-200;
+    @apply hover:opacity-90 active:scale-[0.98];
+  }
+  
+  /* Secondary/Ghost button */
+  .elstar-btn-ghost {
+    @apply bg-transparent text-foreground font-medium px-4 py-2 rounded-lg transition-all duration-200;
+    @apply hover:bg-secondary;
+  }
+  
+  /* Input field styling */
+  .elstar-input {
+    @apply w-full h-11 px-3 bg-background border border-input rounded-lg text-sm transition-colors;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary;
+    @apply placeholder:text-muted-foreground;
+  }
+  
+  /* Select dropdown */
+  .elstar-select {
+    @apply w-full h-11 px-3 bg-background border border-input rounded-lg text-sm transition-colors cursor-pointer;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary;
+  }
+  
+  /* Sidebar navigation item */
+  .elstar-nav-item {
+    @apply flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200;
+    @apply text-muted-foreground hover:text-foreground hover:bg-secondary;
+  }
+  
+  .elstar-nav-item.active {
+    @apply bg-primary/10 text-primary;
+  }
+  
+  /* Stat card */
+  .elstar-stat-card {
+    @apply elstar-card p-5;
+  }
+  
+  /* Table styling */
+  .elstar-table {
+    @apply w-full text-sm;
+  }
+  
+  .elstar-table th {
+    @apply text-left font-semibold text-muted-foreground py-3 px-4 border-b border-border;
+  }
+  
+  .elstar-table td {
+    @apply py-3 px-4 border-b border-border;
+  }
+  
+  .elstar-table tbody tr {
+    @apply transition-colors hover:bg-secondary/50;
+  }
+  
+  /* Badge/Tag */
+  .elstar-badge {
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium;
+  }
+  
+  .elstar-badge-primary {
+    @apply bg-primary/10 text-primary;
+  }
+  
+  .elstar-badge-success {
+    @apply bg-emerald-500/10 text-emerald-500;
+  }
+  
+  .elstar-badge-warning {
+    @apply bg-amber-500/10 text-amber-500;
+  }
+  
+  .elstar-badge-danger {
+    @apply bg-red-500/10 text-red-500;
+  }
+  
+  .elstar-badge-info {
+    @apply bg-blue-500/10 text-blue-500;
+  }
+  
+  /* Modal/Dialog */
+  .elstar-modal-overlay {
+    @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4;
+  }
+  
+  .elstar-modal {
+    @apply bg-card rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden;
+  }
+  
+  .elstar-modal-header {
+    @apply px-6 py-4 border-b border-border;
+  }
+  
+  .elstar-modal-body {
+    @apply px-6 py-4 overflow-y-auto;
+  }
+  
+  .elstar-modal-footer {
+    @apply px-6 py-4 border-t border-border flex justify-end gap-3;
+  }
+  
+  /* Kanban column */
+  .elstar-kanban-column {
+    @apply w-72 flex-shrink-0 bg-secondary/30 rounded-lg p-3;
+  }
+  
+  .elstar-kanban-card {
+    @apply elstar-card p-4 mb-3 cursor-grab active:cursor-grabbing;
+    @apply hover:border-primary/30 hover:shadow-md transition-all duration-200;
+  }
+  
+  /* Avatar */
+  .elstar-avatar {
+    @apply flex items-center justify-center rounded-full bg-primary/10 text-primary font-semibold;
+  }
+  
+  /* Dropdown */
+  .elstar-dropdown {
+    @apply absolute right-0 mt-2 w-48 bg-card rounded-lg border border-border shadow-lg z-50 overflow-hidden;
+  }
+  
+  .elstar-dropdown-item {
+    @apply px-4 py-2.5 text-sm text-foreground hover:bg-secondary transition-colors cursor-pointer;
+  }
 }
 
-h1, h2, h3, h4, h5, h6, .title, .subtitle {
-  font-family: 'Manrope', sans-serif;
-  letter-spacing: -0.02em;
-}
+/* Score colors */
+.score-high { @apply text-emerald-500; }
+.score-medium { @apply text-amber-500; }
+.score-low { @apply text-red-500; }
 
-code, pre, .is-family-monospace {
-  font-family: 'JetBrains Mono', monospace;
-}
-
-/* Dark mode specific overrides */
-[data-theme="dark"] .box {
-  background-color: var(--bulma-scheme-main-bis);
-  border: 1px solid var(--bulma-border);
-}
-
-[data-theme="dark"] .card {
-  background-color: var(--bulma-scheme-main-bis);
-  border: 1px solid var(--bulma-border);
-}
-
-[data-theme="dark"] .input,
-[data-theme="dark"] .textarea,
-[data-theme="dark"] .select select {
-  background-color: var(--bulma-scheme-main-bis);
-  border-color: var(--bulma-border);
-  color: var(--bulma-text);
-}
-
-[data-theme="dark"] .input::placeholder {
-  color: var(--bulma-text-light);
-}
-
-[data-theme="dark"] .input:focus,
-[data-theme="dark"] .textarea:focus,
-[data-theme="dark"] .select select:focus {
-  border-color: var(--bulma-primary);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
-}
-
-[data-theme="dark"] .menu-list a {
-  color: var(--bulma-text-light);
-}
-
-[data-theme="dark"] .menu-list a:hover {
-  background-color: var(--bulma-scheme-main-ter);
-  color: var(--bulma-text);
-}
-
-[data-theme="dark"] .menu-list a.is-active {
-  background-color: var(--bulma-primary);
-  color: white;
-}
-
-[data-theme="dark"] .table {
-  background-color: var(--bulma-scheme-main-bis);
-  color: var(--bulma-text);
-}
-
-[data-theme="dark"] .table th {
-  color: var(--bulma-text-light);
-  border-color: var(--bulma-border);
-}
-
-[data-theme="dark"] .table td {
-  border-color: var(--bulma-border);
-}
-
-[data-theme="dark"] .table tbody tr:hover {
-  background-color: var(--bulma-scheme-main-ter);
-}
-
-[data-theme="dark"] .modal-card-head,
-[data-theme="dark"] .modal-card-foot {
-  background-color: var(--bulma-scheme-main-bis);
-  border-color: var(--bulma-border);
-}
-
-[data-theme="dark"] .modal-card-body {
-  background-color: var(--bulma-scheme-main);
-}
-
-[data-theme="dark"] .modal-card-title {
-  color: var(--bulma-text);
-}
-
-[data-theme="dark"] .navbar {
-  background-color: var(--bulma-scheme-main-bis);
-  border-bottom: 1px solid var(--bulma-border);
-}
-
-[data-theme="dark"] .dropdown-content {
-  background-color: var(--bulma-scheme-main-bis);
-  border: 1px solid var(--bulma-border);
-}
-
-[data-theme="dark"] .dropdown-item {
-  color: var(--bulma-text);
-}
-
-[data-theme="dark"] .dropdown-item:hover {
-  background-color: var(--bulma-scheme-main-ter);
-}
-
-/* AI gradient styles */
+/* AI Gradient - Elstar accent */
 .ai-gradient {
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  background: linear-gradient(135deg, hsl(243 75% 59%) 0%, hsl(280 65% 60%) 100%);
 }
 
 .ai-text {
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  background: linear-gradient(135deg, hsl(243 75% 59%) 0%, hsl(280 65% 60%) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Sidebar styles */
-.sidebar {
-  width: 250px;
-  min-height: 100vh;
-  position: fixed;
-  left: 0;
-  top: 0;
-  background-color: var(--bulma-scheme-main-bis);
-  border-right: 1px solid var(--bulma-border);
-  z-index: 30;
+/* Custom scrollbar - Elstar style */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-.main-content {
-  margin-left: 250px;
-  min-height: 100vh;
-  padding: 2rem;
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-/* Kanban styles */
-.kanban-column {
-  min-width: 280px;
-  max-width: 280px;
-  background-color: var(--bulma-scheme-main-ter);
-  border-radius: 8px;
-  padding: 1rem;
+::-webkit-scrollbar-thumb {
+  @apply bg-border rounded-full;
 }
 
-.kanban-card {
-  cursor: grab;
-  transition: transform 0.2s, box-shadow 0.2s;
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/30;
 }
-
-.kanban-card:active {
-  cursor: grabbing;
-}
-
-.kanban-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-/* Score colors */
-.score-high { color: #10b981; }
-.score-medium { color: #f59e0b; }
-.score-low { color: #ef4444; }
-
-/* Status tags */
-.tag.is-new { background-color: rgba(59, 130, 246, 0.15); color: #3b82f6; }
-.tag.is-contacted { background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; }
-.tag.is-qualified { background-color: rgba(16, 185, 129, 0.15); color: #10b981; }
-.tag.is-lost { background-color: rgba(239, 68, 68, 0.15); color: #ef4444; }
 
 /* Hide Emergent badge */
 #emergent-badge,
@@ -218,35 +259,12 @@ div[style*="position: fixed"][style*="right: 16px"][style*="bottom: 16px"] {
   opacity: 0 !important;
 }
 
-/* Responsive */
-@media screen and (max-width: 1023px) {
-  .sidebar {
-    transform: translateX(-100%);
-    transition: transform 0.3s;
-  }
-  .sidebar.is-active {
-    transform: translateX(0);
-  }
-  .main-content {
-    margin-left: 0;
-  }
+/* Animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out forwards;
 }

@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../App';
+import { 
+  Users, 
+  DollarSign, 
+  TrendingUp, 
+  Target,
+  Sparkles,
+  ArrowUpRight,
+  ArrowDownRight
+} from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -37,127 +46,182 @@ export default function Dashboard() {
     }).format(value);
   };
 
+  const stats = analytics ? [
+    {
+      title: 'Total Leads',
+      value: analytics.total_leads,
+      icon: Users,
+      change: '+12%',
+      positive: true,
+      iconBg: 'bg-blue-500/10',
+      iconColor: 'text-blue-500'
+    },
+    {
+      title: 'Pipeline Value',
+      value: formatCurrency(analytics.total_pipeline_value),
+      icon: DollarSign,
+      change: '+8%',
+      positive: true,
+      iconBg: 'bg-emerald-500/10',
+      iconColor: 'text-emerald-500'
+    },
+    {
+      title: 'Won Revenue',
+      value: formatCurrency(analytics.won_deals_value),
+      icon: TrendingUp,
+      change: '+23%',
+      positive: true,
+      iconBg: 'bg-purple-500/10',
+      iconColor: 'text-purple-500'
+    },
+    {
+      title: 'Conversion Rate',
+      value: `${analytics.conversion_rate}%`,
+      icon: Target,
+      change: analytics.conversion_rate > 20 ? '+5%' : '-2%',
+      positive: analytics.conversion_rate > 20,
+      iconBg: 'bg-amber-500/10',
+      iconColor: 'text-amber-500'
+    }
+  ] : [];
+
   if (loading) {
     return (
-      <div className="has-text-centered p-6">
-        <span className="loader"></span>
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  const stats = analytics ? [
-    { title: 'Total Leads', value: analytics.total_leads, icon: '👥', color: 'is-info' },
-    { title: 'Pipeline Value', value: formatCurrency(analytics.total_pipeline_value), icon: '💰', color: 'is-success' },
-    { title: 'Won Revenue', value: formatCurrency(analytics.won_deals_value), icon: '📈', color: 'is-link' },
-    { title: 'Conversion Rate', value: `${analytics.conversion_rate}%`, icon: '🎯', color: 'is-warning' }
-  ] : [];
-
   return (
-    <div data-testid="dashboard">
+    <div className="space-y-6" data-testid="dashboard">
       {/* Header */}
-      <div className="mb-5">
-        <h1 className="title is-3">Welcome back, {user?.name?.split(' ')[0]}</h1>
-        <p className="subtitle is-6 has-text-grey">Here's what's happening with your sales pipeline today.</p>
+      <div>
+        <h1 className="text-2xl font-bold">Welcome back, {user?.name?.split(' ')[0]}</h1>
+        <p className="text-muted-foreground mt-1">Here's what's happening with your sales today.</p>
       </div>
 
       {/* Stats Grid */}
-      <div className="columns is-multiline">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, index) => (
-          <div className="column is-6-tablet is-3-desktop" key={index}>
-            <div className="box">
-              <div className="is-flex is-justify-content-space-between is-align-items-center mb-3">
-                <span className="is-size-7 has-text-grey has-text-weight-medium">{stat.title}</span>
-                <span className={`tag ${stat.color} is-light`}>{stat.icon}</span>
+          <div 
+            key={stat.title} 
+            className="elstar-stat-card animate-fade-in"
+            style={{ animationDelay: `${index * 50}ms` }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-sm text-muted-foreground font-medium">{stat.title}</span>
+              <div className={`w-10 h-10 rounded-lg ${stat.iconBg} flex items-center justify-center`}>
+                <stat.icon className={`w-5 h-5 ${stat.iconColor}`} />
               </div>
-              <p className="title is-4 mb-1">{stat.value}</p>
-              <p className="is-size-7 has-text-success">
-                ↑ +12% from last month
-              </p>
+            </div>
+            <div className="text-2xl font-bold mb-1">{stat.value}</div>
+            <div className={`flex items-center text-xs ${stat.positive ? 'text-emerald-500' : 'text-red-500'}`}>
+              {stat.positive ? (
+                <ArrowUpRight className="w-3 h-3 mr-1" />
+              ) : (
+                <ArrowDownRight className="w-3 h-3 mr-1" />
+              )}
+              {stat.change} from last month
             </div>
           </div>
         ))}
       </div>
 
       {/* Charts Row */}
-      <div className="columns">
-        <div className="column is-6">
-          <div className="box">
-            <h2 className="title is-5 mb-4">
-              <span className="mr-2">📈</span>
-              Revenue Trend
-            </h2>
-            <div style={{ height: '200px', display: 'flex', alignItems: 'flex-end', gap: '8px', padding: '1rem 0' }}>
-              {analytics?.monthly_revenue?.map((item, i) => (
-                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div 
-                    style={{ 
-                      width: '100%', 
-                      background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
-                      borderRadius: '4px 4px 0 0',
-                      height: `${Math.max(20, (item.revenue / (analytics.won_deals_value * 0.3 || 1)) * 150)}px`,
-                      maxHeight: '150px'
-                    }}
-                  />
-                  <span className="is-size-7 has-text-grey mt-2">{item.month}</span>
-                </div>
-              ))}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Revenue Chart */}
+        <div className="elstar-card p-5">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="font-semibold">Revenue Trend</h3>
+              <p className="text-sm text-muted-foreground">Monthly revenue overview</p>
             </div>
+          </div>
+          <div className="h-48 flex items-end gap-3">
+            {analytics?.monthly_revenue?.map((item, i) => {
+              const maxRev = Math.max(...analytics.monthly_revenue.map(r => r.revenue)) || 1;
+              const height = Math.max(20, (item.revenue / maxRev) * 160);
+              return (
+                <div key={i} className="flex-1 flex flex-col items-center">
+                  <div 
+                    className="w-full bg-primary rounded-t transition-all duration-500 hover:bg-primary/80"
+                    style={{ height: `${height}px` }}
+                  />
+                  <span className="text-xs text-muted-foreground mt-2">{item.month}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        <div className="column is-6">
-          <div className="box">
-            <h2 className="title is-5 mb-4">
-              <span className="mr-2">🎯</span>
-              Pipeline Overview
-            </h2>
-            <div style={{ padding: '1rem 0' }}>
-              {analytics && Object.entries(analytics.deals_by_stage).map(([stage, count]) => (
-                <div key={stage} className="mb-3">
-                  <div className="is-flex is-justify-content-space-between mb-1">
-                    <span className="is-size-7 has-text-weight-medium" style={{ textTransform: 'capitalize' }}>
-                      {stage.replace('_', ' ')}
-                    </span>
-                    <span className="is-size-7 has-text-grey">{count}</span>
-                  </div>
-                  <progress 
-                    className="progress is-small is-link" 
-                    value={count} 
-                    max={Math.max(...Object.values(analytics.deals_by_stage), 1)}
-                  />
-                </div>
-              ))}
-              {(!analytics || Object.keys(analytics.deals_by_stage).length === 0) && (
-                <p className="has-text-grey has-text-centered">No deals yet</p>
-              )}
+        {/* Pipeline Overview */}
+        <div className="elstar-card p-5">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="font-semibold">Pipeline Overview</h3>
+              <p className="text-sm text-muted-foreground">Deals by stage</p>
             </div>
+          </div>
+          <div className="space-y-4">
+            {analytics && Object.entries(analytics.deals_by_stage).length > 0 ? (
+              Object.entries(analytics.deals_by_stage).map(([stage, count]) => {
+                const max = Math.max(...Object.values(analytics.deals_by_stage)) || 1;
+                const width = (count / max) * 100;
+                return (
+                  <div key={stage}>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="capitalize text-muted-foreground">{stage.replace('_', ' ')}</span>
+                      <span className="font-medium">{count}</span>
+                    </div>
+                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary rounded-full transition-all duration-500"
+                        style={{ width: `${width}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-center text-muted-foreground py-8">No deals yet</p>
+            )}
           </div>
         </div>
       </div>
 
       {/* AI Insights */}
-      <div className="box" style={{ border: '1px solid rgba(99, 102, 241, 0.3)' }}>
-        <h2 className="title is-5 mb-4">
-          <span className="ai-gradient mr-2" style={{ width: '28px', height: '28px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ color: 'white', fontSize: '12px' }}>✦</span>
-          </span>
-          <span className="ai-text">AI Insights</span>
-        </h2>
+      <div className="elstar-card p-5 border-primary/20">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-9 h-9 ai-gradient rounded-lg flex items-center justify-center">
+            <Sparkles className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h3 className="font-semibold ai-text">AI Insights</h3>
+            <p className="text-xs text-muted-foreground">Powered by Claude Sonnet 4.5</p>
+          </div>
+        </div>
         
-        <div className="content">
-          <div className="message is-success is-small mb-3">
-            <div className="message-body">
-              <strong>Strong pipeline momentum</strong> - Your pipeline value has grown this month.
+        <div className="space-y-3">
+          <div className="flex items-start gap-3 p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-lg">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium">Strong pipeline momentum</p>
+              <p className="text-xs text-muted-foreground">Your pipeline value has grown this month.</p>
             </div>
           </div>
-          <div className="message is-warning is-small mb-3">
-            <div className="message-body">
-              <strong>Focus on qualified leads</strong> - Review leads with high AI scores for demos.
+          <div className="flex items-start gap-3 p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+            <div className="w-2 h-2 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium">Focus on qualified leads</p>
+              <p className="text-xs text-muted-foreground">Review leads with high AI scores for demos.</p>
             </div>
           </div>
-          <div className="message is-info is-small">
-            <div className="message-body">
-              <strong>Follow up recommended</strong> - Deals in negotiation stage need attention.
+          <div className="flex items-start gap-3 p-3 bg-blue-500/5 border border-blue-500/20 rounded-lg">
+            <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium">Follow up recommended</p>
+              <p className="text-xs text-muted-foreground">Deals in negotiation stage need attention.</p>
             </div>
           </div>
         </div>

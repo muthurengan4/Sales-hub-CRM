@@ -1,13 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth, useTheme } from '../App';
-import { useState } from 'react';
+import { 
+  LayoutDashboard, 
+  Users, 
+  Kanban, 
+  Settings, 
+  LogOut, 
+  Moon, 
+  Sun,
+  Menu,
+  X,
+  ChevronDown
+} from 'lucide-react';
 
 const navItems = [
-  { to: '/dashboard', icon: '📊', label: 'Dashboard' },
-  { to: '/leads', icon: '👥', label: 'Leads' },
-  { to: '/pipeline', icon: '📋', label: 'Pipeline' },
-  { to: '/settings', icon: '⚙️', label: 'Settings' },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/leads', icon: Users, label: 'Leads' },
+  { to: '/pipeline', icon: Kanban, label: 'Pipeline' },
+  { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 
 export default function Layout() {
@@ -15,6 +26,7 @@ export default function Layout() {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -22,141 +34,138 @@ export default function Layout() {
   };
 
   return (
-    <div data-theme={theme} style={{ minHeight: '100vh', background: 'var(--bulma-scheme-main)' }}>
+    <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
-      <aside className={`sidebar ${mobileOpen ? 'is-active' : ''}`} style={{ display: 'flex', flexDirection: 'column' }}>
+      <aside className={`
+        fixed lg:static inset-y-0 left-0 z-40 w-64 bg-card border-r border-border
+        transform transition-transform duration-200 ease-in-out
+        ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
         {/* Logo */}
-        <div className="p-4" style={{ borderBottom: '1px solid var(--bulma-border)' }}>
-          <div className="is-flex is-align-items-center">
-            <div 
-              className="ai-gradient mr-3" 
-              style={{ 
-                width: '40px', 
-                height: '40px', 
-                borderRadius: '10px', 
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <span style={{ color: 'white', fontSize: '18px' }}>✦</span>
+        <div className="h-16 px-6 flex items-center border-b border-border">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 ai-gradient rounded-lg flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+              </svg>
             </div>
             <div>
-              <p className="has-text-weight-bold is-size-5">SalesCRM</p>
-              <p className="is-size-7 has-text-grey">AI-Powered</p>
+              <span className="font-bold text-lg">SalesCRM</span>
+              <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">PRO</span>
             </div>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="menu p-4" style={{ flex: 1 }}>
-          <ul className="menu-list">
-            {navItems.map((item) => (
-              <li key={item.to}>
-                <NavLink
-                  to={item.to}
-                  className={({ isActive }) => isActive ? 'is-active' : ''}
-                  onClick={() => setMobileOpen(false)}
-                  data-testid={`nav-${item.label.toLowerCase()}`}
-                  style={{ borderRadius: '8px', marginBottom: '4px' }}
-                >
-                  <span className="mr-2">{item.icon}</span>
-                  {item.label}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
+        <nav className="p-4 space-y-1">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              onClick={() => setMobileOpen(false)}
+              className={({ isActive }) =>
+                `elstar-nav-item ${isActive ? 'active' : ''}`
+              }
+              data-testid={`nav-${item.label.toLowerCase()}`}
+            >
+              <item.icon className="w-5 h-5" />
+              {item.label}
+            </NavLink>
+          ))}
         </nav>
 
-        {/* User section */}
-        <div className="p-4" style={{ borderTop: '1px solid var(--bulma-border)' }}>
-          <div className="is-flex is-align-items-center mb-3">
-            <div 
-              style={{ 
-                width: '36px', 
-                height: '36px', 
-                borderRadius: '50%', 
-                background: 'rgba(99, 102, 241, 0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: '12px'
-              }}
-            >
-              <span className="has-text-link has-text-weight-semibold">
-                {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-              </span>
+        {/* User Section at Bottom */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
+          <div className="flex items-center gap-3 p-2">
+            <div className="elstar-avatar w-9 h-9 text-sm">
+              {user?.name?.charAt(0)?.toUpperCase() || 'U'}
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p className="is-size-7 has-text-weight-medium" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {user?.name}
-              </p>
-              <p className="is-size-7 has-text-grey" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {user?.email}
-              </p>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{user?.name}</p>
+              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
             </div>
-          </div>
-          <div className="buttons are-small">
-            <button
-              className="button is-light is-small"
-              onClick={toggleTheme}
-              data-testid="theme-toggle"
-            >
-              {theme === 'dark' ? '☀️' : '🌙'}
-            </button>
-            <button
-              className="button is-danger is-light is-small"
-              onClick={handleLogout}
-              data-testid="logout-btn"
-            >
-              Logout
-            </button>
           </div>
         </div>
       </aside>
 
-      {/* Mobile Header */}
-      <nav className="navbar is-hidden-desktop is-fixed-top" style={{ background: 'var(--bulma-scheme-main-bis)' }}>
-        <div className="navbar-brand">
-          <button 
-            className="navbar-burger"
-            onClick={() => setMobileOpen(!mobileOpen)}
-            data-testid="mobile-menu-btn"
-          >
-            <span></span>
-            <span></span>
-            <span></span>
-          </button>
-          <div className="navbar-item">
-            <div className="is-flex is-align-items-center">
-              <div className="ai-gradient mr-2" style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ color: 'white' }}>✦</span>
-              </div>
-              <span className="has-text-weight-bold">SalesCRM</span>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      {/* Mobile overlay */}
+      {/* Mobile Overlay */}
       {mobileOpen && (
         <div 
-          className="is-hidden-desktop"
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 20 }}
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
       {/* Main Content */}
-      <main className="main-content" style={{ paddingTop: 'calc(52px + 2rem)' }}>
-        <Outlet />
-      </main>
+      <div className="flex-1 flex flex-col min-h-screen">
+        {/* Header */}
+        <header className="h-16 bg-card border-b border-border px-4 lg:px-6 flex items-center justify-between sticky top-0 z-20">
+          <div className="flex items-center gap-4">
+            <button
+              className="lg:hidden p-2 hover:bg-secondary rounded-lg"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              data-testid="mobile-menu-btn"
+            >
+              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+            <h1 className="text-lg font-semibold hidden sm:block">Dashboard</h1>
+          </div>
 
-      <style>{`
-        @media screen and (min-width: 1024px) {
-          .main-content { padding-top: 2rem !important; }
-        }
-      `}</style>
+          <div className="flex items-center gap-2">
+            {/* Theme Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="p-2 hover:bg-secondary rounded-lg transition-colors"
+              data-testid="theme-toggle"
+            >
+              {theme === 'dark' ? (
+                <Sun className="w-5 h-5 text-muted-foreground" />
+              ) : (
+                <Moon className="w-5 h-5 text-muted-foreground" />
+              )}
+            </button>
+
+            {/* User Menu */}
+            <div className="relative">
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="flex items-center gap-2 p-2 hover:bg-secondary rounded-lg transition-colors"
+              >
+                <div className="elstar-avatar w-8 h-8 text-sm">
+                  {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                </div>
+                <span className="hidden sm:block text-sm font-medium">{user?.name?.split(' ')[0]}</span>
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              </button>
+
+              {userMenuOpen && (
+                <>
+                  <div className="fixed inset-0" onClick={() => setUserMenuOpen(false)} />
+                  <div className="elstar-dropdown animate-fade-in">
+                    <div className="px-4 py-3 border-b border-border">
+                      <p className="text-sm font-medium">{user?.name}</p>
+                      <p className="text-xs text-muted-foreground">{user?.email}</p>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500"
+                      data-testid="logout-btn"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sign out
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <main className="flex-1 p-4 lg:p-6">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

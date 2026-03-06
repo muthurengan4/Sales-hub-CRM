@@ -1,47 +1,39 @@
 import React from 'react';
 import { useAuth, useTheme } from '../App';
+import { Moon, Sun, User, Shield, Sparkles, Check } from 'lucide-react';
 
 export default function Settings() {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <div data-testid="settings-page" style={{ maxWidth: '700px' }}>
+    <div className="max-w-3xl space-y-6" data-testid="settings-page">
       {/* Header */}
-      <div className="mb-5">
-        <h1 className="title is-3">Settings</h1>
-        <p className="subtitle is-6 has-text-grey">Manage your account and preferences</p>
+      <div>
+        <h1 className="text-2xl font-bold">Settings</h1>
+        <p className="text-muted-foreground mt-1">Manage your account and preferences</p>
       </div>
 
       {/* Profile Card */}
-      <div className="box mb-5">
-        <h2 className="title is-5 mb-4">
-          <span className="mr-2">👤</span>
-          Profile
-        </h2>
-        <p className="subtitle is-6 has-text-grey mb-4">Your account information</p>
-        
-        <div className="is-flex is-align-items-center">
-          <div 
-            style={{ 
-              width: '64px', 
-              height: '64px', 
-              borderRadius: '50%', 
-              background: 'rgba(99, 102, 241, 0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: '1rem'
-            }}
-          >
-            <span className="has-text-link is-size-3 has-text-weight-bold">
-              {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-            </span>
+      <div className="elstar-card p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+            <User className="w-5 h-5 text-blue-500" />
           </div>
           <div>
-            <p className="title is-5 mb-1">{user?.name}</p>
-            <p className="is-size-7 has-text-grey mb-2">{user?.email}</p>
-            <span className="tag is-light" style={{ textTransform: 'capitalize' }}>
+            <h2 className="font-semibold">Profile</h2>
+            <p className="text-sm text-muted-foreground">Your account information</p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-4 p-4 bg-secondary/50 rounded-lg">
+          <div className="elstar-avatar w-16 h-16 text-xl">
+            {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+          </div>
+          <div>
+            <p className="text-lg font-semibold">{user?.name}</p>
+            <p className="text-sm text-muted-foreground">{user?.email}</p>
+            <span className="inline-block mt-2 text-xs px-2 py-1 rounded bg-primary/10 text-primary font-medium capitalize">
               {user?.role?.replace('_', ' ')}
             </span>
           </div>
@@ -49,115 +41,97 @@ export default function Settings() {
       </div>
 
       {/* Appearance Card */}
-      <div className="box mb-5">
-        <h2 className="title is-5 mb-4">
-          <span className="mr-2">{theme === 'dark' ? '🌙' : '☀️'}</span>
-          Appearance
-        </h2>
-        <p className="subtitle is-6 has-text-grey mb-4">Customize your interface</p>
-        
-        <div className="is-flex is-justify-content-space-between is-align-items-center">
+      <div className="elstar-card p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+            {theme === 'dark' ? <Moon className="w-5 h-5 text-purple-500" /> : <Sun className="w-5 h-5 text-purple-500" />}
+          </div>
           <div>
-            <p className="has-text-weight-medium">Dark Mode</p>
-            <p className="is-size-7 has-text-grey">Switch between light and dark themes</p>
+            <h2 className="font-semibold">Appearance</h2>
+            <p className="text-sm text-muted-foreground">Customize your interface</p>
           </div>
-          <div className="field">
-            <input 
-              id="darkModeSwitch" 
-              type="checkbox" 
-              className="switch is-rounded is-link"
-              checked={theme === 'dark'}
-              onChange={toggleTheme}
-              data-testid="dark-mode-switch"
-            />
-            <label htmlFor="darkModeSwitch">
-              <button 
-                className={`button is-small ${theme === 'dark' ? 'is-link' : 'is-light'}`}
-                onClick={toggleTheme}
-              >
-                {theme === 'dark' ? 'Dark' : 'Light'}
-              </button>
-            </label>
+        </div>
+        
+        <div className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg">
+          <div>
+            <p className="font-medium">Dark Mode</p>
+            <p className="text-sm text-muted-foreground">Switch between light and dark themes</p>
           </div>
+          <button
+            onClick={toggleTheme}
+            className={`relative w-14 h-8 rounded-full transition-colors ${theme === 'dark' ? 'bg-primary' : 'bg-secondary'}`}
+            data-testid="dark-mode-switch"
+          >
+            <div className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow-sm transition-transform ${theme === 'dark' ? 'translate-x-7' : 'translate-x-1'}`} />
+          </button>
         </div>
       </div>
 
       {/* AI Features Card */}
-      <div className="box mb-5" style={{ border: '1px solid rgba(99, 102, 241, 0.3)' }}>
-        <h2 className="title is-5 mb-4">
-          <span className="ai-gradient mr-2" style={{ width: '28px', height: '28px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ color: 'white', fontSize: '12px' }}>✦</span>
-          </span>
-          <span className="ai-text">AI Features</span>
-        </h2>
-        <p className="subtitle is-6 has-text-grey mb-4">AI-powered capabilities in your CRM</p>
-        
-        <div className="message is-success is-small mb-3">
-          <div className="message-body">
-            <div className="is-flex is-justify-content-space-between is-align-items-center">
-              <div>
-                <p className="has-text-weight-medium">Lead Scoring</p>
-                <p className="is-size-7">AI analyzes leads and provides scores from 0-100</p>
-              </div>
-              <span className="tag is-success">Active</span>
-            </div>
+      <div className="elstar-card p-6 border-primary/20">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-lg ai-gradient flex items-center justify-center">
+            <Sparkles className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h2 className="font-semibold ai-text">AI Features</h2>
+            <p className="text-sm text-muted-foreground">AI-powered capabilities in your CRM</p>
           </div>
         </div>
         
-        <div className="message is-success is-small mb-3">
-          <div className="message-body">
-            <div className="is-flex is-justify-content-space-between is-align-items-center">
-              <div>
-                <p className="has-text-weight-medium">Deal Health Monitoring</p>
-                <p className="is-size-7">Track deal progress and identify risks</p>
+        <div className="space-y-3">
+          {[
+            { name: 'Lead Scoring', desc: 'AI analyzes leads and provides scores from 0-100' },
+            { name: 'Deal Health Monitoring', desc: 'Track deal progress and identify risks' },
+            { name: 'Insights Generation', desc: 'Get AI-powered recommendations for your pipeline' }
+          ].map((feature) => (
+            <div key={feature.name} className="flex items-center justify-between p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                  <Check className="w-3 h-3 text-emerald-500" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm">{feature.name}</p>
+                  <p className="text-xs text-muted-foreground">{feature.desc}</p>
+                </div>
               </div>
-              <span className="tag is-success">Active</span>
+              <span className="elstar-badge elstar-badge-success">Active</span>
             </div>
-          </div>
+          ))}
         </div>
         
-        <div className="message is-success is-small">
-          <div className="message-body">
-            <div className="is-flex is-justify-content-space-between is-align-items-center">
-              <div>
-                <p className="has-text-weight-medium">Insights Generation</p>
-                <p className="is-size-7">Get AI-powered recommendations for your pipeline</p>
-              </div>
-              <span className="tag is-success">Active</span>
-            </div>
-          </div>
+        <div className="mt-4 pt-4 border-t border-border">
+          <p className="text-xs text-muted-foreground">Powered by Claude Sonnet 4.5 • AI features use Emergent LLM integration</p>
         </div>
-        
-        <hr />
-        <p className="is-size-7 has-text-grey">
-          Powered by Claude Sonnet 4.5 • AI features use Emergent LLM integration
-        </p>
       </div>
 
       {/* Security Card */}
-      <div className="box">
-        <h2 className="title is-5 mb-4">
-          <span className="mr-2">🔒</span>
-          Security
-        </h2>
-        <p className="subtitle is-6 has-text-grey mb-4">Account security settings</p>
-        
-        <div className="is-flex is-justify-content-space-between is-align-items-center mb-4">
-          <div>
-            <p className="has-text-weight-medium">Authentication</p>
-            <p className="is-size-7 has-text-grey">JWT-based secure authentication</p>
+      <div className="elstar-card p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+            <Shield className="w-5 h-5 text-emerald-500" />
           </div>
-          <span className="tag is-success is-light">Secured</span>
+          <div>
+            <h2 className="font-semibold">Security</h2>
+            <p className="text-sm text-muted-foreground">Account security settings</p>
+          </div>
         </div>
         
-        <hr />
-        
-        <div className="is-flex is-justify-content-space-between is-align-items-center">
-          <div>
-            <p className="has-text-weight-medium">Session</p>
-            <p className="is-size-7 has-text-grey">24-hour token expiration</p>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg">
+            <div>
+              <p className="font-medium text-sm">Authentication</p>
+              <p className="text-xs text-muted-foreground">JWT-based secure authentication</p>
+            </div>
+            <span className="elstar-badge elstar-badge-success">Secured</span>
           </div>
-          <span className="tag is-light">Active</span>
+          <div className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg">
+            <div>
+              <p className="font-medium text-sm">Session</p>
+              <p className="text-xs text-muted-foreground">24-hour token expiration</p>
+            </div>
+            <span className="elstar-badge elstar-badge-info">Active</span>
+          </div>
         </div>
       </div>
     </div>

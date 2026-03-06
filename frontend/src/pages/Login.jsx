@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
 import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -44,86 +45,90 @@ export default function Login() {
   };
 
   return (
-    <div data-theme="dark">
-      <section className="hero is-fullheight">
-        <div className="hero-body">
-          <div className="container">
-            <div className="columns is-centered">
-              <div className="column is-5-tablet is-4-desktop">
-                <div className="box" style={{ borderRadius: '12px' }}>
-                  <div className="has-text-centered mb-5">
-                    <div 
-                      className="ai-gradient" 
-                      style={{ 
-                        width: '60px', 
-                        height: '60px', 
-                        borderRadius: '12px', 
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginBottom: '1rem'
-                      }}
-                    >
-                      <span style={{ fontSize: '24px', color: 'white' }}>✦</span>
-                    </div>
-                    <h1 className="title is-4">Welcome back</h1>
-                    <p className="subtitle is-6 has-text-grey">Sign in to your CRM account</p>
-                  </div>
-
-                  <form onSubmit={handleSubmit}>
-                    <div className="field">
-                      <label className="label is-small">Email</label>
-                      <div className="control">
-                        <input
-                          className="input"
-                          type="email"
-                          placeholder="you@company.com"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          data-testid="login-email-input"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="field">
-                      <label className="label is-small">Password</label>
-                      <div className="control">
-                        <input
-                          className="input"
-                          type="password"
-                          placeholder="••••••••"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          data-testid="login-password-input"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="field mt-5">
-                      <button
-                        type="submit"
-                        className={`button is-link is-fullwidth ${loading ? 'is-loading' : ''}`}
-                        disabled={loading}
-                        data-testid="login-submit-btn"
-                        style={{ background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', border: 'none' }}
-                      >
-                        Sign in
-                      </button>
-                    </div>
-                  </form>
-
-                  <p className="has-text-centered mt-4 is-size-7">
-                    Don't have an account?{' '}
-                    <Link to="/register" className="has-text-link" data-testid="register-link">
-                      Create one
-                    </Link>
-                  </p>
-                </div>
-              </div>
-            </div>
+    <div className="min-h-screen flex bg-background">
+      {/* Left Panel - Branding */}
+      <div className="hidden lg:flex lg:w-1/2 ai-gradient items-center justify-center p-12">
+        <div className="max-w-md text-white">
+          <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center mb-8">
+            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
           </div>
+          <h1 className="text-4xl font-bold mb-4">SalesCRM</h1>
+          <p className="text-white/80 text-lg leading-relaxed">
+            AI-powered sales management platform. Track leads, manage your pipeline, and close more deals.
+          </p>
         </div>
-      </section>
+      </div>
+
+      {/* Right Panel - Login Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
+        <div className="w-full max-w-md">
+          {/* Mobile Logo */}
+          <div className="lg:hidden flex items-center gap-3 mb-8">
+            <div className="w-10 h-10 ai-gradient rounded-xl flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+              </svg>
+            </div>
+            <span className="text-xl font-bold">SalesCRM</span>
+          </div>
+
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-2">Welcome back</h2>
+            <p className="text-muted-foreground">Sign in to continue to your dashboard</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium mb-2">Email</label>
+              <input
+                type="email"
+                placeholder="you@company.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="elstar-input"
+                data-testid="login-email-input"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Password</label>
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="elstar-input"
+                data-testid="login-password-input"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="elstar-btn-primary w-full h-11 flex items-center justify-center gap-2"
+              data-testid="login-submit-btn"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                'Sign in'
+              )}
+            </button>
+          </form>
+
+          <p className="text-center text-sm text-muted-foreground mt-6">
+            Don't have an account?{' '}
+            <Link to="/register" className="text-primary hover:underline font-medium" data-testid="register-link">
+              Create one
+            </Link>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
