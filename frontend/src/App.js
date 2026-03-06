@@ -9,6 +9,9 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Leads from './pages/Leads';
 import Pipeline from './pages/Pipeline';
+import Contacts from './pages/Contacts';
+import Users from './pages/Users';
+import Organization from './pages/Organization';
 import Settings from './pages/Settings';
 import Layout from './components/Layout';
 
@@ -63,6 +66,22 @@ const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const hasPermission = (permission) => {
+    return user?.permissions?.includes(permission) || false;
+  };
+
+  const refreshUser = async () => {
+    if (token) {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -72,7 +91,7 @@ const AuthProvider = ({ children }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!token }}>
+    <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!token, hasPermission, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
@@ -88,10 +107,7 @@ export const useTheme = () => {
 };
 
 const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState(() => {
-    const saved = localStorage.getItem('theme');
-    return saved || 'dark';
-  });
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -100,9 +116,7 @@ const ThemeProvider = ({ children }) => {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-  };
+  const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
@@ -130,14 +144,7 @@ function App() {
     <ThemeProvider>
       <BrowserRouter>
         <AuthProvider>
-          <Toaster 
-            position="top-right" 
-            richColors 
-            closeButton 
-            toastOptions={{
-              style: { background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }
-            }}
-          />
+          <Toaster position="top-right" richColors closeButton />
           <Routes>
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
             <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
@@ -146,6 +153,9 @@ function App() {
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="leads" element={<Leads />} />
               <Route path="pipeline" element={<Pipeline />} />
+              <Route path="contacts" element={<Contacts />} />
+              <Route path="users" element={<Users />} />
+              <Route path="organization" element={<Organization />} />
               <Route path="settings" element={<Settings />} />
             </Route>
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

@@ -2,35 +2,39 @@ import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth, useTheme } from '../App';
 import { 
-  LayoutDashboard, 
-  Users, 
-  Kanban, 
-  Settings, 
-  LogOut, 
-  Moon, 
-  Sun,
-  Menu,
-  X,
-  ChevronDown
+  LayoutDashboard, Users, Kanban, Settings, LogOut, Moon, Sun,
+  Menu, X, ChevronDown, Building2, UserCircle, Contact2, Shield
 } from 'lucide-react';
 
-const navItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/leads', icon: Users, label: 'Leads' },
-  { to: '/pipeline', icon: Kanban, label: 'Pipeline' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
-];
-
 export default function Layout() {
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleLogout = () => { logout(); navigate('/login'); };
+
+  // Dynamic navigation based on permissions
+  const navItems = [
+    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', show: true },
+    { to: '/leads', icon: Users, label: 'Leads', show: hasPermission('view_all_leads') || hasPermission('view_own_leads') },
+    { to: '/pipeline', icon: Kanban, label: 'Pipeline', show: hasPermission('view_all_deals') || hasPermission('view_own_deals') },
+    { to: '/contacts', icon: Contact2, label: 'Contacts', show: hasPermission('view_contacts') },
+    { to: '/users', icon: UserCircle, label: 'Team', show: hasPermission('view_users') },
+    { to: '/organization', icon: Building2, label: 'Organization', show: hasPermission('view_organization') },
+    { to: '/settings', icon: Settings, label: 'Settings', show: true },
+  ].filter(item => item.show);
+
+  const getRoleBadge = (role) => {
+    const colors = {
+      super_admin: 'bg-purple-500/20 text-purple-400',
+      org_admin: 'bg-blue-500/20 text-blue-400',
+      manager: 'bg-emerald-500/20 text-emerald-400',
+      sales_rep: 'bg-amber-500/20 text-amber-400',
+      viewer: 'bg-slate-500/20 text-slate-400'
+    };
+    return colors[role] || colors.viewer;
   };
 
   return (
@@ -38,7 +42,7 @@ export default function Layout() {
       {/* Sidebar */}
       <aside className={`
         fixed lg:static inset-y-0 left-0 z-40 w-64 bg-card border-r border-border
-        transform transition-transform duration-200 ease-in-out
+        transform transition-transform duration-200 ease-in-out flex flex-col
         ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         {/* Logo */}
@@ -50,22 +54,30 @@ export default function Layout() {
               </svg>
             </div>
             <div>
-              <span className="font-bold text-lg">SalesCRM</span>
-              <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">PRO</span>
+              <span className="font-bold text-lg">CRM Platform</span>
+              <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">v2.0</span>
             </div>
           </div>
         </div>
 
+        {/* Organization Info */}
+        {user?.organization_name && (
+          <div className="px-4 py-3 border-b border-border">
+            <div className="flex items-center gap-2 text-sm">
+              <Building2 className="w-4 h-4 text-muted-foreground" />
+              <span className="truncate font-medium">{user.organization_name}</span>
+            </div>
+          </div>
+        )}
+
         {/* Navigation */}
-        <nav className="p-4 space-y-1">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               onClick={() => setMobileOpen(false)}
-              className={({ isActive }) =>
-                `elstar-nav-item ${isActive ? 'active' : ''}`
-              }
+              className={({ isActive }) => `elstar-nav-item ${isActive ? 'active' : ''}`}
               data-testid={`nav-${item.label.toLowerCase()}`}
             >
               <item.icon className="w-5 h-5" />
@@ -74,15 +86,17 @@ export default function Layout() {
           ))}
         </nav>
 
-        {/* User Section at Bottom */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
+        {/* User Section */}
+        <div className="p-4 border-t border-border">
           <div className="flex items-center gap-3 p-2">
             <div className="elstar-avatar w-9 h-9 text-sm">
               {user?.name?.charAt(0)?.toUpperCase() || 'U'}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{user?.name}</p>
-              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${getRoleBadge(user?.role)}`}>
+                {user?.role?.replace('_', ' ').toUpperCase()}
+              </span>
             </div>
           </div>
         </div>
@@ -90,10 +104,7 @@ export default function Layout() {
 
       {/* Mobile Overlay */}
       {mobileOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
+        <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setMobileOpen(false)} />
       )}
 
       {/* Main Content */}
@@ -101,39 +112,20 @@ export default function Layout() {
         {/* Header */}
         <header className="h-16 bg-card border-b border-border px-4 lg:px-6 flex items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-4">
-            <button
-              className="lg:hidden p-2 hover:bg-secondary rounded-lg"
-              onClick={() => setMobileOpen(!mobileOpen)}
-              data-testid="mobile-menu-btn"
-            >
+            <button className="lg:hidden p-2 hover:bg-secondary rounded-lg" onClick={() => setMobileOpen(!mobileOpen)} data-testid="mobile-menu-btn">
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
-            <h1 className="text-lg font-semibold hidden sm:block">Dashboard</h1>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Theme Toggle */}
-            <button
-              onClick={toggleTheme}
-              className="p-2 hover:bg-secondary rounded-lg transition-colors"
-              data-testid="theme-toggle"
-            >
-              {theme === 'dark' ? (
-                <Sun className="w-5 h-5 text-muted-foreground" />
-              ) : (
-                <Moon className="w-5 h-5 text-muted-foreground" />
-              )}
+            <button onClick={toggleTheme} className="p-2 hover:bg-secondary rounded-lg" data-testid="theme-toggle">
+              {theme === 'dark' ? <Sun className="w-5 h-5 text-muted-foreground" /> : <Moon className="w-5 h-5 text-muted-foreground" />}
             </button>
 
             {/* User Menu */}
             <div className="relative">
-              <button
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center gap-2 p-2 hover:bg-secondary rounded-lg transition-colors"
-              >
-                <div className="elstar-avatar w-8 h-8 text-sm">
-                  {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                </div>
+              <button onClick={() => setUserMenuOpen(!userMenuOpen)} className="flex items-center gap-2 p-2 hover:bg-secondary rounded-lg">
+                <div className="elstar-avatar w-8 h-8 text-sm">{user?.name?.charAt(0)?.toUpperCase() || 'U'}</div>
                 <span className="hidden sm:block text-sm font-medium">{user?.name?.split(' ')[0]}</span>
                 <ChevronDown className="w-4 h-4 text-muted-foreground" />
               </button>
@@ -145,14 +137,13 @@ export default function Layout() {
                     <div className="px-4 py-3 border-b border-border">
                       <p className="text-sm font-medium">{user?.name}</p>
                       <p className="text-xs text-muted-foreground">{user?.email}</p>
+                      <div className="flex items-center gap-1 mt-1">
+                        <Shield className="w-3 h-3" />
+                        <span className="text-xs capitalize">{user?.role?.replace('_', ' ')}</span>
+                      </div>
                     </div>
-                    <button
-                      onClick={handleLogout}
-                      className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500"
-                      data-testid="logout-btn"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      Sign out
+                    <button onClick={handleLogout} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500" data-testid="logout-btn">
+                      <LogOut className="w-4 h-4" /> Sign out
                     </button>
                   </div>
                 </>

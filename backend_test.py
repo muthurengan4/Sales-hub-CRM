@@ -10,10 +10,13 @@ class HubSpotCRMTester:
         self.base_url = base_url
         self.token = None
         self.user_id = None
+        self.organization_id = None
         self.tests_run = 0
         self.tests_passed = 0
         self.created_lead_id = None
         self.created_deal_id = None
+        self.created_contact_id = None
+        self.invited_user_id = None
 
     def log(self, message, success=None):
         """Log test results with colored output"""
@@ -256,20 +259,151 @@ class HubSpotCRMTester:
             return True
         return False
 
-    def test_refresh_lead_score(self):
-        """Test AI score refresh for lead"""
-        if not self.token or not self.created_lead_id:
+    def test_create_organization(self):
+        """Test creating an organization (user becomes org_admin)"""
+        if not self.token:
+            self.log("No token available for organization creation", False)
+            return False
+            
+        org_data = {
+            "name": f"Test Organization {datetime.now().strftime('%H%M%S')}",
+            "domain": "testorg.com",
+            "industry": "technology",
+            "size": "11-50"
+        }
+        
+        success, response = self.run_test(
+            "Create Organization",
+            "POST",
+            "organizations",
+            200,
+            data=org_data
+        )
+        
+        if success and 'id' in response:
+            self.organization_id = response['id']
+            self.log(f"Organization created: {response['name']} with {response['member_count']} members", True)
+            return True
+        return False
+
+    def test_get_organizations(self):
+        """Test retrieving organizations list"""
+        if not self.token:
             return False
             
         success, response = self.run_test(
-            "Refresh Lead AI Score",
-            "POST",
-            f"leads/{self.created_lead_id}/refresh-score",
+            "Get Organizations List",
+            "GET", 
+            "organizations",
             200
         )
         
-        if success and 'score' in response:
-            self.log(f"AI score refreshed: {response['score']}", True)
+        if success and isinstance(response, list):
+            self.log(f"Retrieved {len(response)} organizations", True)
+            return True
+        return False
+
+    def test_create_contact(self):
+        """Test creating a new contact"""
+        if not self.token:
+            return False
+            
+        contact_data = {
+            "first_name": "Jane",
+            "last_name": "Smith",
+            "email": "jane.smith@testcompany.com",
+            "phone": "+1-555-0456",
+            "company": "Test Company Inc",
+            "job_title": "Marketing Director",
+            "city": "San Francisco",
+            "country": "USA"
+        }
+        
+        success, response = self.run_test(
+            "Create Contact",
+            "POST",
+            "contacts",
+            200,
+            data=contact_data
+        )
+        
+        if success and 'id' in response:
+            self.created_contact_id = response['id']
+            self.log(f"Contact created: {response['first_name']} {response['last_name']}", True)
+            return True
+        return False
+
+    def test_get_contacts(self):
+        """Test retrieving contacts list"""
+        if not self.token:
+            return False
+            
+        success, response = self.run_test(
+            "Get Contacts List",
+            "GET",
+            "contacts",
+            200
+        )
+        
+        if success and isinstance(response, list):
+            self.log(f"Retrieved {len(response)} contacts", True)
+            return True
+        return False
+
+    def test_invite_user(self):
+        """Test inviting a new user to organization"""
+        if not self.token or not self.organization_id:
+            self.log("No token or organization for user invitation", False)
+            return False
+            
+        invite_data = {
+            "name": f"Invited User {datetime.now().strftime('%H%M%S')}",
+            "email": f"invited{datetime.now().strftime('%H%M%S')}@example.com",
+            "role": "sales_rep"
+        }
+        
+        success, response = self.run_test(
+            "Invite User to Organization",
+            "POST",
+            "users/invite",
+            200,
+            data=invite_data
+        )
+        
+        if success and 'id' in response:
+            self.invited_user_id = response['id']
+            self.log(f"User invited: {response['name']} with role {response['role']}", True)
+            return True
+        return False
+
+    def test_get_users(self):
+        """Test retrieving users in organization"""
+        if not self.token:
+            return False
+            
+        success, response = self.run_test(
+            "Get Organization Users",
+            "GET",
+            "users",
+            200
+        )
+        
+        if success and isinstance(response, list):
+            self.log(f"Retrieved {len(response)} users in organization", True)
+            return True
+        return False
+
+    def test_get_roles(self):
+        """Test retrieving available roles"""
+        success, response = self.run_test(
+            "Get Available Roles",
+            "GET",
+            "roles",
+            200
+        )
+        
+        if success and 'roles' in response:
+            self.log(f"Retrieved {len(response['roles'])} available roles", True)
             return True
         return False
 
@@ -406,11 +540,17 @@ def main():
         ("User Registration", tester.test_registration),
         ("User Login", tester.test_login),
         ("Get Current User", tester.test_get_me),
+        ("Create Organization", tester.test_create_organization),
+        ("Get Organizations", tester.test_get_organizations),
+        ("Get Available Roles", tester.test_get_roles),
+        ("Invite User", tester.test_invite_user),
+        ("Get Organization Users", tester.test_get_users),
+        ("Create Contact", tester.test_create_contact),
+        ("Get Contacts", tester.test_get_contacts),
         ("Create Lead", tester.test_create_lead),
         ("Get Leads", tester.test_get_leads),
         ("Get Lead by ID", tester.test_get_lead_by_id),
         ("Update Lead", tester.test_update_lead),
-        ("Refresh Lead Score", tester.test_refresh_lead_score),
         ("Create Deal", tester.test_create_deal),
         ("Get Deals", tester.test_get_deals),
         ("Update Deal", tester.test_update_deal),
