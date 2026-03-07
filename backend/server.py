@@ -894,7 +894,17 @@ async def import_contacts(file: UploadFile = File(...), user: dict = Depends(get
         if file.filename.endswith('.csv'):
             df = pd.read_csv(io.BytesIO(contents))
         else:
-            df = pd.read_excel(io.BytesIO(contents))
+            # Try to auto-detect header row by looking for 'Clinic Name' or 'Name'
+            df_raw = pd.read_excel(io.BytesIO(contents), header=None)
+            header_row = 0
+            for i in range(min(5, len(df_raw))):
+                row_values = [str(v).lower() if pd.notna(v) else '' for v in df_raw.iloc[i]]
+                if any('clinic name' in v or v == 'name' for v in row_values):
+                    header_row = i
+                    break
+            df = pd.read_excel(io.BytesIO(contents), header=header_row)
+        
+        logging.info(f"Excel columns found: {list(df.columns)}")
         
         # Column mapping from Excel to our schema
         column_mapping = {
@@ -930,6 +940,7 @@ async def import_contacts(file: UploadFile = File(...), user: dict = Depends(get
         
         # Rename columns
         df = df.rename(columns={k: v for k, v in column_mapping.items() if k in df.columns})
+        logging.info(f"Columns after mapping: {list(df.columns)}")
         
         now = datetime.now(timezone.utc).isoformat()
         imported_count = 0
@@ -1106,7 +1117,17 @@ async def import_leads(file: UploadFile = File(...), user: dict = Depends(get_cu
         if file.filename.endswith('.csv'):
             df = pd.read_csv(io.BytesIO(contents))
         else:
-            df = pd.read_excel(io.BytesIO(contents))
+            # Try to auto-detect header row by looking for 'Clinic Name' or 'Name'
+            df_raw = pd.read_excel(io.BytesIO(contents), header=None)
+            header_row = 0
+            for i in range(min(5, len(df_raw))):
+                row_values = [str(v).lower() if pd.notna(v) else '' for v in df_raw.iloc[i]]
+                if any('clinic name' in v or v == 'name' for v in row_values):
+                    header_row = i
+                    break
+            df = pd.read_excel(io.BytesIO(contents), header=header_row)
+        
+        logging.info(f"Excel columns found for leads: {list(df.columns)}")
         
         # Column mapping from Excel to our schema
         column_mapping = {
@@ -1138,6 +1159,7 @@ async def import_leads(file: UploadFile = File(...), user: dict = Depends(get_cu
         
         # Rename columns
         df = df.rename(columns={k: v for k, v in column_mapping.items() if k in df.columns})
+        logging.info(f"Columns after mapping: {list(df.columns)}")
         
         now = datetime.now(timezone.utc).isoformat()
         imported_count = 0
