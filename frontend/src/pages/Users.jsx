@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../App';
 import { toast } from 'sonner';
 import Modal from '../components/Modal';
+import Pagination from '../components/Pagination';
 import { Plus, Loader2, MoreHorizontal, Trash2, Edit, UserPlus, Shield, Mail, Clock } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -35,15 +36,40 @@ export default function Users() {
   const [dropdownOpen, setDropdownOpen] = useState(null);
   const [inviteData, setInviteData] = useState({ email: '', name: '', role: 'sales_rep' });
   const [editData, setEditData] = useState({ role: '', is_active: true });
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => { fetchUsers(); }, [currentPage, pageSize]);
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch(`${API}/api/users`, { headers: { Authorization: `Bearer ${token}` } });
-      if (response.ok) setUsers(await response.json());
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.append('page', currentPage);
+      params.append('limit', pageSize);
+      
+      const response = await fetch(`${API}/api/users?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data.items || []);
+        setTotalItems(data.total || 0);
+        setTotalPages(data.total_pages || 0);
+      }
     } catch (error) { toast.error('Failed to fetch users'); }
     finally { setLoading(false); }
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+  
+  const handlePageSizeChange = (size) => {
+    setPageSize(size);
+    setCurrentPage(1);
   };
 
   // Stable callbacks to prevent re-renders
@@ -168,70 +194,80 @@ export default function Users() {
             <p className="text-sm text-muted-foreground mb-4">Invite your first team member to get started</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="elstar-table">
-              <thead>
-                <tr>
-                  <th>User</th>
-                  <th>Role</th>
-                  <th className="hidden md:table-cell">Status</th>
-                  <th className="hidden sm:table-cell">Last Login</th>
-                  {canManageUsers && <th className="w-12"></th>}
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user) => (
-                  <tr key={user.id} data-testid={`user-row-${user.id}`}>
-                    <td>
-                      <div className="flex items-center gap-3">
-                        <div className="elstar-avatar w-9 h-9 text-sm">{user.name?.charAt(0)?.toUpperCase()}</div>
-                        <div>
-                          <p className="font-medium">{user.name}</p>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1"><Mail className="w-3 h-3" />{user.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td><span className={`elstar-badge ${getRoleBadge(user.role)}`}>{user.role?.replace('_', ' ')}</span></td>
-                    <td className="hidden md:table-cell">
-                      <span className={`elstar-badge ${user.is_active ? 'elstar-badge-success' : 'elstar-badge-danger'}`}>
-                        {user.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="hidden sm:table-cell">
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Clock className="w-3 h-3" />
-                        {user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
-                      </div>
-                    </td>
-                    {canManageUsers && (
-                      <td>
-                        {user.id !== currentUser.id && (
-                          <div className="relative">
-                            <button onClick={() => setDropdownOpen(dropdownOpen === user.id ? null : user.id)} className="p-2 hover:bg-secondary rounded-lg">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </button>
-                            {dropdownOpen === user.id && (
-                              <>
-                                <div className="fixed inset-0" onClick={() => setDropdownOpen(null)} />
-                                <div className="elstar-dropdown animate-fade-in">
-                                  <button onClick={() => openEditDialog(user)} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
-                                    <Edit className="w-4 h-4" /> Edit Role
-                                  </button>
-                                  <button onClick={() => { handleDelete(user.id); setDropdownOpen(null); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500">
-                                    <Trash2 className="w-4 h-4" /> Remove
-                                  </button>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                    )}
+          <>
+            <div className="overflow-x-auto">
+              <table className="elstar-table">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th className="hidden md:table-cell">Status</th>
+                    <th className="hidden sm:table-cell">Last Login</th>
+                    {canManageUsers && <th className="w-12"></th>}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {users.map((user) => (
+                    <tr key={user.id} data-testid={`user-row-${user.id}`}>
+                      <td>
+                        <div className="flex items-center gap-3">
+                          <div className="elstar-avatar w-9 h-9 text-sm">{user.name?.charAt(0)?.toUpperCase()}</div>
+                          <div>
+                            <p className="font-medium">{user.name}</p>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1"><Mail className="w-3 h-3" />{user.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td><span className={`elstar-badge ${getRoleBadge(user.role)}`}>{user.role?.replace('_', ' ')}</span></td>
+                      <td className="hidden md:table-cell">
+                        <span className={`elstar-badge ${user.is_active ? 'elstar-badge-success' : 'elstar-badge-danger'}`}>
+                          {user.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="hidden sm:table-cell">
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Clock className="w-3 h-3" />
+                          {user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
+                        </div>
+                      </td>
+                      {canManageUsers && (
+                        <td>
+                          {user.id !== currentUser.id && (
+                            <div className="relative">
+                              <button onClick={() => setDropdownOpen(dropdownOpen === user.id ? null : user.id)} className="p-2 hover:bg-secondary rounded-lg">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </button>
+                              {dropdownOpen === user.id && (
+                                <>
+                                  <div className="fixed inset-0" onClick={() => setDropdownOpen(null)} />
+                                  <div className="elstar-dropdown animate-fade-in">
+                                    <button onClick={() => openEditDialog(user)} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
+                                      <Edit className="w-4 h-4" /> Edit Role
+                                    </button>
+                                    <button onClick={() => { handleDelete(user.id); setDropdownOpen(null); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500">
+                                      <Trash2 className="w-4 h-4" /> Remove
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+            />
+          </>
         )}
       </div>
 

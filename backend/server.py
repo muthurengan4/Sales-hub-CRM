@@ -693,18 +693,39 @@ async def invite_user(invite_data: UserInvite, user: dict = Depends(get_current_
         created_at=now
     )
 
-@api_router.get("/users", response_model=List[UserResponse])
-async def get_users(user: dict = Depends(get_current_user)):
+class PaginatedUsersResponse(BaseModel):
+    items: List[UserResponse]
+    total: int
+    page: int
+    limit: int
+    total_pages: int
+
+@api_router.get("/users", response_model=PaginatedUsersResponse)
+async def get_users(
+    page: int = 1,
+    limit: int = 10,
+    user: dict = Depends(get_current_user)
+):
     """Get users in the organization"""
     check_permission(user, Permission.VIEW_USERS)
+    
+    # Validate pagination params
+    page = max(1, page)
+    limit = min(max(1, limit), 100)  # Cap at 100 items per page
+    skip = (page - 1) * limit
     
     query = {}
     if user['role'] != RoleType.SUPER_ADMIN.value:
         if not user.get('organization_id'):
-            return []
+            return PaginatedUsersResponse(items=[], total=0, page=1, limit=limit, total_pages=0)
         query['organization_id'] = user['organization_id']
     
-    users = await db.users.find(query, {'_id': 0, 'password': 0}).to_list(1000)
+    # Get total count
+    total = await db.users.count_documents(query)
+    total_pages = (total + limit - 1) // limit  # Ceiling division
+    
+    # Get paginated results
+    users = await db.users.find(query, {'_id': 0, 'password': 0}).skip(skip).limit(limit).to_list(limit)
     
     result = []
     for u in users:
@@ -727,7 +748,13 @@ async def get_users(user: dict = Depends(get_current_user)):
             last_login=u.get('last_login')
         ))
     
-    return result
+    return PaginatedUsersResponse(
+        items=result,
+        total=total,
+        page=page,
+        limit=limit,
+        total_pages=total_pages
+    )
 
 @api_router.put("/users/{user_id}", response_model=UserResponse)
 async def update_user(user_id: str, user_data: UserUpdate, user: dict = Depends(get_current_user)):
@@ -807,12 +834,29 @@ async def create_contact(contact_data: ContactCreate, user: dict = Depends(get_c
     
     return ContactResponse(**contact_doc)
 
-@api_router.get("/contacts", response_model=List[ContactResponse])
-async def get_contacts(search: Optional[str] = None, user: dict = Depends(get_current_user)):
+class PaginatedContactsResponse(BaseModel):
+    items: List[ContactResponse]
+    total: int
+    page: int
+    limit: int
+    total_pages: int
+
+@api_router.get("/contacts", response_model=PaginatedContactsResponse)
+async def get_contacts(
+    search: Optional[str] = None, 
+    page: int = 1, 
+    limit: int = 10,
+    user: dict = Depends(get_current_user)
+):
     check_permission(user, Permission.VIEW_CONTACTS)
     
     if not user.get('organization_id'):
-        return []
+        return PaginatedContactsResponse(items=[], total=0, page=1, limit=limit, total_pages=0)
+    
+    # Validate pagination params
+    page = max(1, page)
+    limit = min(max(1, limit), 100)  # Cap at 100 items per page
+    skip = (page - 1) * limit
     
     query = {'organization_id': user['organization_id']}
     if search:
@@ -823,14 +867,25 @@ async def get_contacts(search: Optional[str] = None, user: dict = Depends(get_cu
             {'company': {'$regex': search, '$options': 'i'}}
         ]
     
-    contacts = await db.contacts.find(query, {'_id': 0}).sort('created_at', -1).to_list(1000)
+    # Get total count
+    total = await db.contacts.count_documents(query)
+    total_pages = (total + limit - 1) // limit  # Ceiling division
+    
+    # Get paginated results
+    contacts = await db.contacts.find(query, {'_id': 0}).sort('created_at', -1).skip(skip).limit(limit).to_list(limit)
     
     # Add owner names
     for contact in contacts:
         owner = await db.users.find_one({'id': contact['owner_id']}, {'_id': 0, 'name': 1})
         contact['owner_name'] = owner['name'] if owner else None
     
-    return [ContactResponse(**c) for c in contacts]
+    return PaginatedContactsResponse(
+        items=[ContactResponse(**c) for c in contacts],
+        total=total,
+        page=page,
+        limit=limit,
+        total_pages=total_pages
+    )
 
 @api_router.get("/contacts/{contact_id}", response_model=ContactResponse)
 async def get_contact(contact_id: str, user: dict = Depends(get_current_user)):
@@ -1022,9 +1077,27 @@ async def create_lead(lead_data: LeadCreate, user: dict = Depends(get_current_us
     
     return LeadResponse(**lead_doc)
 
-@api_router.get("/leads", response_model=List[LeadResponse])
-async def get_leads(status: Optional[str] = None, search: Optional[str] = None, user: dict = Depends(get_current_user)):
+class PaginatedLeadsResponse(BaseModel):
+    items: List[LeadResponse]
+    total: int
+    page: int
+    limit: int
+    total_pages: int
+
+@api_router.get("/leads", response_model=PaginatedLeadsResponse)
+async def get_leads(
+    status: Optional[str] = None, 
+    search: Optional[str] = None, 
+    page: int = 1,
+    limit: int = 10,
+    user: dict = Depends(get_current_user)
+):
     query = get_data_filter(user, Permission.VIEW_ALL_LEADS, Permission.VIEW_OWN_LEADS)
+    
+    # Validate pagination params
+    page = max(1, page)
+    limit = min(max(1, limit), 100)  # Cap at 100 items per page
+    skip = (page - 1) * limit
     
     if status:
         query['status'] = status
@@ -1035,7 +1108,12 @@ async def get_leads(status: Optional[str] = None, search: Optional[str] = None, 
             {'email': {'$regex': search, '$options': 'i'}}
         ]
     
-    leads = await db.leads.find(query, {'_id': 0}).sort('created_at', -1).to_list(1000)
+    # Get total count
+    total = await db.leads.count_documents(query)
+    total_pages = (total + limit - 1) // limit  # Ceiling division
+    
+    # Get paginated results
+    leads = await db.leads.find(query, {'_id': 0}).sort('created_at', -1).skip(skip).limit(limit).to_list(limit)
     
     # Add owner and assigned names
     for lead in leads:
@@ -1045,7 +1123,13 @@ async def get_leads(status: Optional[str] = None, search: Optional[str] = None, 
             assigned = await db.users.find_one({'id': lead['assigned_to']}, {'_id': 0, 'name': 1})
             lead['assigned_to_name'] = assigned['name'] if assigned else None
     
-    return [LeadResponse(**lead) for lead in leads]
+    return PaginatedLeadsResponse(
+        items=[LeadResponse(**lead) for lead in leads],
+        total=total,
+        page=page,
+        limit=limit,
+        total_pages=total_pages
+    )
 
 @api_router.get("/leads/{lead_id}", response_model=LeadResponse)
 async def get_lead(lead_id: str, user: dict = Depends(get_current_user)):

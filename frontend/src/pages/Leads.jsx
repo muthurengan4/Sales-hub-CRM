@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useAuth } from '../App';
 import { toast } from 'sonner';
 import Modal from '../components/Modal';
+import Pagination from '../components/Pagination';
 import { 
   Plus, Search, Loader2, Sparkles, Mail, Phone, Building2, 
   MoreHorizontal, Trash2, Edit, RefreshCw, Upload, FileSpreadsheet
@@ -235,6 +236,7 @@ export default function Leads() {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -245,22 +247,57 @@ export default function Leads() {
   const [formData, setFormData] = useState(initialFormData);
   const [importFile, setImportFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1); // Reset to first page on search
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     fetchLeads();
-  }, [statusFilter]);
+  }, [statusFilter, currentPage, pageSize, debouncedSearch]);
 
   const fetchLeads = async () => {
     try {
-      let url = `${API}/api/leads`;
-      if (statusFilter && statusFilter !== 'all') url += `?status=${statusFilter}`;
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.append('page', currentPage);
+      params.append('limit', pageSize);
+      if (statusFilter && statusFilter !== 'all') params.append('status', statusFilter);
+      if (debouncedSearch) params.append('search', debouncedSearch);
+      
+      const url = `${API}/api/leads?${params.toString()}`;
       const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      if (response.ok) setLeads(await response.json());
+      if (response.ok) {
+        const data = await response.json();
+        setLeads(data.items || []);
+        setTotalItems(data.total || 0);
+        setTotalPages(data.total_pages || 0);
+      }
     } catch (error) {
       toast.error('Failed to fetch leads');
     } finally {
       setLoading(false);
     }
+  };
+  
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+  
+  const handlePageSizeChange = (size) => {
+    setPageSize(size);
+    setCurrentPage(1); // Reset to first page when changing page size
   };
 
   // Stable callback to prevent re-renders
@@ -351,6 +388,11 @@ export default function Leads() {
     setIsCreateOpen(true);
   };
 
+  const handleStatusFilterChange = (value) => {
+    setStatusFilter(value);
+    setCurrentPage(1); // Reset to first page when changing filter
+  };
+
   const handleImport = async (e) => {
     e.preventDefault();
     if (!importFile) { toast.error('Please select a file'); return; }
@@ -371,6 +413,7 @@ export default function Leads() {
         toast.success(`Successfully imported ${result.imported} leads`);
         setIsImportOpen(false);
         setImportFile(null);
+        setCurrentPage(1);
         fetchLeads();
       } else {
         const data = await response.json();
@@ -382,12 +425,6 @@ export default function Leads() {
       setImportLoading(false);
     }
   };
-
-  const filteredLeads = leads.filter(lead => {
-    if (!search) return true;
-    const s = search.toLowerCase();
-    return lead.name?.toLowerCase().includes(s) || lead.company?.toLowerCase().includes(s) || lead.email?.toLowerCase().includes(s);
-  });
 
   return (
     <div className="space-y-6" data-testid="leads-page">
@@ -433,7 +470,7 @@ export default function Leads() {
           </div>
           <select 
             value={statusFilter} 
-            onChange={(e) => setStatusFilter(e.target.value)} 
+            onChange={(e) => handleStatusFilterChange(e.target.value)} 
             className="elstar-select w-full sm:w-44" 
             data-testid="status-filter"
           >
@@ -452,7 +489,7 @@ export default function Leads() {
           <div className="flex items-center justify-center h-64">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
-        ) : filteredLeads.length === 0 ? (
+        ) : leads.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-center">
             <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mb-4">
               <UsersIcon className="w-8 h-8 text-muted-foreground" />
@@ -471,84 +508,94 @@ export default function Leads() {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="elstar-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th className="hidden md:table-cell">Company</th>
-                  <th className="hidden sm:table-cell">Contact</th>
-                  <th className="hidden lg:table-cell">Location</th>
-                  <th>Status</th>
-                  <th className="text-center">AI Score</th>
-                  <th className="w-12"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredLeads.map((lead) => (
-                  <tr key={lead.id} data-testid={`lead-row-${lead.id}`}>
-                    <td>
-                      <p className="font-medium">{lead.name}</p>
-                      <p className="text-xs text-muted-foreground">{lead.title}</p>
-                    </td>
-                    <td className="hidden md:table-cell">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Building2 className="w-4 h-4" />
-                        <span>{lead.company || '-'}</span>
-                      </div>
-                    </td>
-                    <td className="hidden sm:table-cell">
-                      <div className="space-y-1">
-                        {lead.email && <div className="flex items-center gap-1 text-xs text-muted-foreground"><Mail className="w-3 h-3" />{lead.email}</div>}
-                        {lead.phone && <div className="flex items-center gap-1 text-xs text-muted-foreground"><Phone className="w-3 h-3" />{lead.phone}</div>}
-                      </div>
-                    </td>
-                    <td className="hidden lg:table-cell">
-                      <div className="text-xs text-muted-foreground">
-                        {lead.city && <span>{lead.city}</span>}
-                        {lead.city && lead.state && <span>, </span>}
-                        {lead.state && <span>{lead.state}</span>}
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`elstar-badge ${statusConfig[lead.status]?.class || 'elstar-badge-info'}`}>
-                        {statusConfig[lead.status]?.label || lead.status}
-                      </span>
-                    </td>
-                    <td className="text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <Sparkles className={`w-4 h-4 ${getScoreClass(lead.ai_score)}`} />
-                        <span className={`font-mono font-bold ${getScoreClass(lead.ai_score)}`}>{lead.ai_score}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="relative">
-                        <button onClick={() => setDropdownOpen(dropdownOpen === lead.id ? null : lead.id)} className="p-2 hover:bg-secondary rounded-lg">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </button>
-                        {dropdownOpen === lead.id && (
-                          <>
-                            <div className="fixed inset-0" onClick={() => setDropdownOpen(null)} />
-                            <div className="elstar-dropdown animate-fade-in">
-                              <button onClick={() => openEditDialog(lead)} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
-                                <Edit className="w-4 h-4" /> Edit
-                              </button>
-                              <button onClick={() => { handleRefreshScore(lead.id); setDropdownOpen(null); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
-                                <RefreshCw className="w-4 h-4" /> Refresh Score
-                              </button>
-                              <button onClick={() => { handleDelete(lead.id); setDropdownOpen(null); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500">
-                                <Trash2 className="w-4 h-4" /> Delete
-                              </button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </td>
+          <>
+            <div className="overflow-x-auto">
+              <table className="elstar-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th className="hidden md:table-cell">Company</th>
+                    <th className="hidden sm:table-cell">Contact</th>
+                    <th className="hidden lg:table-cell">Location</th>
+                    <th>Status</th>
+                    <th className="text-center">AI Score</th>
+                    <th className="w-12"></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {leads.map((lead) => (
+                    <tr key={lead.id} data-testid={`lead-row-${lead.id}`}>
+                      <td>
+                        <p className="font-medium">{lead.name}</p>
+                        <p className="text-xs text-muted-foreground">{lead.title}</p>
+                      </td>
+                      <td className="hidden md:table-cell">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Building2 className="w-4 h-4" />
+                          <span>{lead.company || '-'}</span>
+                        </div>
+                      </td>
+                      <td className="hidden sm:table-cell">
+                        <div className="space-y-1">
+                          {lead.email && <div className="flex items-center gap-1 text-xs text-muted-foreground"><Mail className="w-3 h-3" />{lead.email}</div>}
+                          {lead.phone && <div className="flex items-center gap-1 text-xs text-muted-foreground"><Phone className="w-3 h-3" />{lead.phone}</div>}
+                        </div>
+                      </td>
+                      <td className="hidden lg:table-cell">
+                        <div className="text-xs text-muted-foreground">
+                          {lead.city && <span>{lead.city}</span>}
+                          {lead.city && lead.state && <span>, </span>}
+                          {lead.state && <span>{lead.state}</span>}
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`elstar-badge ${statusConfig[lead.status]?.class || 'elstar-badge-info'}`}>
+                          {statusConfig[lead.status]?.label || lead.status}
+                        </span>
+                      </td>
+                      <td className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Sparkles className={`w-4 h-4 ${getScoreClass(lead.ai_score)}`} />
+                          <span className={`font-mono font-bold ${getScoreClass(lead.ai_score)}`}>{lead.ai_score}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="relative">
+                          <button onClick={() => setDropdownOpen(dropdownOpen === lead.id ? null : lead.id)} className="p-2 hover:bg-secondary rounded-lg">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </button>
+                          {dropdownOpen === lead.id && (
+                            <>
+                              <div className="fixed inset-0" onClick={() => setDropdownOpen(null)} />
+                              <div className="elstar-dropdown animate-fade-in">
+                                <button onClick={() => openEditDialog(lead)} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
+                                  <Edit className="w-4 h-4" /> Edit
+                                </button>
+                                <button onClick={() => { handleRefreshScore(lead.id); setDropdownOpen(null); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
+                                  <RefreshCw className="w-4 h-4" /> Refresh Score
+                                </button>
+                                <button onClick={() => { handleDelete(lead.id); setDropdownOpen(null); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500">
+                                  <Trash2 className="w-4 h-4" /> Delete
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+            />
+          </>
         )}
       </div>
 

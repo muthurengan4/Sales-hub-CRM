@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useAuth } from '../App';
 import { toast } from 'sonner';
 import Modal from '../components/Modal';
+import Pagination from '../components/Pagination';
 import { Plus, Search, Loader2, Mail, Phone, Building2, MoreHorizontal, Trash2, Edit, MapPin, User, Upload, FileSpreadsheet, X } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -145,6 +146,7 @@ export default function Contacts() {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -154,17 +156,51 @@ export default function Contacts() {
   const [formData, setFormData] = useState(initialFormData);
   const [importFile, setImportFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
-  useEffect(() => { fetchContacts(); }, [search]);
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1); // Reset to first page on search
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => { fetchContacts(); }, [currentPage, pageSize, debouncedSearch]);
 
   const fetchContacts = async () => {
     try {
-      let url = `${API}/api/contacts`;
-      if (search) url += `?search=${encodeURIComponent(search)}`;
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.append('page', currentPage);
+      params.append('limit', pageSize);
+      if (debouncedSearch) params.append('search', debouncedSearch);
+      
+      const url = `${API}/api/contacts?${params.toString()}`;
       const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      if (response.ok) setContacts(await response.json());
+      if (response.ok) {
+        const data = await response.json();
+        setContacts(data.items || []);
+        setTotalItems(data.total || 0);
+        setTotalPages(data.total_pages || 0);
+      }
     } catch (error) { toast.error('Failed to fetch contacts'); }
     finally { setLoading(false); }
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+  
+  const handlePageSizeChange = (size) => {
+    setPageSize(size);
+    setCurrentPage(1); // Reset to first page when changing page size
   };
 
   // Stable callback to prevent re-renders
@@ -238,6 +274,7 @@ export default function Contacts() {
         toast.success(`Successfully imported ${result.imported} contacts`);
         setIsImportOpen(false);
         setImportFile(null);
+        setCurrentPage(1);
         fetchContacts();
       } else {
         const data = await response.json();
@@ -290,46 +327,56 @@ export default function Contacts() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-            {contacts.map((contact) => (
-              <div key={contact.id} className="elstar-card p-4" data-testid={`contact-card-${contact.id}`}>
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="elstar-avatar w-10 h-10">{contact.first_name?.charAt(0)?.toUpperCase()}</div>
-                    <div>
-                      <p className="font-medium">{contact.first_name} {contact.last_name}</p>
-                      <p className="text-xs text-muted-foreground">{contact.job_title}</p>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+              {contacts.map((contact) => (
+                <div key={contact.id} className="elstar-card p-4" data-testid={`contact-card-${contact.id}`}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="elstar-avatar w-10 h-10">{contact.first_name?.charAt(0)?.toUpperCase()}</div>
+                      <div>
+                        <p className="font-medium">{contact.first_name} {contact.last_name}</p>
+                        <p className="text-xs text-muted-foreground">{contact.job_title}</p>
+                      </div>
+                    </div>
+                    <div className="relative">
+                      <button onClick={() => setDropdownOpen(dropdownOpen === contact.id ? null : contact.id)} className="p-1 hover:bg-secondary rounded">
+                        <MoreHorizontal className="w-4 h-4" />
+                      </button>
+                      {dropdownOpen === contact.id && (
+                        <>
+                          <div className="fixed inset-0" onClick={() => setDropdownOpen(null)} />
+                          <div className="elstar-dropdown animate-fade-in">
+                            <button onClick={() => openEditDialog(contact)} className="elstar-dropdown-item w-full text-left flex items-center gap-2"><Edit className="w-4 h-4" /> Edit</button>
+                            <button onClick={() => { handleDelete(contact.id); setDropdownOpen(null); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500"><Trash2 className="w-4 h-4" /> Delete</button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
-                  <div className="relative">
-                    <button onClick={() => setDropdownOpen(dropdownOpen === contact.id ? null : contact.id)} className="p-1 hover:bg-secondary rounded">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </button>
-                    {dropdownOpen === contact.id && (
-                      <>
-                        <div className="fixed inset-0" onClick={() => setDropdownOpen(null)} />
-                        <div className="elstar-dropdown animate-fade-in">
-                          <button onClick={() => openEditDialog(contact)} className="elstar-dropdown-item w-full text-left flex items-center gap-2"><Edit className="w-4 h-4" /> Edit</button>
-                          <button onClick={() => { handleDelete(contact.id); setDropdownOpen(null); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500"><Trash2 className="w-4 h-4" /> Delete</button>
-                        </div>
-                      </>
+                  <div className="space-y-2">
+                    {contact.company && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Building2 className="w-4 h-4" />{contact.company}</div>}
+                    {contact.email && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Mail className="w-4 h-4" /><span className="truncate">{contact.email}</span></div>}
+                    {contact.phone && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Phone className="w-4 h-4" />{contact.phone}</div>}
+                    {(contact.city || contact.state) && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <MapPin className="w-4 h-4" />
+                        {contact.city}{contact.city && contact.state && ', '}{contact.state}
+                      </div>
                     )}
                   </div>
                 </div>
-                <div className="space-y-2">
-                  {contact.company && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Building2 className="w-4 h-4" />{contact.company}</div>}
-                  {contact.email && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Mail className="w-4 h-4" /><span className="truncate">{contact.email}</span></div>}
-                  {contact.phone && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Phone className="w-4 h-4" />{contact.phone}</div>}
-                  {(contact.city || contact.state) && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <MapPin className="w-4 h-4" />
-                      {contact.city}{contact.city && contact.state && ', '}{contact.state}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+            />
+          </>
         )}
       </div>
 
