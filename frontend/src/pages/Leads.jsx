@@ -649,8 +649,8 @@ export default function Leads() {
                           </button>
                           {dropdownOpen === lead.id && (
                             <>
-                              <div className="fixed inset-0" onClick={() => setDropdownOpen(null)} />
-                              <div className="elstar-dropdown animate-fade-in">
+                              <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(null)} />
+                              <div className="absolute right-0 mt-2 w-48 bg-card rounded-lg border border-border shadow-xl z-50 overflow-hidden animate-fade-in" style={{ boxShadow: '0 10px 40px -10px rgba(0,0,0,0.3)' }}>
                                 <button onClick={() => { navigate(`/profile/lead/${lead.id}`); setDropdownOpen(null); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
                                   <Eye className="w-4 h-4" /> View Profile
                                 </button>
