@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useAuth } from '../App';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
 import { 
   Plus, Search, Loader2, Sparkles, Mail, Phone, Building2, 
-  MoreHorizontal, Trash2, Edit, RefreshCw, Upload, FileSpreadsheet
+  MoreHorizontal, Trash2, Edit, RefreshCw, Upload, FileSpreadsheet, Eye
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -233,6 +234,7 @@ const UsersIcon = ({ className }) => (
 
 export default function Leads() {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -568,6 +570,9 @@ export default function Leads() {
                             <>
                               <div className="fixed inset-0" onClick={() => setDropdownOpen(null)} />
                               <div className="elstar-dropdown animate-fade-in">
+                                <button onClick={() => { navigate(`/profile/lead/${lead.id}`); setDropdownOpen(null); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
+                                  <Eye className="w-4 h-4" /> View Profile
+                                </button>
                                 <button onClick={() => openEditDialog(lead)} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
                                   <Edit className="w-4 h-4" /> Edit
                                 </button>

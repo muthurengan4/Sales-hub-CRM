@@ -42,6 +42,43 @@ class RoleType(str, Enum):
     SALES_REP = "sales_rep"
     VIEWER = "viewer"
 
+class CustomerLifecycle(str, Enum):
+    LEAD = "lead"
+    AI_CONTACTED = "ai_contacted"
+    INTERESTED = "interested"
+    OPPORTUNITY = "opportunity"
+    CUSTOMER = "customer"
+    REPEAT_CUSTOMER = "repeat_customer"
+
+class ActivityType(str, Enum):
+    AI_CALL = "ai_call"
+    EMAIL = "email"
+    NOTE = "note"
+    MEETING = "meeting"
+    PIPELINE_CHANGE = "pipeline_change"
+    STATUS_CHANGE = "status_change"
+    ASSIGNMENT = "assignment"
+    SYSTEM = "system"
+
+class CallStatus(str, Enum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    NO_ANSWER = "no_answer"
+    BUSY = "busy"
+    COMPLETED = "completed"
+    INTERESTED = "interested"
+    FOLLOW_UP = "follow_up"
+    FAILED = "failed"
+
+class NotificationType(str, Enum):
+    NEW_LEAD = "new_lead"
+    LEAD_ASSIGNED = "lead_assigned"
+    AI_CALL_COMPLETED = "ai_call_completed"
+    DEAL_STAGE_CHANGED = "deal_stage_changed"
+    CUSTOMER_REPLY = "customer_reply"
+    TASK_DUE = "task_due"
+    SYSTEM = "system"
+
 class Permission(str, Enum):
     # Organization
     MANAGE_ORGANIZATION = "manage_organization"
@@ -237,6 +274,7 @@ class LeadCreate(BaseModel):
     city: Optional[str] = None
     state: Optional[str] = None
     is_public: Optional[bool] = False
+    lifecycle_stage: Optional[str] = "lead"
 
 class LeadUpdate(BaseModel):
     name: Optional[str] = None
@@ -256,6 +294,7 @@ class LeadUpdate(BaseModel):
     city: Optional[str] = None
     state: Optional[str] = None
     is_public: Optional[bool] = None
+    lifecycle_stage: Optional[str] = None
 
 class LeadResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -271,6 +310,7 @@ class LeadResponse(BaseModel):
     source: Optional[str] = None
     notes: Optional[str] = None
     status: str
+    lifecycle_stage: Optional[str] = "lead"
     ai_score: int
     ai_insights: Optional[str] = None
     contact_id: Optional[str] = None
@@ -357,6 +397,71 @@ class ActivityResponse(BaseModel):
     owner_id: str
     owner_name: Optional[str] = None
     created_at: str
+
+# Notification Models
+class NotificationCreate(BaseModel):
+    type: str
+    title: str
+    message: str
+    link: Optional[str] = None
+    entity_type: Optional[str] = None  # lead, contact, deal
+    entity_id: Optional[str] = None
+
+class NotificationResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    type: str
+    title: str
+    message: str
+    link: Optional[str] = None
+    entity_type: Optional[str] = None
+    entity_id: Optional[str] = None
+    read: bool = False
+    organization_id: str
+    user_id: str
+    created_at: str
+
+# AI Call Models (Placeholder for future integration)
+class AICallCreate(BaseModel):
+    contact_id: Optional[str] = None
+    lead_id: Optional[str] = None
+    phone_number: str
+    script_type: Optional[str] = "default"
+    notes: Optional[str] = None
+
+class AICallResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    contact_id: Optional[str] = None
+    lead_id: Optional[str] = None
+    phone_number: str
+    status: str  # pending, in_progress, completed, failed
+    call_result: Optional[str] = None  # no_answer, busy, completed, interested, follow_up
+    duration_seconds: Optional[int] = None
+    transcription: Optional[str] = None
+    ai_summary: Optional[str] = None
+    recording_url: Optional[str] = None
+    organization_id: str
+    initiated_by: str
+    created_at: str
+    completed_at: Optional[str] = None
+
+# Worklist Models
+class WorklistItem(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    record_number: int
+    customer_name: str
+    customer_email: Optional[str] = None
+    customer_phone: Optional[str] = None
+    assigned_agent: Optional[str] = None
+    assigned_agent_name: Optional[str] = None
+    status: str
+    lifecycle_stage: str
+    registration_time: str
+    last_activity: Optional[str] = None
+    entity_type: str  # lead or contact
+    entity_id: str
 
 # Analytics Models
 class AnalyticsResponse(BaseModel):
@@ -1577,6 +1682,467 @@ async def get_roles():
                 "permissions": [p.value for p in ROLE_PERMISSIONS.get(role, [])]
             }
             for role in RoleType
+        ]
+    }
+
+# ============= ACTIVITY TIMELINE ROUTES =============
+
+@api_router.get("/timeline/{entity_type}/{entity_id}")
+async def get_entity_timeline(entity_type: str, entity_id: str, user: dict = Depends(get_current_user)):
+    """Get activity timeline for a lead or contact"""
+    if entity_type not in ['lead', 'contact']:
+        raise HTTPException(status_code=400, detail="Invalid entity type")
+    
+    if not user.get('organization_id'):
+        return []
+    
+    # Get activities for this entity
+    query = {'organization_id': user['organization_id']}
+    if entity_type == 'lead':
+        query['lead_id'] = entity_id
+    else:
+        query['contact_id'] = entity_id
+    
+    activities = await db.activities.find(query, {'_id': 0}).sort('created_at', -1).to_list(100)
+    
+    # Add owner names
+    for activity in activities:
+        owner = await db.users.find_one({'id': activity['owner_id']}, {'_id': 0, 'name': 1})
+        activity['owner_name'] = owner['name'] if owner else None
+    
+    return activities
+
+async def log_activity(
+    org_id: str,
+    user_id: str,
+    activity_type: str,
+    subject: str,
+    description: str = None,
+    lead_id: str = None,
+    contact_id: str = None,
+    deal_id: str = None
+):
+    """Helper function to log activities"""
+    activity_doc = {
+        'id': str(uuid.uuid4()),
+        'type': activity_type,
+        'subject': subject,
+        'description': description,
+        'lead_id': lead_id,
+        'contact_id': contact_id,
+        'deal_id': deal_id,
+        'organization_id': org_id,
+        'owner_id': user_id,
+        'completed': True,
+        'created_at': datetime.now(timezone.utc).isoformat()
+    }
+    await db.activities.insert_one(activity_doc)
+    return activity_doc
+
+# ============= NOTIFICATION ROUTES =============
+
+@api_router.get("/notifications")
+async def get_notifications(unread_only: bool = False, limit: int = 20, user: dict = Depends(get_current_user)):
+    """Get notifications for current user"""
+    if not user.get('organization_id'):
+        return {"items": [], "unread_count": 0}
+    
+    query = {
+        'organization_id': user['organization_id'],
+        'user_id': user['id']
+    }
+    if unread_only:
+        query['read'] = False
+    
+    notifications = await db.notifications.find(query, {'_id': 0}).sort('created_at', -1).limit(limit).to_list(limit)
+    unread_count = await db.notifications.count_documents({
+        'organization_id': user['organization_id'],
+        'user_id': user['id'],
+        'read': False
+    })
+    
+    return {"items": notifications, "unread_count": unread_count}
+
+@api_router.put("/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str, user: dict = Depends(get_current_user)):
+    """Mark a notification as read"""
+    result = await db.notifications.update_one(
+        {'id': notification_id, 'user_id': user['id']},
+        {'$set': {'read': True}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return {"message": "Notification marked as read"}
+
+@api_router.put("/notifications/read-all")
+async def mark_all_notifications_read(user: dict = Depends(get_current_user)):
+    """Mark all notifications as read"""
+    await db.notifications.update_many(
+        {'user_id': user['id'], 'read': False},
+        {'$set': {'read': True}}
+    )
+    return {"message": "All notifications marked as read"}
+
+async def create_notification(
+    org_id: str,
+    user_id: str,
+    notification_type: str,
+    title: str,
+    message: str,
+    link: str = None,
+    entity_type: str = None,
+    entity_id: str = None
+):
+    """Helper function to create notifications"""
+    notification_doc = {
+        'id': str(uuid.uuid4()),
+        'type': notification_type,
+        'title': title,
+        'message': message,
+        'link': link,
+        'entity_type': entity_type,
+        'entity_id': entity_id,
+        'read': False,
+        'organization_id': org_id,
+        'user_id': user_id,
+        'created_at': datetime.now(timezone.utc).isoformat()
+    }
+    await db.notifications.insert_one(notification_doc)
+    return notification_doc
+
+# ============= AI CALL ROUTES (PLACEHOLDER) =============
+
+@api_router.post("/ai-calls")
+async def initiate_ai_call(call_data: AICallCreate, user: dict = Depends(get_current_user)):
+    """Initiate an AI call - PLACEHOLDER for future integration"""
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="You must belong to an organization")
+    
+    call_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    call_doc = {
+        'id': call_id,
+        'contact_id': call_data.contact_id,
+        'lead_id': call_data.lead_id,
+        'phone_number': call_data.phone_number,
+        'status': 'pending',
+        'call_result': None,
+        'duration_seconds': None,
+        'transcription': None,
+        'ai_summary': None,
+        'recording_url': None,
+        'organization_id': user['organization_id'],
+        'initiated_by': user['id'],
+        'created_at': now,
+        'completed_at': None
+    }
+    
+    await db.ai_calls.insert_one(call_doc)
+    
+    # Log activity
+    await log_activity(
+        org_id=user['organization_id'],
+        user_id=user['id'],
+        activity_type='ai_call',
+        subject=f"AI call initiated to {call_data.phone_number}",
+        description="Call queued for processing",
+        lead_id=call_data.lead_id,
+        contact_id=call_data.contact_id
+    )
+    
+    call_doc.pop('_id', None)
+    return {
+        **call_doc,
+        "message": "AI Call feature is a placeholder. Integration with voice provider required."
+    }
+
+@api_router.get("/ai-calls")
+async def get_ai_calls(
+    lead_id: Optional[str] = None,
+    contact_id: Optional[str] = None,
+    status: Optional[str] = None,
+    user: dict = Depends(get_current_user)
+):
+    """Get AI calls for organization"""
+    if not user.get('organization_id'):
+        return []
+    
+    query = {'organization_id': user['organization_id']}
+    if lead_id:
+        query['lead_id'] = lead_id
+    if contact_id:
+        query['contact_id'] = contact_id
+    if status:
+        query['status'] = status
+    
+    calls = await db.ai_calls.find(query, {'_id': 0}).sort('created_at', -1).to_list(100)
+    return calls
+
+@api_router.get("/ai-calls/{call_id}")
+async def get_ai_call(call_id: str, user: dict = Depends(get_current_user)):
+    """Get specific AI call details"""
+    call = await db.ai_calls.find_one(
+        {'id': call_id, 'organization_id': user.get('organization_id')},
+        {'_id': 0}
+    )
+    if not call:
+        raise HTTPException(status_code=404, detail="Call not found")
+    return call
+
+# ============= WORKLIST DASHBOARD ROUTES =============
+
+@api_router.get("/worklist")
+async def get_worklist(
+    status: Optional[str] = None,
+    lifecycle_stage: Optional[str] = None,
+    assigned_to: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    page: int = 1,
+    limit: int = 20,
+    user: dict = Depends(get_current_user)
+):
+    """Get worklist dashboard data - active leads requiring attention"""
+    if not user.get('organization_id'):
+        return {"items": [], "total": 0, "page": page, "limit": limit, "total_pages": 0}
+    
+    # Validate pagination
+    page = max(1, page)
+    limit = min(max(1, limit), 100)
+    skip = (page - 1) * limit
+    
+    # Build query for leads (worklist focuses on leads)
+    query = {'organization_id': user['organization_id']}
+    
+    # Apply filters
+    if status:
+        query['status'] = status
+    if lifecycle_stage:
+        query['lifecycle_stage'] = lifecycle_stage
+    if assigned_to:
+        query['assigned_to'] = assigned_to
+    
+    # Date filters
+    if date_from:
+        query['created_at'] = {'$gte': date_from}
+    if date_to:
+        if 'created_at' in query:
+            query['created_at']['$lte'] = date_to
+        else:
+            query['created_at'] = {'$lte': date_to}
+    
+    # Get total count
+    total = await db.leads.count_documents(query)
+    total_pages = (total + limit - 1) // limit
+    
+    # Get paginated leads
+    leads = await db.leads.find(query, {'_id': 0}).sort('created_at', -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Transform to worklist items
+    worklist_items = []
+    record_number = skip + 1
+    
+    for lead in leads:
+        assigned_name = None
+        if lead.get('assigned_to'):
+            assigned_user = await db.users.find_one({'id': lead['assigned_to']}, {'_id': 0, 'name': 1})
+            assigned_name = assigned_user['name'] if assigned_user else None
+        
+        # Get last activity
+        last_activity = await db.activities.find_one(
+            {'lead_id': lead['id']},
+            {'_id': 0, 'created_at': 1, 'subject': 1}
+        )
+        
+        worklist_items.append({
+            'id': f"WL-{record_number:04d}",
+            'record_number': record_number,
+            'customer_name': lead.get('name', ''),
+            'customer_email': lead.get('email'),
+            'customer_phone': lead.get('phone'),
+            'assigned_agent': lead.get('assigned_to'),
+            'assigned_agent_name': assigned_name,
+            'status': lead.get('status', 'new'),
+            'lifecycle_stage': lead.get('lifecycle_stage', 'lead'),
+            'registration_time': lead.get('created_at', ''),
+            'last_activity': last_activity.get('created_at') if last_activity else None,
+            'entity_type': 'lead',
+            'entity_id': lead['id']
+        })
+        record_number += 1
+    
+    return {
+        "items": worklist_items,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": total_pages
+    }
+
+# ============= CUSTOMER PROFILE ROUTES =============
+
+@api_router.get("/profile/lead/{lead_id}")
+async def get_lead_profile(lead_id: str, user: dict = Depends(get_current_user)):
+    """Get comprehensive lead profile with all related data"""
+    query = get_data_filter(user, Permission.VIEW_ALL_LEADS, Permission.VIEW_OWN_LEADS)
+    query['id'] = lead_id
+    
+    lead = await db.leads.find_one(query, {'_id': 0})
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    # Get owner info
+    owner = await db.users.find_one({'id': lead['owner_id']}, {'_id': 0, 'name': 1, 'email': 1})
+    lead['owner_name'] = owner['name'] if owner else None
+    lead['owner_email'] = owner['email'] if owner else None
+    
+    # Get assigned user info
+    if lead.get('assigned_to'):
+        assigned = await db.users.find_one({'id': lead['assigned_to']}, {'_id': 0, 'name': 1, 'email': 1})
+        lead['assigned_to_name'] = assigned['name'] if assigned else None
+    
+    # Get activities/timeline
+    activities = await db.activities.find(
+        {'lead_id': lead_id, 'organization_id': user['organization_id']},
+        {'_id': 0}
+    ).sort('created_at', -1).to_list(50)
+    
+    for activity in activities:
+        act_owner = await db.users.find_one({'id': activity['owner_id']}, {'_id': 0, 'name': 1})
+        activity['owner_name'] = act_owner['name'] if act_owner else None
+    
+    # Get AI calls
+    ai_calls = await db.ai_calls.find(
+        {'lead_id': lead_id, 'organization_id': user['organization_id']},
+        {'_id': 0}
+    ).sort('created_at', -1).to_list(20)
+    
+    # Get related deals
+    deals = await db.deals.find(
+        {'lead_id': lead_id, 'organization_id': user['organization_id']},
+        {'_id': 0}
+    ).to_list(10)
+    
+    return {
+        "profile": lead,
+        "activities": activities,
+        "ai_calls": ai_calls,
+        "deals": deals,
+        "stats": {
+            "total_activities": len(activities),
+            "total_calls": len(ai_calls),
+            "total_deals": len(deals)
+        }
+    }
+
+@api_router.get("/profile/contact/{contact_id}")
+async def get_contact_profile(contact_id: str, user: dict = Depends(get_current_user)):
+    """Get comprehensive contact profile with all related data"""
+    check_permission(user, Permission.VIEW_CONTACTS)
+    
+    contact = await db.contacts.find_one(
+        {'id': contact_id, 'organization_id': user.get('organization_id')},
+        {'_id': 0}
+    )
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    
+    # Get owner info
+    owner = await db.users.find_one({'id': contact['owner_id']}, {'_id': 0, 'name': 1, 'email': 1})
+    contact['owner_name'] = owner['name'] if owner else None
+    contact['owner_email'] = owner['email'] if owner else None
+    
+    # Get activities/timeline
+    activities = await db.activities.find(
+        {'contact_id': contact_id, 'organization_id': user['organization_id']},
+        {'_id': 0}
+    ).sort('created_at', -1).to_list(50)
+    
+    for activity in activities:
+        act_owner = await db.users.find_one({'id': activity['owner_id']}, {'_id': 0, 'name': 1})
+        activity['owner_name'] = act_owner['name'] if act_owner else None
+    
+    # Get AI calls
+    ai_calls = await db.ai_calls.find(
+        {'contact_id': contact_id, 'organization_id': user['organization_id']},
+        {'_id': 0}
+    ).sort('created_at', -1).to_list(20)
+    
+    # Get related deals
+    deals = await db.deals.find(
+        {'contact_id': contact_id, 'organization_id': user['organization_id']},
+        {'_id': 0}
+    ).to_list(10)
+    
+    # Get related leads
+    leads = await db.leads.find(
+        {'contact_id': contact_id, 'organization_id': user['organization_id']},
+        {'_id': 0}
+    ).to_list(10)
+    
+    return {
+        "profile": contact,
+        "activities": activities,
+        "ai_calls": ai_calls,
+        "deals": deals,
+        "leads": leads,
+        "stats": {
+            "total_activities": len(activities),
+            "total_calls": len(ai_calls),
+            "total_deals": len(deals),
+            "total_leads": len(leads)
+        }
+    }
+
+# ============= ADVANCED FILTER OPTIONS =============
+
+@api_router.get("/filter-options")
+async def get_filter_options(user: dict = Depends(get_current_user)):
+    """Get available filter options for dropdowns"""
+    if not user.get('organization_id'):
+        return {}
+    
+    org_id = user['organization_id']
+    
+    # Get unique industries from leads
+    industries = await db.leads.distinct('industry', {'organization_id': org_id})
+    industries = [i for i in industries if i]
+    
+    # Get unique sources
+    sources = await db.leads.distinct('source', {'organization_id': org_id})
+    sources = [s for s in sources if s]
+    
+    # Get unique statuses
+    statuses = ['new', 'contacted', 'qualified', 'lost']
+    
+    # Get lifecycle stages
+    lifecycle_stages = [stage.value for stage in CustomerLifecycle]
+    
+    # Get users for assignment filter
+    users = await db.users.find(
+        {'organization_id': org_id},
+        {'_id': 0, 'id': 1, 'name': 1}
+    ).to_list(100)
+    
+    # Pipeline stages
+    pipeline_stages = ['lead', 'qualified', 'demo', 'proposal', 'negotiation', 'closed_won', 'closed_lost']
+    
+    return {
+        "industries": industries,
+        "sources": sources,
+        "statuses": statuses,
+        "lifecycle_stages": lifecycle_stages,
+        "users": users,
+        "pipeline_stages": pipeline_stages,
+        "date_presets": [
+            {"label": "Today", "value": "today"},
+            {"label": "Yesterday", "value": "yesterday"},
+            {"label": "Last 7 Days", "value": "last_7_days"},
+            {"label": "Last 30 Days", "value": "last_30_days"},
+            {"label": "This Month", "value": "this_month"},
+            {"label": "Last Month", "value": "last_month"},
+            {"label": "Custom Range", "value": "custom"}
         ]
     }
 

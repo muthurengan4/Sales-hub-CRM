@@ -13,6 +13,8 @@ import Contacts from './pages/Contacts';
 import Users from './pages/Users';
 import Organization from './pages/Organization';
 import Settings from './pages/Settings';
+import Worklist from './pages/Worklist';
+import CustomerProfile from './pages/CustomerProfile';
 import Layout from './components/Layout';
 
 // Auth Context
@@ -151,12 +153,14 @@ function App() {
             <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
+              <Route path="worklist" element={<Worklist />} />
               <Route path="leads" element={<Leads />} />
               <Route path="pipeline" element={<Pipeline />} />
               <Route path="contacts" element={<Contacts />} />
               <Route path="users" element={<Users />} />
               <Route path="organization" element={<Organization />} />
               <Route path="settings" element={<Settings />} />
+              <Route path="profile/:type/:id" element={<CustomerProfile />} />
             </Route>
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth, useTheme } from '../App';
+import NotificationsDropdown from './NotificationsDropdown';
 import { 
   LayoutDashboard, Users, Kanban, Settings, LogOut, Moon, Sun,
-  Menu, X, ChevronDown, Building2, UserCircle, Contact2, Shield
+  Menu, X, ChevronDown, Building2, UserCircle, Contact2, Shield, ClipboardList
 } from 'lucide-react';
 
 export default function Layout() {
@@ -18,6 +19,7 @@ export default function Layout() {
   // Dynamic navigation based on permissions
   const navItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', show: true },
+    { to: '/worklist', icon: ClipboardList, label: 'Worklist', show: hasPermission('view_all_leads') || hasPermission('view_own_leads') },
     { to: '/leads', icon: Users, label: 'Leads', show: hasPermission('view_all_leads') || hasPermission('view_own_leads') },
     { to: '/pipeline', icon: Kanban, label: 'Pipeline', show: hasPermission('view_all_deals') || hasPermission('view_own_deals') },
     { to: '/contacts', icon: Contact2, label: 'Contacts', show: hasPermission('view_contacts') },
@@ -118,6 +120,7 @@ export default function Layout() {
           </div>
 
           <div className="flex items-center gap-2">
+            <NotificationsDropdown />
             <button onClick={toggleTheme} className="p-2 hover:bg-secondary rounded-lg" data-testid="theme-toggle">
               {theme === 'dark' ? <Sun className="w-5 h-5 text-muted-foreground" /> : <Moon className="w-5 h-5 text-muted-foreground" />}
             </button>
