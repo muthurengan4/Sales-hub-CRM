@@ -6,14 +6,16 @@ import { Plus, Loader2, DollarSign, Calendar, MoreHorizontal, Trash2, Edit, Spar
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
+// Call-based pipeline stages
 const STAGES = [
-  { id: 'lead', label: 'Lead', color: 'bg-slate-500' },
-  { id: 'qualified', label: 'Qualified', color: 'bg-amber-400' },
-  { id: 'demo', label: 'Demo', color: 'bg-amber-500' },
-  { id: 'proposal', label: 'Proposal', color: 'bg-amber-600' },
-  { id: 'negotiation', label: 'Negotiation', color: 'bg-orange-500' },
-  { id: 'closed_won', label: 'Closed Won', color: 'bg-emerald-500' },
-  { id: 'closed_lost', label: 'Closed Lost', color: 'bg-red-500' }
+  { id: 'new', label: 'New', color: 'bg-slate-500' },
+  { id: 'contacted', label: 'Contacted', color: 'bg-blue-500' },
+  { id: 'no_answer', label: 'No Answer', color: 'bg-amber-400' },
+  { id: 'interested', label: 'Interested', color: 'bg-emerald-400' },
+  { id: 'follow_up', label: 'Follow Up', color: 'bg-purple-500' },
+  { id: 'booked', label: 'Booked', color: 'bg-amber-500' },
+  { id: 'won', label: 'Won', color: 'bg-emerald-500' },
+  { id: 'lost', label: 'Lost', color: 'bg-red-500' }
 ];
 
 const getHealthClass = (score) => {
@@ -23,7 +25,7 @@ const getHealthClass = (score) => {
 };
 
 const initialFormData = {
-  title: '', value: '', company: '', contact_name: '', stage: 'lead', expected_close_date: '', notes: ''
+  title: '', value: '', company: '', contact_name: '', stage: 'new', expected_close_date: '', notes: ''
 };
 
 // Deal Form Fields - MOVED OUTSIDE to prevent re-renders

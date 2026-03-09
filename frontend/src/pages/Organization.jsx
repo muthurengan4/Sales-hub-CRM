@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../App';
 import { toast } from 'sonner';
 import Modal from '../components/Modal';
+import AssignmentSettings from '../components/AssignmentSettings';
 import { Loader2, Building2, Users, Globe, Briefcase, Save, Plus, Check } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -306,6 +307,13 @@ export default function Organization() {
           <span className="elstar-badge elstar-badge-primary capitalize">{user?.role?.replace('_', ' ')}</span>
         </div>
       </div>
+
+      {/* Assignment Settings - Only show for admins */}
+      {user?.organization_id && hasPermission('manage_organization') && (
+        <div className="elstar-card p-6">
+          <AssignmentSettings />
+        </div>
+      )}
     </div>
   );
 }

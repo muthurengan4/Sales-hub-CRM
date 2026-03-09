@@ -4,7 +4,7 @@ import { useAuth, useTheme } from '../App';
 import NotificationsDropdown from './NotificationsDropdown';
 import { 
   LayoutDashboard, Users, Kanban, Settings, LogOut, Moon, Sun,
-  Menu, X, ChevronDown, Building2, UserCircle, Contact2, Shield, ClipboardList
+  Menu, X, ChevronDown, Building2, UserCircle, Contact2, Shield, ClipboardList, Briefcase
 } from 'lucide-react';
 
 export default function Layout() {
@@ -22,7 +22,8 @@ export default function Layout() {
     { to: '/worklist', icon: ClipboardList, label: 'Worklist', show: hasPermission('view_all_leads') || hasPermission('view_own_leads') },
     { to: '/leads', icon: Users, label: 'Leads', show: hasPermission('view_all_leads') || hasPermission('view_own_leads') },
     { to: '/pipeline', icon: Kanban, label: 'Pipeline', show: hasPermission('view_all_deals') || hasPermission('view_own_deals') },
-    { to: '/contacts', icon: Contact2, label: 'Contacts', show: hasPermission('view_contacts') },
+    { to: '/customers', icon: Contact2, label: 'Customers', show: hasPermission('view_contacts') },
+    { to: '/clients', icon: Briefcase, label: 'Clients', show: hasPermission('view_contacts') },
     { to: '/users', icon: UserCircle, label: 'Team', show: hasPermission('view_users') },
     { to: '/organization', icon: Building2, label: 'Organization', show: hasPermission('view_organization') },
     { to: '/settings', icon: Settings, label: 'Settings', show: true },

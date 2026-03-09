@@ -9,7 +9,8 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Leads from './pages/Leads';
 import Pipeline from './pages/Pipeline';
-import Contacts from './pages/Contacts';
+import Customers from './pages/Customers';
+import Clients from './pages/Clients';
 import Users from './pages/Users';
 import Organization from './pages/Organization';
 import Settings from './pages/Settings';
@@ -156,7 +157,8 @@ function App() {
               <Route path="worklist" element={<Worklist />} />
               <Route path="leads" element={<Leads />} />
               <Route path="pipeline" element={<Pipeline />} />
-              <Route path="contacts" element={<Contacts />} />
+              <Route path="customers" element={<Customers />} />
+              <Route path="clients" element={<Clients />} />
               <Route path="users" element={<Users />} />
               <Route path="organization" element={<Organization />} />
               <Route path="settings" element={<Settings />} />

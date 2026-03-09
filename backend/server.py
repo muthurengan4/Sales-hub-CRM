@@ -42,6 +42,22 @@ class RoleType(str, Enum):
     SALES_REP = "sales_rep"
     VIEWER = "viewer"
 
+class AssignmentMode(str, Enum):
+    ROUND_ROBIN = "round_robin"
+    TERRITORY = "territory"
+    MANUAL = "manual"
+    DEFAULT_AGENT = "default_agent"
+
+class PipelineStage(str, Enum):
+    NEW = "new"
+    CONTACTED = "contacted"
+    NO_ANSWER = "no_answer"
+    INTERESTED = "interested"
+    FOLLOW_UP = "follow_up"
+    BOOKED = "booked"
+    WON = "won"
+    LOST = "lost"
+
 class CustomerLifecycle(str, Enum):
     LEAD = "lead"
     AI_CONTACTED = "ai_contacted"
@@ -59,6 +75,7 @@ class ActivityType(str, Enum):
     STATUS_CHANGE = "status_change"
     ASSIGNMENT = "assignment"
     SYSTEM = "system"
+    CONVERSION = "conversion"
 
 class CallStatus(str, Enum):
     PENDING = "pending"
@@ -77,6 +94,7 @@ class NotificationType(str, Enum):
     DEAL_STAGE_CHANGED = "deal_stage_changed"
     CUSTOMER_REPLY = "customer_reply"
     TASK_DUE = "task_due"
+    LEAD_CONVERTED = "lead_converted"
     SYSTEM = "system"
 
 class Permission(str, Enum):
@@ -110,7 +128,7 @@ class Permission(str, Enum):
 ROLE_PERMISSIONS = {
     RoleType.SUPER_ADMIN: list(Permission),
     RoleType.ORG_ADMIN: [
-        Permission.VIEW_ORGANIZATION, Permission.MANAGE_USERS, Permission.VIEW_USERS,
+        Permission.VIEW_ORGANIZATION, Permission.MANAGE_ORGANIZATION, Permission.MANAGE_USERS, Permission.VIEW_USERS,
         Permission.INVITE_USERS, Permission.MANAGE_ALL_LEADS, Permission.VIEW_ALL_LEADS,
         Permission.MANAGE_ALL_DEALS, Permission.VIEW_ALL_DEALS, Permission.MANAGE_CONTACTS,
         Permission.VIEW_CONTACTS, Permission.VIEW_ANALYTICS, Permission.VIEW_TEAM_ANALYTICS,
@@ -288,6 +306,7 @@ class LeadUpdate(BaseModel):
     source: Optional[str] = None
     notes: Optional[str] = None
     status: Optional[str] = None
+    pipeline_stage: Optional[str] = None
     assigned_to: Optional[str] = None
     address: Optional[str] = None
     postcode: Optional[str] = None
@@ -310,6 +329,7 @@ class LeadResponse(BaseModel):
     source: Optional[str] = None
     notes: Optional[str] = None
     status: str
+    pipeline_stage: Optional[str] = "new"
     lifecycle_stage: Optional[str] = "lead"
     ai_score: int
     ai_insights: Optional[str] = None
@@ -319,6 +339,8 @@ class LeadResponse(BaseModel):
     city: Optional[str] = None
     state: Optional[str] = None
     is_public: Optional[bool] = False
+    converted_to_client: Optional[bool] = False
+    client_id: Optional[str] = None
     organization_id: Optional[str] = None
     owner_id: str
     owner_name: Optional[str] = None
@@ -478,6 +500,58 @@ class AnalyticsResponse(BaseModel):
     team_performance: List[Dict[str, Any]] = []
     recent_activities: List[Dict[str, Any]] = []
     organization_stats: Dict[str, Any] = {}
+
+# Assignment Settings Models
+class TerritoryMapping(BaseModel):
+    state: str
+    city: Optional[str] = None
+    agent_id: str
+
+class AssignmentSettingsUpdate(BaseModel):
+    mode: str  # round_robin, territory, manual, default_agent
+    default_agent_id: Optional[str] = None
+    territories: Optional[List[TerritoryMapping]] = None
+
+class AssignmentSettingsResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    organization_id: str
+    mode: str
+    default_agent_id: Optional[str] = None
+    default_agent_name: Optional[str] = None
+    territories: List[Dict[str, Any]] = []
+    round_robin_index: int = 0
+
+# Client/Service Models
+class ServiceCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    amount: float
+    purchase_date: Optional[str] = None
+    renewal_date: Optional[str] = None
+    status: str = "active"  # active, expired, cancelled
+
+class ClientCreate(BaseModel):
+    lead_id: str
+    services: List[ServiceCreate] = []
+    notes: Optional[str] = None
+
+class ClientResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    lead_id: str
+    customer_id: Optional[str] = None  # Link to customer record
+    customer_name: str
+    customer_email: Optional[str] = None
+    customer_phone: Optional[str] = None
+    company: Optional[str] = None
+    services: List[Dict[str, Any]] = []
+    total_value: float = 0
+    notes: Optional[str] = None
+    organization_id: str
+    converted_by: str
+    converted_by_name: Optional[str] = None
+    created_at: str
+    updated_at: str
 
 # ============= AUTH HELPERS =============
 
@@ -1290,7 +1364,7 @@ async def delete_lead(lead_id: str, user: dict = Depends(get_current_user)):
 
 @api_router.post("/leads/import")
 async def import_leads(file: UploadFile = File(...), user: dict = Depends(get_current_user)):
-    """Import leads from Excel file"""
+    """Import leads from Excel file with auto-assignment"""
     if Permission.MANAGE_ALL_LEADS.value not in user['permissions'] and Permission.MANAGE_OWN_LEADS.value not in user['permissions']:
         raise HTTPException(status_code=403, detail="Permission denied")
     
@@ -1350,10 +1424,58 @@ async def import_leads(file: UploadFile = File(...), user: dict = Depends(get_cu
         df = df.rename(columns={k: v for k, v in column_mapping.items() if k in df.columns})
         logging.info(f"Columns after mapping: {list(df.columns)}")
         
+        # Get assignment settings
+        assignment_settings = await db.assignment_settings.find_one(
+            {'organization_id': user['organization_id']},
+            {'_id': 0}
+        )
+        
+        # Get sales reps for round-robin
+        sales_reps = await db.users.find(
+            {'organization_id': user['organization_id'], 'role': {'$in': ['sales_rep', 'manager', 'org_admin']}},
+            {'_id': 0, 'id': 1, 'name': 1}
+        ).to_list(100)
+        
+        round_robin_index = assignment_settings.get('round_robin_index', 0) if assignment_settings else 0
+        
         now = datetime.now(timezone.utc).isoformat()
         imported_count = 0
         
         for _, row in df.iterrows():
+            # Determine assigned agent based on settings
+            assigned_to = None
+            assigned_to_name = None
+            
+            if assignment_settings:
+                mode = assignment_settings.get('mode', 'manual')
+                
+                if mode == 'default_agent' and assignment_settings.get('default_agent_id'):
+                    assigned_to = assignment_settings['default_agent_id']
+                    agent = await db.users.find_one({'id': assigned_to}, {'_id': 0, 'name': 1})
+                    assigned_to_name = agent['name'] if agent else None
+                    
+                elif mode == 'round_robin' and sales_reps:
+                    agent = sales_reps[round_robin_index % len(sales_reps)]
+                    assigned_to = agent['id']
+                    assigned_to_name = agent['name']
+                    round_robin_index += 1
+                    
+                elif mode == 'territory':
+                    territories = assignment_settings.get('territories', [])
+                    lead_state = str(row.get('state', '')).strip().lower() if pd.notna(row.get('state')) else ''
+                    lead_city = str(row.get('city', '')).strip().lower() if pd.notna(row.get('city')) else ''
+                    
+                    for territory in territories:
+                        t_state = territory.get('state', '').lower()
+                        t_city = territory.get('city', '').lower() if territory.get('city') else None
+                        
+                        if t_state == lead_state:
+                            if t_city is None or t_city == lead_city:
+                                assigned_to = territory.get('agent_id')
+                                agent = await db.users.find_one({'id': assigned_to}, {'_id': 0, 'name': 1})
+                                assigned_to_name = agent['name'] if agent else None
+                                break
+            
             lead_data = {
                 'id': str(uuid.uuid4()),
                 'name': str(row.get('name', '')).strip() if pd.notna(row.get('name')) else '',
@@ -1370,11 +1492,15 @@ async def import_leads(file: UploadFile = File(...), user: dict = Depends(get_cu
                 'company_size': '',
                 'source': 'import',
                 'status': 'new',
+                'pipeline_stage': 'new',
+                'lifecycle_stage': 'lead',
                 'notes': f"Imported from {file.filename}",
                 'ai_score': 50,  # Default score for imports
                 'organization_id': user['organization_id'],
                 'owner_id': user['id'],
                 'owner_name': user['name'],
+                'assigned_to': assigned_to,
+                'assigned_to_name': assigned_to_name,
                 'created_at': now,
                 'updated_at': now
             }
@@ -1385,6 +1511,26 @@ async def import_leads(file: UploadFile = File(...), user: dict = Depends(get_cu
             
             await db.leads.insert_one(lead_data)
             imported_count += 1
+            
+            # Create notification for assigned agent
+            if assigned_to:
+                await create_notification(
+                    org_id=user['organization_id'],
+                    user_id=assigned_to,
+                    notification_type='lead_assigned',
+                    title='New Lead Assigned',
+                    message=f'Lead "{lead_data["name"]}" has been assigned to you',
+                    link=f'/profile/lead/{lead_data["id"]}',
+                    entity_type='lead',
+                    entity_id=lead_data['id']
+                )
+        
+        # Update round-robin index
+        if assignment_settings and assignment_settings.get('mode') == 'round_robin':
+            await db.assignment_settings.update_one(
+                {'organization_id': user['organization_id']},
+                {'$set': {'round_robin_index': round_robin_index}}
+            )
         
         return {"imported": imported_count, "message": f"Successfully imported {imported_count} leads"}
     
@@ -2125,8 +2271,8 @@ async def get_filter_options(user: dict = Depends(get_current_user)):
         {'_id': 0, 'id': 1, 'name': 1}
     ).to_list(100)
     
-    # Pipeline stages
-    pipeline_stages = ['lead', 'qualified', 'demo', 'proposal', 'negotiation', 'closed_won', 'closed_lost']
+    # Pipeline stages - call-based
+    pipeline_stages = [stage.value for stage in PipelineStage]
     
     return {
         "industries": industries,
@@ -2145,6 +2291,348 @@ async def get_filter_options(user: dict = Depends(get_current_user)):
             {"label": "Custom Range", "value": "custom"}
         ]
     }
+
+# ============= ASSIGNMENT SETTINGS ROUTES =============
+
+@api_router.get("/assignment-settings")
+async def get_assignment_settings(user: dict = Depends(get_current_user)):
+    """Get assignment settings for organization"""
+    check_permission(user, Permission.VIEW_ORGANIZATION)
+    
+    if not user.get('organization_id'):
+        return {"mode": "manual", "territories": [], "default_agent_id": None}
+    
+    settings = await db.assignment_settings.find_one(
+        {'organization_id': user['organization_id']},
+        {'_id': 0}
+    )
+    
+    if not settings:
+        return {
+            "organization_id": user['organization_id'],
+            "mode": "manual",
+            "default_agent_id": None,
+            "default_agent_name": None,
+            "territories": [],
+            "round_robin_index": 0
+        }
+    
+    # Get default agent name
+    if settings.get('default_agent_id'):
+        agent = await db.users.find_one({'id': settings['default_agent_id']}, {'_id': 0, 'name': 1})
+        settings['default_agent_name'] = agent['name'] if agent else None
+    
+    return settings
+
+@api_router.put("/assignment-settings")
+async def update_assignment_settings(settings: AssignmentSettingsUpdate, user: dict = Depends(get_current_user)):
+    """Update assignment settings for organization"""
+    check_permission(user, Permission.MANAGE_ORGANIZATION)
+    
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="You must belong to an organization")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    
+    settings_doc = {
+        'organization_id': user['organization_id'],
+        'mode': settings.mode,
+        'default_agent_id': settings.default_agent_id,
+        'territories': [t.model_dump() for t in (settings.territories or [])],
+        'round_robin_index': 0,
+        'updated_at': now
+    }
+    
+    await db.assignment_settings.update_one(
+        {'organization_id': user['organization_id']},
+        {'$set': settings_doc},
+        upsert=True
+    )
+    
+    return {"message": "Assignment settings updated", "settings": settings_doc}
+
+# ============= CLIENT ROUTES =============
+
+@api_router.get("/clients")
+async def get_clients(
+    page: int = 1,
+    limit: int = 10,
+    search: Optional[str] = None,
+    user: dict = Depends(get_current_user)
+):
+    """Get all clients for organization"""
+    check_permission(user, Permission.VIEW_CONTACTS)
+    
+    if not user.get('organization_id'):
+        return {"items": [], "total": 0, "page": 1, "limit": limit, "total_pages": 0}
+    
+    page = max(1, page)
+    limit = min(max(1, limit), 100)
+    skip = (page - 1) * limit
+    
+    query = {'organization_id': user['organization_id']}
+    
+    if search:
+        query['$or'] = [
+            {'customer_name': {'$regex': search, '$options': 'i'}},
+            {'customer_email': {'$regex': search, '$options': 'i'}},
+            {'company': {'$regex': search, '$options': 'i'}}
+        ]
+    
+    total = await db.clients.count_documents(query)
+    total_pages = (total + limit - 1) // limit
+    
+    clients = await db.clients.find(query, {'_id': 0}).sort('created_at', -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Get converter names
+    for client in clients:
+        converter = await db.users.find_one({'id': client['converted_by']}, {'_id': 0, 'name': 1})
+        client['converted_by_name'] = converter['name'] if converter else None
+    
+    return {
+        "items": clients,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": total_pages
+    }
+
+@api_router.get("/clients/{client_id}")
+async def get_client(client_id: str, user: dict = Depends(get_current_user)):
+    """Get client details"""
+    check_permission(user, Permission.VIEW_CONTACTS)
+    
+    client = await db.clients.find_one(
+        {'id': client_id, 'organization_id': user.get('organization_id')},
+        {'_id': 0}
+    )
+    
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Get converter name
+    converter = await db.users.find_one({'id': client['converted_by']}, {'_id': 0, 'name': 1})
+    client['converted_by_name'] = converter['name'] if converter else None
+    
+    # Get original lead
+    lead = await db.leads.find_one({'id': client['lead_id']}, {'_id': 0})
+    
+    # Get activities
+    activities = await db.activities.find(
+        {'$or': [{'lead_id': client['lead_id']}, {'client_id': client_id}]},
+        {'_id': 0}
+    ).sort('created_at', -1).to_list(50)
+    
+    return {
+        "client": client,
+        "lead": lead,
+        "activities": activities
+    }
+
+@api_router.post("/leads/{lead_id}/convert")
+async def convert_lead_to_client(lead_id: str, client_data: ClientCreate, user: dict = Depends(get_current_user)):
+    """Convert a lead to a client after successful sale"""
+    if Permission.MANAGE_ALL_LEADS.value not in user['permissions'] and Permission.MANAGE_OWN_LEADS.value not in user['permissions']:
+        raise HTTPException(status_code=403, detail="Permission denied")
+    
+    # Get the lead
+    lead = await db.leads.find_one(
+        {'id': lead_id, 'organization_id': user.get('organization_id')},
+        {'_id': 0}
+    )
+    
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    client_id = str(uuid.uuid4())
+    
+    # Calculate total value from services
+    total_value = sum(s.amount for s in client_data.services)
+    
+    # Create client record
+    client_doc = {
+        'id': client_id,
+        'lead_id': lead_id,
+        'customer_id': None,  # Will be set if we create a customer record
+        'customer_name': lead.get('name', ''),
+        'customer_email': lead.get('email'),
+        'customer_phone': lead.get('phone'),
+        'company': lead.get('company'),
+        'services': [s.model_dump() for s in client_data.services],
+        'total_value': total_value,
+        'notes': client_data.notes,
+        'organization_id': user['organization_id'],
+        'converted_by': user['id'],
+        'created_at': now,
+        'updated_at': now
+    }
+    
+    await db.clients.insert_one(client_doc)
+    
+    # Update lead status and lifecycle
+    await db.leads.update_one(
+        {'id': lead_id},
+        {'$set': {
+            'status': 'qualified',
+            'pipeline_stage': 'won',
+            'lifecycle_stage': 'customer',
+            'converted_to_client': True,
+            'client_id': client_id,
+            'updated_at': now
+        }}
+    )
+    
+    # Create customer record in customers collection
+    customer_id = str(uuid.uuid4())
+    customer_doc = {
+        'id': customer_id,
+        'first_name': lead.get('name', '').split()[0] if lead.get('name') else '',
+        'last_name': ' '.join(lead.get('name', '').split()[1:]) if lead.get('name') else '',
+        'email': lead.get('email'),
+        'phone': lead.get('phone'),
+        'company': lead.get('company'),
+        'job_title': lead.get('title'),
+        'address': lead.get('address'),
+        'city': lead.get('city'),
+        'state': lead.get('state'),
+        'postcode': lead.get('postcode'),
+        'is_client': True,
+        'client_id': client_id,
+        'lead_id': lead_id,
+        'organization_id': user['organization_id'],
+        'owner_id': user['id'],
+        'created_at': now,
+        'updated_at': now
+    }
+    
+    await db.customers.insert_one(customer_doc)
+    
+    # Update client with customer_id
+    await db.clients.update_one(
+        {'id': client_id},
+        {'$set': {'customer_id': customer_id}}
+    )
+    
+    # Log activity
+    await log_activity(
+        org_id=user['organization_id'],
+        user_id=user['id'],
+        activity_type='conversion',
+        subject="Lead converted to client",
+        description=f"Lead \"{lead.get('name')}\" was converted to a client with {len(client_data.services)} service(s) worth ${total_value:,.2f}",
+        lead_id=lead_id
+    )
+    
+    # Notify the lead owner
+    if lead.get('owner_id') and lead['owner_id'] != user['id']:
+        await create_notification(
+            org_id=user['organization_id'],
+            user_id=lead['owner_id'],
+            notification_type='lead_converted',
+            title='Lead Converted to Client',
+            message=f'Lead "{lead.get("name")}" has been converted to a client',
+            link='/clients',
+            entity_type='client',
+            entity_id=client_id
+        )
+    
+    client_doc.pop('_id', None)
+    return {"message": "Lead converted to client successfully", "client": client_doc}
+
+@api_router.post("/clients/{client_id}/services")
+async def add_service_to_client(client_id: str, service: ServiceCreate, user: dict = Depends(get_current_user)):
+    """Add a service to an existing client"""
+    check_permission(user, Permission.MANAGE_CONTACTS)
+    
+    client = await db.clients.find_one(
+        {'id': client_id, 'organization_id': user.get('organization_id')},
+        {'_id': 0}
+    )
+    
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    service_data = service.model_dump()
+    service_data['id'] = str(uuid.uuid4())
+    service_data['added_at'] = now
+    
+    # Add service and update total
+    new_total = client.get('total_value', 0) + service.amount
+    
+    await db.clients.update_one(
+        {'id': client_id},
+        {
+            '$push': {'services': service_data},
+            '$set': {'total_value': new_total, 'updated_at': now}
+        }
+    )
+    
+    # Update lifecycle to repeat customer if they have multiple services
+    services_count = len(client.get('services', [])) + 1
+    if services_count > 1 and client.get('lead_id'):
+        await db.leads.update_one(
+            {'id': client['lead_id']},
+            {'$set': {'lifecycle_stage': 'repeat_customer', 'updated_at': now}}
+        )
+    
+    return {"message": "Service added successfully", "service": service_data}
+
+@api_router.put("/leads/{lead_id}/pipeline-stage")
+async def update_lead_pipeline_stage(lead_id: str, stage: str, user: dict = Depends(get_current_user)):
+    """Update lead pipeline stage (after call completion)"""
+    if Permission.MANAGE_ALL_LEADS.value not in user['permissions'] and Permission.MANAGE_OWN_LEADS.value not in user['permissions']:
+        raise HTTPException(status_code=403, detail="Permission denied")
+    
+    valid_stages = [s.value for s in PipelineStage]
+    if stage not in valid_stages:
+        raise HTTPException(status_code=400, detail=f"Invalid stage. Valid stages: {valid_stages}")
+    
+    lead = await db.leads.find_one(
+        {'id': lead_id, 'organization_id': user.get('organization_id')},
+        {'_id': 0, 'pipeline_stage': 1, 'name': 1}
+    )
+    
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    old_stage = lead.get('pipeline_stage', 'new')
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Update lifecycle based on pipeline stage
+    lifecycle_mapping = {
+        'new': 'lead',
+        'contacted': 'ai_contacted',
+        'no_answer': 'ai_contacted',
+        'interested': 'interested',
+        'follow_up': 'interested',
+        'booked': 'opportunity',
+        'won': 'customer',
+        'lost': 'lead'
+    }
+    lifecycle_stage = lifecycle_mapping.get(stage, 'lead')
+    
+    await db.leads.update_one(
+        {'id': lead_id},
+        {'$set': {
+            'pipeline_stage': stage,
+            'lifecycle_stage': lifecycle_stage,
+            'updated_at': now
+        }}
+    )
+    
+    # Log activity
+    await log_activity(
+        org_id=user['organization_id'],
+        user_id=user['id'],
+        activity_type='pipeline_change',
+        subject=f"Pipeline stage changed: {old_stage} → {stage}",
+        description=f"Lead moved from {old_stage} to {stage}",
+        lead_id=lead_id
+    )
+    
+    return {"message": f"Lead moved to {stage}", "pipeline_stage": stage, "lifecycle_stage": lifecycle_stage}
 
 # ============= ROOT ROUTE =============
 

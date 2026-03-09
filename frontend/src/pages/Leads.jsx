@@ -6,7 +6,7 @@ import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
 import { 
   Plus, Search, Loader2, Sparkles, Mail, Phone, Building2, 
-  MoreHorizontal, Trash2, Edit, RefreshCw, Upload, FileSpreadsheet, Eye
+  MoreHorizontal, Trash2, Edit, RefreshCw, Upload, FileSpreadsheet, Eye, UserCheck, DollarSign
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -16,6 +16,17 @@ const statusConfig = {
   contacted: { label: 'Contacted', class: 'elstar-badge-warning' },
   qualified: { label: 'Qualified', class: 'elstar-badge-success' },
   lost: { label: 'Lost', class: 'elstar-badge-danger' }
+};
+
+const pipelineStageConfig = {
+  new: { label: 'New', class: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300' },
+  contacted: { label: 'Contacted', class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+  no_answer: { label: 'No Answer', class: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
+  interested: { label: 'Interested', class: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+  follow_up: { label: 'Follow Up', class: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
+  booked: { label: 'Booked', class: 'bg-amber-200 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300' },
+  won: { label: 'Won', class: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
+  lost: { label: 'Lost', class: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' }
 };
 
 const getScoreClass = (score) => {
@@ -243,10 +254,12 @@ export default function Leads() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isConvertOpen, setIsConvertOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(null);
   const [formData, setFormData] = useState(initialFormData);
+  const [convertData, setConvertData] = useState({ services: [{ name: '', amount: '', status: 'active' }], notes: '' });
   const [importFile, setImportFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
   
@@ -383,6 +396,74 @@ export default function Leads() {
     setFormData({ ...initialFormData, ...lead });
     setIsEditOpen(true);
     setDropdownOpen(null);
+  };
+
+  const openConvertDialog = (lead) => {
+    setSelectedLead(lead);
+    setConvertData({ services: [{ name: '', amount: '', status: 'active' }], notes: '' });
+    setIsConvertOpen(true);
+    setDropdownOpen(null);
+  };
+
+  const handleConvert = async (e) => {
+    e.preventDefault();
+    if (!selectedLead) return;
+    
+    // Validate services
+    const validServices = convertData.services.filter(s => s.name && s.amount);
+    if (validServices.length === 0) {
+      toast.error('Please add at least one service');
+      return;
+    }
+    
+    setFormLoading(true);
+    try {
+      const response = await fetch(`${API}/api/leads/${selectedLead.id}/convert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          lead_id: selectedLead.id,
+          services: validServices.map(s => ({ ...s, amount: parseFloat(s.amount) })),
+          notes: convertData.notes
+        })
+      });
+      
+      if (response.ok) {
+        toast.success('Lead converted to client successfully!');
+        setIsConvertOpen(false);
+        setSelectedLead(null);
+        fetchLeads();
+        navigate('/clients');
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Failed to convert lead');
+      }
+    } catch (error) {
+      toast.error('Failed to convert lead');
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const addService = () => {
+    setConvertData(prev => ({
+      ...prev,
+      services: [...prev.services, { name: '', amount: '', status: 'active' }]
+    }));
+  };
+
+  const removeService = (index) => {
+    setConvertData(prev => ({
+      ...prev,
+      services: prev.services.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateService = (index, field, value) => {
+    setConvertData(prev => ({
+      ...prev,
+      services: prev.services.map((s, i) => i === index ? { ...s, [field]: value } : s)
+    }));
   };
 
   const openCreateDialog = () => {
@@ -579,6 +660,11 @@ export default function Leads() {
                                 <button onClick={() => { handleRefreshScore(lead.id); setDropdownOpen(null); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
                                   <RefreshCw className="w-4 h-4" /> Refresh Score
                                 </button>
+                                {!lead.converted_to_client && (
+                                  <button onClick={() => openConvertDialog(lead)} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-green-600">
+                                    <UserCheck className="w-4 h-4" /> Convert to Client
+                                  </button>
+                                )}
                                 <button onClick={() => { handleDelete(lead.id); setDropdownOpen(null); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500">
                                   <Trash2 className="w-4 h-4" /> Delete
                                 </button>
@@ -679,6 +765,111 @@ export default function Leads() {
             <button type="submit" disabled={importLoading || !importFile} className="elstar-btn-primary flex items-center gap-2">
               {importLoading && <Loader2 className="w-4 h-4 animate-spin" />}
               Import Leads
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Convert to Client Modal */}
+      <Modal isOpen={isConvertOpen} onClose={() => setIsConvertOpen(false)} title="Convert Lead to Client" size="lg">
+        <form onSubmit={handleConvert}>
+          <div className="elstar-modal-body max-h-[60vh] overflow-y-auto space-y-4">
+            {/* Lead Info */}
+            {selectedLead && (
+              <div className="p-4 rounded-lg bg-secondary/50">
+                <div className="flex items-center gap-3">
+                  <div className="elstar-avatar w-12 h-12">{selectedLead.name?.charAt(0)?.toUpperCase()}</div>
+                  <div>
+                    <p className="font-bold">{selectedLead.name}</p>
+                    <p className="text-sm text-muted-foreground">{selectedLead.company}</p>
+                    {selectedLead.email && <p className="text-xs text-muted-foreground">{selectedLead.email}</p>}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Services */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="font-medium">Purchased Services *</label>
+                <button type="button" onClick={addService} className="text-sm text-primary hover:underline flex items-center gap-1">
+                  <Plus className="w-3 h-3" /> Add Service
+                </button>
+              </div>
+              <div className="space-y-3">
+                {convertData.services.map((service, index) => (
+                  <div key={index} className="flex items-end gap-3 p-3 rounded-lg bg-secondary/30">
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium mb-1">Service Name *</label>
+                      <input
+                        type="text"
+                        value={service.name}
+                        onChange={(e) => updateService(index, 'name', e.target.value)}
+                        placeholder="e.g., Premium Plan"
+                        className="elstar-input"
+                        data-testid={`service-name-${index}`}
+                      />
+                    </div>
+                    <div className="w-32">
+                      <label className="block text-xs font-medium mb-1">Amount ($) *</label>
+                      <input
+                        type="number"
+                        value={service.amount}
+                        onChange={(e) => updateService(index, 'amount', e.target.value)}
+                        placeholder="0.00"
+                        className="elstar-input"
+                        data-testid={`service-amount-${index}`}
+                      />
+                    </div>
+                    <div className="w-28">
+                      <label className="block text-xs font-medium mb-1">Status</label>
+                      <select
+                        value={service.status}
+                        onChange={(e) => updateService(index, 'status', e.target.value)}
+                        className="elstar-select"
+                      >
+                        <option value="active">Active</option>
+                        <option value="pending">Pending</option>
+                      </select>
+                    </div>
+                    {convertData.services.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeService(index)}
+                        className="p-2 text-red-500 hover:bg-red-500/10 rounded"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {/* Total Value */}
+              <div className="mt-3 p-3 rounded-lg bg-green-500/10 flex items-center justify-between">
+                <span className="font-medium">Total Value:</span>
+                <span className="text-xl font-bold text-green-500">
+                  ${convertData.services.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0).toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Conversion Notes</label>
+              <textarea
+                value={convertData.notes}
+                onChange={(e) => setConvertData(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="Any notes about this conversion..."
+                className="elstar-input min-h-[80px]"
+              />
+            </div>
+          </div>
+          <div className="elstar-modal-footer">
+            <button type="button" onClick={() => setIsConvertOpen(false)} className="elstar-btn-ghost">Cancel</button>
+            <button type="submit" disabled={formLoading} className="elstar-btn-primary flex items-center gap-2" data-testid="convert-lead-btn">
+              {formLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+              <UserCheck className="w-4 h-4" />
+              Convert to Client
             </button>
           </div>
         </form>
