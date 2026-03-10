@@ -307,13 +307,17 @@
   
   /* Modal/Dialog with smooth entrance */
   .elstar-modal-overlay {
-    @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4;
+    @apply fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4;
+    z-index: 9998;
     animation: overlayFadeIn 0.2s ease-out;
   }
   
   .elstar-modal {
-    @apply bg-card rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden;
-    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.5), 0 0 30px -5px #f5c77a / 0.2);
+    @apply bg-card rounded-xl shadow-xl w-full overflow-hidden;
+    max-width: 500px;
+    max-height: calc(100vh - 2rem);
+    z-index: 9999;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 30px -5px rgba(160, 196, 255, 0.2);
     animation: modalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
@@ -323,6 +327,7 @@
   
   .elstar-modal-body {
     @apply px-6 py-4 overflow-y-auto;
+    max-height: calc(100vh - 12rem);
   }
   
   .elstar-modal-footer {

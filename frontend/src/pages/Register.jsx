@@ -59,7 +59,7 @@ export default function Register() {
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
             </svg>
           </div>
-          <h1 className="text-4xl font-bold mb-4">SalesHub</h1>
+          <h1 className="text-4xl font-bold mb-4">AISalesTask</h1>
           <p className="text-white/80 text-lg leading-relaxed">
             Join thousands of sales teams who use our AI-powered platform to close more deals.
           </p>
@@ -76,12 +76,12 @@ export default function Register() {
                 <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
               </svg>
             </div>
-            <span className="text-xl font-bold">SalesHub</span>
+            <span className="text-xl font-bold">AISalesTask</span>
           </div>
 
           <div className="mb-8">
             <h2 className="text-2xl font-bold mb-2">Create your account</h2>
-            <p className="text-muted-foreground">Get started with AI-powered SalesHub</p>
+            <p className="text-muted-foreground">Get started with AI-powered AISalesTask</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">

@@ -433,7 +433,7 @@ export default function Leads() {
     setSelectAll(false);
   };
 
-  // AI Actions (Placeholder)
+  // AI Actions
   const handleStartAICalling = () => {
     if (selectedLeads.size === 0) {
       toast.error('Please select leads first');
@@ -447,7 +447,17 @@ export default function Leads() {
       toast.error('Please select leads first');
       return;
     }
-    toast.info(`AI WhatsApp feature coming soon for ${selectedLeads.size} leads`);
+    // Get the first selected lead and navigate to WhatsApp with it pre-selected
+    const firstSelectedId = Array.from(selectedLeads)[0];
+    const selectedLead = leads.find(l => l.id === firstSelectedId);
+    if (selectedLead) {
+      navigate(`/whatsapp?leadId=${selectedLead.id}&leadName=${encodeURIComponent(selectedLead.pic_name || selectedLead.name)}`);
+    }
+  };
+
+  // Navigate to WhatsApp with a specific lead
+  const openWhatsappWithLead = (lead) => {
+    navigate(`/whatsapp?leadId=${lead.id}&leadName=${encodeURIComponent(lead.pic_name || lead.name)}`);
   };
 
   // Stable callback to prevent re-renders
@@ -866,6 +876,9 @@ export default function Leads() {
                               <button onClick={() => { navigate(`/profile/lead/${lead.id}`); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
                                 <Eye className="w-4 h-4" /> View Profile
                               </button>
+                              <button onClick={() => { openWhatsappWithLead(lead); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-green-600">
+                                <MessageCircle className="w-4 h-4" /> WhatsApp
+                              </button>
                               <button onClick={() => { openEditDialog(lead); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
                                 <Edit className="w-4 h-4" /> Edit
                               </button>
@@ -873,7 +886,7 @@ export default function Leads() {
                                 <RefreshCw className="w-4 h-4" /> Refresh Score
                               </button>
                               {!lead.converted_to_client && (
-                                <button onClick={() => { openConvertDialog(lead); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-green-600">
+                                <button onClick={() => { openConvertDialog(lead); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-primary">
                                   <UserCheck className="w-4 h-4" /> Convert to Client
                                 </button>
                               )}

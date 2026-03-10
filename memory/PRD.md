@@ -1,90 +1,70 @@
 # AISalesTask CRM Platform - PRD
 
 ## Original Problem Statement
-Build an AI-powered HubSpot CRM clone with Lead Management, Pipeline & Deals (Kanban), Basic Analytics Dashboard, and AI features. Multi-tenancy, RBAC, Excel Import, and comprehensive sales workflow.
+Build an AI-powered CRM with Lead Management, Pipeline & Deals, Analytics Dashboard, and AI features.
 
 ## Latest Update (March 2026)
 
-### Bug Fixes Completed
-1. **ActionDropdown Not Working** - Fixed by using React Portal (`createPortal` to `document.body`) with z-index: 9999
-2. **Excel Import in Customers** - Added `/api/customers` endpoint (alias for contacts)
-3. **Color Scheme Update** - Changed from gold (#f5c77a) to blue (#A0C4FF) throughout the app
+### Completed Changes
 
-### New Features Implemented
-4. **Calendar Page** (`/calendar`)
-   - Month/Week/Day view switcher
-   - Event CRUD with color coding
-   - Navigation (prev/next/today)
-   - Google Calendar sync ready (credentials in Settings)
+**1. Rebranding to AISalesTask**
+- ✅ Login page: "AISalesTask" title and branding
+- ✅ Register page: "AISalesTask" branding  
+- ✅ Sidebar: "AISalesTask v2.0" logo
+- ✅ Browser tab: "AISalesTask | AI-Powered Sales Platform"
 
-5. **WhatsApp Messages Page** (`/whatsapp`)
-   - Contact list from leads
-   - Chat interface with messages
-   - Message templates
-   - Local storage (external API MOCKED)
+**2. Create Event Modal Fix**
+- ✅ Fixed modal CSS (z-index: 9998/9999, proper centering)
+- ✅ Modal now displays fully with all form fields visible
+- ✅ Max height prevents overflow
 
-6. **Dashboard Color Overhaul**
-   - Dynamic gradient colors for stats cards
-   - Blue (#A0C4FF) primary accent
-   - Gradient backgrounds for cards
+**3. WhatsApp Lead Navigation**
+- ✅ Added "WhatsApp" option in lead action dropdown (green icon)
+- ✅ Clicking navigates to `/whatsapp?leadId={id}` 
+- ✅ WhatsApp page auto-selects the lead on load
+- ✅ User can go back to contact list to chat with others
 
 ### Previous Updates
-- Leads page: New columns, checkboxes, state filter, AI calling buttons
-- Tasks page: PDF-spec columns (NO., Company Name, Deal, Status, PIC Name, etc.)
-- Pipeline: Linked companies feature
-- Customers: Table layout with preview
+- ActionDropdown using React Portal (z-index fix)
+- Calendar page with Month/Week/Day views
+- WhatsApp messaging interface
+- Color scheme changed to blue (#A0C4FF)
+- PDF-spec UI for Leads, Tasks, Pipeline, Customers
 
 ## Code Architecture
 ```
 /app/
-├── backend/server.py           # FastAPI (3500+ lines - needs refactoring)
+├── backend/server.py           # FastAPI
 ├── frontend/src/
 │   ├── components/
-│   │   ├── ActionDropdown.jsx  # React Portal dropdown (z-index fix)
-│   │   ├── Layout.jsx          # Navigation with Calendar, WhatsApp
-│   │   └── ...
+│   │   ├── ActionDropdown.jsx  # React Portal (z-index: 9999)
+│   │   ├── Modal.jsx           # Fixed modal component
+│   │   └── Layout.jsx          # "AISalesTask" branding
 │   ├── pages/
-│   │   ├── CalendarPage.jsx    # NEW: Full calendar
-│   │   ├── WhatsAppMessages.jsx # NEW: Messaging interface
-│   │   ├── Dashboard.jsx       # Updated colors
-│   │   ├── Leads.jsx           # Updated form/table
-│   │   ├── Tasks.jsx           # PDF spec columns
-│   │   └── ...
-│   └── index.css               # Blue color scheme (#A0C4FF)
+│   │   ├── CalendarPage.jsx    # Full calendar with event modal
+│   │   ├── WhatsAppMessages.jsx # Auto-selects lead from URL param
+│   │   ├── Leads.jsx           # WhatsApp action in dropdown
+│   │   ├── Login.jsx           # "AISalesTask" branding
+│   │   └── Register.jsx        # "AISalesTask" branding
+│   └── index.css               # Blue theme, modal fixes
+└── frontend/public/
+    └── index.html              # "AISalesTask" title
 ```
 
-## Key API Endpoints
+## Key Features
+
+### WhatsApp Lead Flow
+1. User views Leads table
+2. Clicks action dropdown → "WhatsApp" 
+3. Navigates to `/whatsapp?leadId=xxx`
+4. WhatsApp page auto-selects that lead
+5. User can send messages or click other contacts
 
 ### Calendar
-- GET/POST /api/calendar/events
-- GET/PUT/DELETE /api/calendar/events/{id}
-
-### WhatsApp
-- GET /api/whatsapp/messages/{contact_id}
-- POST /api/whatsapp/send (MOCKED - stores locally)
-
-### Customers (alias for Contacts)
-- GET/POST /api/customers
-- GET/PUT/DELETE /api/customers/{id}
-- POST /api/customers/import
-
-## Pending Tasks
-
-### P0 - Critical
-- ✅ ActionDropdown fix (Done)
-- ✅ Calendar page (Done)
-- ✅ WhatsApp interface (Done)
-- ⏳ Rebrand to "AISalesTask.com"
-
-### P1 - Important
-- ⏳ Google Calendar OAuth integration (UI ready)
-- ⏳ WhatsApp Business API integration
-- AI Call Agent integration (Twilio/Bland.ai)
-
-### P2 - Nice to Have
-- Data export (CSV/Excel)
-- Custom report builder
-- Backend refactoring (split server.py)
+- Month/Week/Day views
+- Event CRUD with color coding
+- Navigation (prev/next/today)
+- Google Calendar sync ready
 
 ## Test Credentials
 - Email: testadmin2@example.com
@@ -92,4 +72,5 @@ Build an AI-powered HubSpot CRM clone with Lead Management, Pipeline & Deals (Ka
 
 ## MOCKED Features
 - WhatsApp external API (messages stored locally)
-- AI Calling/WhatsApp buttons (placeholders)
+- AI Calling button (placeholder)
+- Google Calendar OAuth (credentials UI ready)

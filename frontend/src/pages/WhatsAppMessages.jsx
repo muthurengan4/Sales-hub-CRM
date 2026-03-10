@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../App';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { 
   Search, Send, Paperclip, Smile, Phone, Video, MoreVertical,
@@ -18,6 +19,7 @@ const MESSAGE_TEMPLATES = [
 
 export default function WhatsAppMessages() {
   const { token } = useAuth();
+  const [searchParams] = useSearchParams();
   const [contacts, setContacts] = useState([]);
   const [selectedContact, setSelectedContact] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -28,10 +30,24 @@ export default function WhatsAppMessages() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [mobileView, setMobileView] = useState('contacts'); // contacts or chat
   const messagesEndRef = useRef(null);
+  
+  // Get leadId from URL params
+  const preSelectedLeadId = searchParams.get('leadId');
 
   useEffect(() => {
     fetchContacts();
   }, []);
+  
+  // Auto-select lead from URL params after contacts are loaded
+  useEffect(() => {
+    if (preSelectedLeadId && contacts.length > 0 && !selectedContact) {
+      const leadToSelect = contacts.find(c => c.id === preSelectedLeadId);
+      if (leadToSelect) {
+        setSelectedContact(leadToSelect);
+        setMobileView('chat');
+      }
+    }
+  }, [preSelectedLeadId, contacts, selectedContact]);
 
   useEffect(() => {
     if (selectedContact) {
