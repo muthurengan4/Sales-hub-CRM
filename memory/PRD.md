@@ -1,121 +1,95 @@
 # AISalesTask CRM Platform - PRD
 
 ## Original Problem Statement
-Build an AI-powered HubSpot CRM clone with Lead Management, Pipeline & Deals (Kanban), Basic Analytics Dashboard, and AI features powered by Claude Sonnet 4.5. Later expanded to include Multi-tenancy, Role-Based Access Control (RBAC), Excel Import, Enhanced Analytics, comprehensive sales workflow, and AI CRM features.
+Build an AI-powered HubSpot CRM clone with Lead Management, Pipeline & Deals (Kanban), Basic Analytics Dashboard, and AI features. Multi-tenancy, RBAC, Excel Import, and comprehensive sales workflow.
 
-## Latest Update (March 2026) - PDF Specification Implementation
+## Latest Update (March 2026)
 
-### Completed UI/UX Overhaul
+### Bug Fixes Completed
+1. **ActionDropdown Not Working** - Fixed by using React Portal (`createPortal` to `document.body`) with z-index: 9999
+2. **Excel Import in Customers** - Added `/api/customers` endpoint (alias for contacts)
+3. **Color Scheme Update** - Changed from gold (#f5c77a) to blue (#A0C4FF) throughout the app
 
-**1. Leads Page (Picture 2 in PDF)**
-- ✅ New table columns: Name, Company Name, Contact, Mobile/Office, Email, Location, State, Country, Status, AI Score
-- ✅ Checkboxes for multi-select with selection counter
-- ✅ "Start AI Calling" and "Start AI WhatsApp" placeholder buttons
-- ✅ "All States/Areas" filter dropdown populated from database
-- ✅ New form sections: Clinic/Company Info, Person in Charge (PIC), Location, Contact Details
-- ✅ New form fields: Website, PIC Name, Office Number, Fax Number, Country, Pipeline Status
+### New Features Implemented
+4. **Calendar Page** (`/calendar`)
+   - Month/Week/Day view switcher
+   - Event CRUD with color coding
+   - Navigation (prev/next/today)
+   - Google Calendar sync ready (credentials in Settings)
 
-**2. Tasks Page (Picture 10, 11 in PDF)**
-- ✅ New table columns: NO., Company Name, Deal, Status, PIC Name, Sales Person, Reg Time, Payment
-- ✅ Filter dropdowns: All Deals, All Statuses, All Sales Person, All Payment
-- ✅ Task-to-Deal linking in create/edit form
-- ✅ Summary stats cards (Total Tasks, Pending, Total Payable, Total Paid)
+5. **WhatsApp Messages Page** (`/whatsapp`)
+   - Contact list from leads
+   - Chat interface with messages
+   - Message templates
+   - Local storage (external API MOCKED)
 
-**3. Pipeline Page (Picture 7, 8, 9 in PDF)**
-- ✅ Linked companies feature - link multiple leads/customers to deals
-- ✅ Company search in Create/Edit Deal form
-- ✅ Linked companies display on deal cards
-- ✅ Deal detail modal showing full linked companies list
-- ✅ ActionDropdown component replacing old dropdown (z-index fix)
+6. **Dashboard Color Overhaul**
+   - Dynamic gradient colors for stats cards
+   - Blue (#A0C4FF) primary accent
+   - Gradient backgrounds for cards
 
-**4. Customers Page (Picture 13, 14 in PDF)**
-- ✅ Table layout with columns: Company Name, PIC/Doctor, Role, Mobile, Email, Status
-- ✅ Preview button for quick access
-- ✅ ActionDropdown for edit/delete actions
-
-**5. ActionDropdown Component (Z-Index Fix)**
-- ✅ Created reusable component with fixed positioning (z-index: 70)
-- ✅ Applied to all table-based pages (Leads, Tasks, Clients, Customers, Pipeline)
-- ✅ Dropdowns now appear above table content correctly
-
-### Previous Updates (December 2025)
-- Assignment System: 4 modes (manual, round-robin, territory, default agent)
-- Call-Based Pipeline: New → Contacted → No Answer → Interested → Follow Up → Booked → Won/Lost
-- Lead-to-Client Conversion with service tracking
-- Clients page for converted leads
-- "Contacts" renamed to "Customers"
+### Previous Updates
+- Leads page: New columns, checkboxes, state filter, AI calling buttons
+- Tasks page: PDF-spec columns (NO., Company Name, Deal, Status, PIC Name, etc.)
+- Pipeline: Linked companies feature
+- Customers: Table layout with preview
 
 ## Code Architecture
 ```
 /app/
-├── backend/
-│   ├── server.py           # Monolithic FastAPI (needs refactoring)
-│   ├── tests/              # pytest test files
-│   └── .env
+├── backend/server.py           # FastAPI (3500+ lines - needs refactoring)
 ├── frontend/src/
-│   ├── App.js
 │   ├── components/
-│   │   ├── Layout.jsx
-│   │   ├── Pagination.jsx
-│   │   ├── ActionDropdown.jsx  # NEW: Fixed-position dropdown
-│   │   ├── NotificationsDropdown.jsx
-│   │   └── AssignmentSettings.jsx
+│   │   ├── ActionDropdown.jsx  # React Portal dropdown (z-index fix)
+│   │   ├── Layout.jsx          # Navigation with Calendar, WhatsApp
+│   │   └── ...
 │   ├── pages/
-│   │   ├── Dashboard.jsx
-│   │   ├── Worklist.jsx
-│   │   ├── Leads.jsx           # UPDATED: New columns, form, filters
-│   │   ├── Tasks.jsx           # UPDATED: New columns, deal linking
-│   │   ├── Pipeline.jsx        # UPDATED: Linked companies
-│   │   ├── Customers.jsx       # UPDATED: Table layout
-│   │   ├── Clients.jsx
-│   │   ├── Users.jsx
-│   │   ├── Settings.jsx
-│   │   ├── CustomerProfile.jsx
-│   │   └── Organization.jsx
-│   └── index.css
+│   │   ├── CalendarPage.jsx    # NEW: Full calendar
+│   │   ├── WhatsAppMessages.jsx # NEW: Messaging interface
+│   │   ├── Dashboard.jsx       # Updated colors
+│   │   ├── Leads.jsx           # Updated form/table
+│   │   ├── Tasks.jsx           # PDF spec columns
+│   │   └── ...
+│   └── index.css               # Blue color scheme (#A0C4FF)
 ```
 
 ## Key API Endpoints
 
-### New/Updated Endpoints
-- GET /api/lookup/states - Unique states from leads for filtering
-- GET /api/lookup/companies - Leads/customers for deal linking
-- GET /api/lookup/sales-persons - Users for assignment dropdowns
-- GET/POST/PUT/DELETE /api/customers - Customer CRUD (alias for contacts)
-- POST /api/customers/import - Excel import for customers
+### Calendar
+- GET/POST /api/calendar/events
+- GET/PUT/DELETE /api/calendar/events/{id}
 
-### Updated Models
-- **Lead**: Added website, pic_name, office_number, fax_number, country, pipeline_status
-- **Deal**: Added linked_company_ids array, linked_companies populated list
-- **Task**: Added deal_id, deal_name, company_name, pic_name, reg_time
+### WhatsApp
+- GET /api/whatsapp/messages/{contact_id}
+- POST /api/whatsapp/send (MOCKED - stores locally)
 
-## Pending/Future Tasks
+### Customers (alias for Contacts)
+- GET/POST /api/customers
+- GET/PUT/DELETE /api/customers/{id}
+- POST /api/customers/import
+
+## Pending Tasks
 
 ### P0 - Critical
-- ✅ UI Overhaul (Done)
-- ✅ Dropdown z-index fix (Done)
-- ⏳ Rebrand to "AISalesTask.com" (logo, favicon, name)
+- ✅ ActionDropdown fix (Done)
+- ✅ Calendar page (Done)
+- ✅ WhatsApp interface (Done)
+- ⏳ Rebrand to "AISalesTask.com"
 
 ### P1 - Important
-- ⏳ Google Calendar OAuth integration (credentials storage ready)
-- AI Call Agent integration (Twilio/Bland.ai/Vapi)
-- Email notifications
-- Data export (CSV/Excel)
+- ⏳ Google Calendar OAuth integration (UI ready)
+- ⏳ WhatsApp Business API integration
+- AI Call Agent integration (Twilio/Bland.ai)
 
 ### P2 - Nice to Have
+- Data export (CSV/Excel)
 - Custom report builder
-- Automation workflows
-- Mobile app
-
-### Refactoring Needed
-- **CRITICAL**: Split server.py (~3500 lines) into domain routers
-- Abstract repeated table logic into hooks/components
+- Backend refactoring (split server.py)
 
 ## Test Credentials
 - Email: testadmin2@example.com
 - Password: Password123!
 
-## Known Mocked Features
-- AI Calling button (placeholder)
-- AI WhatsApp button (placeholder)
-- Google Calendar integration (credentials storage ready, OAuth not connected)
+## MOCKED Features
+- WhatsApp external API (messages stored locally)
+- AI Calling/WhatsApp buttons (placeholders)
