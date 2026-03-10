@@ -17,6 +17,8 @@ import Settings from './pages/Settings';
 import Worklist from './pages/Worklist';
 import Tasks from './pages/Tasks';
 import CustomerProfile from './pages/CustomerProfile';
+import CalendarPage from './pages/CalendarPage';
+import WhatsAppMessages from './pages/WhatsAppMessages';
 import Layout from './components/Layout';
 
 // Auth Context
@@ -161,6 +163,8 @@ function App() {
               <Route path="customers" element={<Customers />} />
               <Route path="clients" element={<Clients />} />
               <Route path="tasks" element={<Tasks />} />
+              <Route path="calendar" element={<CalendarPage />} />
+              <Route path="whatsapp" element={<WhatsAppMessages />} />
               <Route path="users" element={<Users />} />
               <Route path="organization" element={<Organization />} />
               <Route path="settings" element={<Settings />} />

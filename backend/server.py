@@ -3430,6 +3430,179 @@ async def sync_task_to_calendar(task_id: str, user: dict = Depends(get_current_u
     
     return {"message": "Task synced to Google Calendar", "event_id": calendar_event.get('id')}
 
+# ============= CALENDAR EVENTS ROUTES =============
+
+class CalendarEventCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    date: str  # YYYY-MM-DD
+    start_time: Optional[str] = "09:00"
+    end_time: Optional[str] = "10:00"
+    location: Optional[str] = None
+    color: Optional[str] = "#A0C4FF"
+    all_day: Optional[bool] = False
+    attendees: List[str] = []
+
+class CalendarEventUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    date: Optional[str] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    location: Optional[str] = None
+    color: Optional[str] = None
+    all_day: Optional[bool] = None
+
+@api_router.get("/calendar/events")
+async def get_calendar_events(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    user: dict = Depends(get_current_user)
+):
+    """Get calendar events for the organization"""
+    if not user.get('organization_id'):
+        return {"events": []}
+    
+    query = {'organization_id': user['organization_id']}
+    
+    if start_date and end_date:
+        query['date'] = {'$gte': start_date, '$lte': end_date}
+    
+    events = await db.calendar_events.find(query, {'_id': 0}).sort('date', 1).to_list(500)
+    
+    return {"events": events}
+
+@api_router.post("/calendar/events")
+async def create_calendar_event(event_data: CalendarEventCreate, user: dict = Depends(get_current_user)):
+    """Create a new calendar event"""
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="You must belong to an organization")
+    
+    event_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    event_doc = {
+        'id': event_id,
+        **event_data.model_dump(),
+        'organization_id': user['organization_id'],
+        'created_by': user['id'],
+        'created_at': now,
+        'updated_at': now,
+        'google_event_id': None
+    }
+    
+    await db.calendar_events.insert_one(event_doc)
+    event_doc.pop('_id', None)
+    
+    return event_doc
+
+@api_router.get("/calendar/events/{event_id}")
+async def get_calendar_event(event_id: str, user: dict = Depends(get_current_user)):
+    """Get a specific calendar event"""
+    event = await db.calendar_events.find_one(
+        {'id': event_id, 'organization_id': user.get('organization_id')},
+        {'_id': 0}
+    )
+    
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    return event
+
+@api_router.put("/calendar/events/{event_id}")
+async def update_calendar_event(
+    event_id: str, 
+    event_data: CalendarEventUpdate, 
+    user: dict = Depends(get_current_user)
+):
+    """Update a calendar event"""
+    update_data = {k: v for k, v in event_data.model_dump().items() if v is not None}
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.calendar_events.find_one_and_update(
+        {'id': event_id, 'organization_id': user.get('organization_id')},
+        {'$set': update_data},
+        return_document=True,
+        projection={'_id': 0}
+    )
+    
+    if not result:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    return result
+
+@api_router.delete("/calendar/events/{event_id}")
+async def delete_calendar_event(event_id: str, user: dict = Depends(get_current_user)):
+    """Delete a calendar event"""
+    result = await db.calendar_events.delete_one(
+        {'id': event_id, 'organization_id': user.get('organization_id')}
+    )
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    return {"message": "Event deleted successfully"}
+
+# ============= WHATSAPP MESSAGE ROUTES =============
+
+class WhatsAppMessageSend(BaseModel):
+    contact_id: str
+    message: str
+    phone: Optional[str] = None
+
+@api_router.get("/whatsapp/messages/{contact_id}")
+async def get_whatsapp_messages(contact_id: str, user: dict = Depends(get_current_user)):
+    """Get WhatsApp messages for a contact"""
+    if not user.get('organization_id'):
+        return {"messages": []}
+    
+    messages = await db.whatsapp_messages.find(
+        {'organization_id': user['organization_id'], 'contact_id': contact_id},
+        {'_id': 0}
+    ).sort('timestamp', 1).to_list(100)
+    
+    return {"messages": messages}
+
+@api_router.post("/whatsapp/send")
+async def send_whatsapp_message(message_data: WhatsAppMessageSend, user: dict = Depends(get_current_user)):
+    """Send a WhatsApp message (stores locally, integration coming soon)"""
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="You must belong to an organization")
+    
+    message_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    message_doc = {
+        'id': message_id,
+        'contact_id': message_data.contact_id,
+        'phone': message_data.phone,
+        'text': message_data.message,
+        'sender': 'me',
+        'timestamp': now,
+        'status': 'sent',
+        'organization_id': user['organization_id'],
+        'sent_by': user['id']
+    }
+    
+    await db.whatsapp_messages.insert_one(message_doc)
+    message_doc.pop('_id', None)
+    
+    # Log activity
+    await db.activities.insert_one({
+        'id': str(uuid.uuid4()),
+        'organization_id': user['organization_id'],
+        'entity_type': 'lead',
+        'entity_id': message_data.contact_id,
+        'action': 'whatsapp_sent',
+        'title': 'WhatsApp Message Sent',
+        'description': f'Sent: {message_data.message[:100]}...' if len(message_data.message) > 100 else f'Sent: {message_data.message}',
+        'user_id': user['id'],
+        'user_name': user['name'],
+        'created_at': now
+    })
+    
+    return {"success": True, "message": message_doc}
+
 # ============= ROOT ROUTE =============
 
 @api_router.get("/")

@@ -4,7 +4,7 @@ import { useAuth, useTheme } from '../App';
 import NotificationsDropdown from './NotificationsDropdown';
 import { 
   LayoutDashboard, Users, Kanban, Settings, LogOut, Moon, Sun,
-  Menu, X, ChevronDown, Building2, UserCircle, Contact2, Shield, ClipboardList, Briefcase, CheckSquare
+  Menu, X, ChevronDown, Building2, UserCircle, Contact2, Shield, ClipboardList, Briefcase, CheckSquare, Calendar, MessageCircle
 } from 'lucide-react';
 
 export default function Layout() {
@@ -25,6 +25,8 @@ export default function Layout() {
     { to: '/customers', icon: Contact2, label: 'Customers', show: hasPermission('view_contacts') },
     { to: '/clients', icon: Briefcase, label: 'Clients', show: hasPermission('view_contacts') },
     { to: '/tasks', icon: CheckSquare, label: 'Tasks', show: hasPermission('view_all_leads') || hasPermission('view_own_leads') },
+    { to: '/calendar', icon: Calendar, label: 'Calendar', show: true },
+    { to: '/whatsapp', icon: MessageCircle, label: 'WhatsApp', show: hasPermission('view_all_leads') || hasPermission('view_own_leads') },
     { to: '/users', icon: UserCircle, label: 'Team', show: hasPermission('view_users') },
     { to: '/organization', icon: Building2, label: 'Organization', show: hasPermission('view_organization') },
     { to: '/settings', icon: Settings, label: 'Settings', show: true },
@@ -32,10 +34,10 @@ export default function Layout() {
 
   const getRoleBadge = (role) => {
     const colors = {
-      super_admin: 'bg-amber-500/20 text-amber-500',
-      org_admin: 'bg-amber-400/20 text-amber-400',
+      super_admin: 'bg-[#A0C4FF]/20 text-[#7EB3FF]',
+      org_admin: 'bg-[#A0C4FF]/20 text-[#A0C4FF]',
       manager: 'bg-emerald-500/20 text-emerald-400',
-      sales_rep: 'bg-amber-600/20 text-amber-600',
+      sales_rep: 'bg-[#C5B3FF]/20 text-[#C5B3FF]',
       viewer: 'bg-slate-500/20 text-slate-400'
     };
     return colors[role] || colors.viewer;
