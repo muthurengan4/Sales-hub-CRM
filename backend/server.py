@@ -950,7 +950,7 @@ async def invite_user(invite_data: UserInvite, user: dict = Depends(get_current_
     check_permission(user, Permission.INVITE_USERS)
     
     if not user.get('organization_id'):
-        raise HTTPException(status_code=400, detail="You must belong to an organization")
+        raise HTTPException(status_code=400, detail="Please create or join an organization first. Go to Organization settings to get started.")
     
     existing = await db.users.find_one({'email': invite_data.email})
     if existing:
@@ -1109,7 +1109,7 @@ async def create_contact(contact_data: ContactCreate, user: dict = Depends(get_c
     check_permission(user, Permission.MANAGE_CONTACTS)
     
     if not user.get('organization_id'):
-        raise HTTPException(status_code=400, detail="You must belong to an organization")
+        raise HTTPException(status_code=400, detail="Please create or join an organization first. Go to Organization settings to get started.")
     
     contact_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -1233,7 +1233,7 @@ async def import_contacts(file: UploadFile = File(...), user: dict = Depends(get
     check_permission(user, Permission.MANAGE_CONTACTS)
     
     if not user.get('organization_id'):
-        raise HTTPException(status_code=400, detail="You must belong to an organization")
+        raise HTTPException(status_code=400, detail="Please create or join an organization first. Go to Organization settings to get started.")
     
     try:
         import pandas as pd
@@ -1256,36 +1256,77 @@ async def import_contacts(file: UploadFile = File(...), user: dict = Depends(get
         
         logging.info(f"Excel columns found: {list(df.columns)}")
         
-        # Column mapping from Excel to our schema
+        # Column mapping from Excel to our schema (case-insensitive matching)
         column_mapping = {
+            # Name variations
             'Clinic Name': 'first_name',
             'clinic name': 'first_name',
             'Name': 'first_name',
             'name': 'first_name',
             'First Name': 'first_name',
             'first_name': 'first_name',
+            'FirstName': 'first_name',
+            'Customer Name': 'first_name',
+            'customer name': 'first_name',
             'Last Name': 'last_name',
             'last_name': 'last_name',
+            'LastName': 'last_name',
+            # Address variations
             'Address': 'address',
             'address': 'address',
+            'Full Address': 'address',
+            'Street Address': 'address',
+            # Postcode variations
             'Postcode': 'postcode',
             'postcode': 'postcode',
+            'Post Code': 'postcode',
+            'Postal Code': 'postcode',
+            'postal code': 'postcode',
+            'Zip': 'postcode',
+            'Zip Code': 'postcode',
+            # City variations
             'City': 'city',
             'city': 'city',
+            # State variations
             'State': 'state',
             'state': 'state',
+            'Region': 'state',
+            'Province': 'state',
+            # Phone variations
             'Contact Number': 'phone',
             'contact number': 'phone',
+            'Customer Number': 'phone',
+            'customer number': 'phone',
             'Phone': 'phone',
             'phone': 'phone',
+            'Phone Number': 'phone',
+            'phone number': 'phone',
+            'Mobile': 'phone',
+            'mobile': 'phone',
+            'Mobile Number': 'phone',
+            'Tel': 'phone',
+            'Telephone': 'phone',
+            # Email variations
             'Email': 'email',
             'email': 'email',
+            'Email Address': 'email',
+            'E-mail': 'email',
+            # Public flag variations
             'Is public': 'is_public',
             'is public': 'is_public',
+            'Is Public': 'is_public',
+            'Public': 'is_public',
+            # Company variations
             'Company': 'company',
             'company': 'company',
+            'Company Name': 'company',
+            'Organization': 'company',
+            # Job title variations
             'Job Title': 'job_title',
             'job_title': 'job_title',
+            'Title': 'job_title',
+            'Role': 'job_title',
+            'Position': 'job_title',
         }
         
         # Rename columns
@@ -1378,7 +1419,7 @@ async def create_customer(contact_data: ContactCreate, user: dict = Depends(get_
     check_permission(user, Permission.MANAGE_CONTACTS)
     
     if not user.get('organization_id'):
-        raise HTTPException(status_code=400, detail="You must belong to an organization")
+        raise HTTPException(status_code=400, detail="Please create or join an organization first. Go to Organization settings to get started.")
     
     contact_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -1456,7 +1497,7 @@ async def create_lead(lead_data: LeadCreate, user: dict = Depends(get_current_us
         raise HTTPException(status_code=403, detail="Permission denied")
     
     if not user.get('organization_id'):
-        raise HTTPException(status_code=400, detail="You must belong to an organization")
+        raise HTTPException(status_code=400, detail="Please create or join an organization first. Go to Organization settings to get started.")
     
     lead_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -1609,7 +1650,7 @@ async def import_leads(file: UploadFile = File(...), user: dict = Depends(get_cu
         raise HTTPException(status_code=403, detail="Permission denied")
     
     if not user.get('organization_id'):
-        raise HTTPException(status_code=400, detail="You must belong to an organization")
+        raise HTTPException(status_code=400, detail="Please create or join an organization first. Go to Organization settings to get started.")
     
     try:
         import pandas as pd
@@ -1786,7 +1827,7 @@ async def create_deal(deal_data: DealCreate, user: dict = Depends(get_current_us
         raise HTTPException(status_code=403, detail="Permission denied")
     
     if not user.get('organization_id'):
-        raise HTTPException(status_code=400, detail="You must belong to an organization")
+        raise HTTPException(status_code=400, detail="Please create or join an organization first. Go to Organization settings to get started.")
     
     deal_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -1937,7 +1978,7 @@ async def delete_deal(deal_id: str, user: dict = Depends(get_current_user)):
 @api_router.post("/activities", response_model=ActivityResponse)
 async def create_activity(activity_data: ActivityCreate, user: dict = Depends(get_current_user)):
     if not user.get('organization_id'):
-        raise HTTPException(status_code=400, detail="You must belong to an organization")
+        raise HTTPException(status_code=400, detail="Please create or join an organization first. Go to Organization settings to get started.")
     
     activity_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -2262,7 +2303,7 @@ async def create_notification(
 async def initiate_ai_call(call_data: AICallCreate, user: dict = Depends(get_current_user)):
     """Initiate an AI call - PLACEHOLDER for future integration"""
     if not user.get('organization_id'):
-        raise HTTPException(status_code=400, detail="You must belong to an organization")
+        raise HTTPException(status_code=400, detail="Please create or join an organization first. Go to Organization settings to get started.")
     
     call_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -2630,7 +2671,7 @@ async def update_assignment_settings(settings: AssignmentSettingsUpdate, user: d
     check_permission(user, Permission.MANAGE_ORGANIZATION)
     
     if not user.get('organization_id'):
-        raise HTTPException(status_code=400, detail="You must belong to an organization")
+        raise HTTPException(status_code=400, detail="Please create or join an organization first. Go to Organization settings to get started.")
     
     now = datetime.now(timezone.utc).isoformat()
     
@@ -3016,7 +3057,7 @@ async def get_tasks(
 async def create_task(task_data: TaskCreate, user: dict = Depends(get_current_user)):
     """Create a new task"""
     if not user.get('organization_id'):
-        raise HTTPException(status_code=400, detail="You must belong to an organization")
+        raise HTTPException(status_code=400, detail="Please create or join an organization first. Go to Organization settings to get started.")
     
     now = datetime.now(timezone.utc).isoformat()
     task_id = str(uuid.uuid4())
@@ -3242,7 +3283,7 @@ async def update_organization_settings(settings: OrganizationSettingsUpdate, use
     check_permission(user, Permission.MANAGE_ORGANIZATION)
     
     if not user.get('organization_id'):
-        raise HTTPException(status_code=400, detail="You must belong to an organization")
+        raise HTTPException(status_code=400, detail="Please create or join an organization first. Go to Organization settings to get started.")
     
     now = datetime.now(timezone.utc).isoformat()
     
@@ -3373,7 +3414,7 @@ async def google_calendar_callback(code: str, state: str):
 async def sync_task_to_calendar(task_id: str, user: dict = Depends(get_current_user)):
     """Sync a task to Google Calendar"""
     if not user.get('organization_id'):
-        raise HTTPException(status_code=400, detail="You must belong to an organization")
+        raise HTTPException(status_code=400, detail="Please create or join an organization first. Go to Organization settings to get started.")
     
     # Get task
     task = await db.tasks.find_one(
@@ -3476,7 +3517,7 @@ async def get_calendar_events(
 async def create_calendar_event(event_data: CalendarEventCreate, user: dict = Depends(get_current_user)):
     """Create a new calendar event"""
     if not user.get('organization_id'):
-        raise HTTPException(status_code=400, detail="You must belong to an organization")
+        raise HTTPException(status_code=400, detail="Please create or join an organization first. Go to Organization settings to get started.")
     
     event_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -3567,7 +3608,7 @@ async def get_whatsapp_messages(contact_id: str, user: dict = Depends(get_curren
 async def send_whatsapp_message(message_data: WhatsAppMessageSend, user: dict = Depends(get_current_user)):
     """Send a WhatsApp message (stores locally, integration coming soon)"""
     if not user.get('organization_id'):
-        raise HTTPException(status_code=400, detail="You must belong to an organization")
+        raise HTTPException(status_code=400, detail="Please create or join an organization first. Go to Organization settings to get started.")
     
     message_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
