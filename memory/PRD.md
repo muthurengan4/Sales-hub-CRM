@@ -3,7 +3,15 @@
 ## Original Problem Statement
 Build an AI-powered HubSpot CRM clone with Lead Management, Pipeline & Deals (Kanban), Basic Analytics Dashboard, and AI features powered by Claude Sonnet 4.5. Later expanded to include Multi-tenancy, Role-Based Access Control (RBAC), Excel Import, Enhanced Analytics, comprehensive sales workflow, and AI CRM features.
 
-## Latest Update (December 2025)
+## Latest Update (March 2026)
+Implemented comprehensive UI overhaul and new features:
+- **Tasks Page**: Full CRUD with payment status tracking (paid/partially paid/unpaid)
+- **Multi-Currency Support**: 16 currencies configurable per organization (USD, MYR, EUR, etc.)
+- **Settings Page**: Profile, Appearance, Currency selection, Google Calendar integration setup
+- **Dropdown Z-Index Fix**: ActionDropdown component with fixed positioning for reliable menu visibility
+- **Navigation Update**: Tasks link added to sidebar
+
+## Previous Update (December 2025)
 Implemented comprehensive sales workflow based on AI CRM Feature Specification:
 - **Assignment System**: 4 modes (manual, round-robin, territory, default agent)
 - **Call-Based Pipeline**: New → Contacted → No Answer → Interested → Follow Up → Booked → Won/Lost
@@ -31,16 +39,19 @@ Implemented comprehensive sales workflow based on AI CRM Feature Specification:
 │   ├── components/
 │   │   ├── Layout.jsx      # Sidebar with all navigation
 │   │   ├── Pagination.jsx  # Reusable pagination
+│   │   ├── ActionDropdown.jsx  # Fixed-position dropdown (z-index fix)
 │   │   ├── NotificationsDropdown.jsx  # In-app notifications
 │   │   └── AssignmentSettings.jsx     # Lead assignment config
 │   ├── pages/
 │   │   ├── Dashboard.jsx   # Analytics + org setup
 │   │   ├── Worklist.jsx    # Operational lead dashboard
 │   │   ├── Leads.jsx       # Lead table + Convert to Client
+│   │   ├── Tasks.jsx       # Task management with payment status
 │   │   ├── Pipeline.jsx    # Kanban with call-based stages
 │   │   ├── Customers.jsx   # Customer management (renamed from Contacts)
-│   │   ├── Clients.jsx     # Converted leads with services
+│   │   ├── Clients.jsx     # Converted leads with services + multi-currency
 │   │   ├── Users.jsx       # Team management
+│   │   ├── Settings.jsx    # Currency, Google Calendar, Profile
 │   │   ├── CustomerProfile.jsx  # Detailed profile view
 │   │   └── Organization.jsx     # Org settings + Assignment settings
 │   └── index.css           # Elstar theme styles
@@ -99,6 +110,19 @@ Lead → AI Contacted → Interested → Opportunity → Customer → Repeat Cus
 - GET /api/assignment-settings
 - PUT /api/assignment-settings
 
+### Tasks (NEW - March 2026)
+- GET /api/tasks (paginated, filter by status/payment_status/assigned_to)
+- POST /api/tasks
+- PUT /api/tasks/{id}
+- DELETE /api/tasks/{id}
+
+### Organization Settings (NEW - March 2026)
+- GET /api/organization-settings (currency, Google Calendar settings)
+- PUT /api/organization-settings
+
+### Currencies
+- GET /api/currencies (returns 16 available currencies)
+
 ### Other Endpoints
 - GET/POST /api/deals
 - GET /api/customers (formerly contacts)
@@ -125,6 +149,14 @@ Lead → AI Contacted → Interested → Opportunity → Customer → Repeat Cus
 - Clients page with services
 - Customers page (renamed)
 
+### ✅ Tasks & Settings (March 2026)
+- Tasks page with CRUD operations
+- Payment status tracking (paid/partially paid/unpaid)
+- Multi-currency support (16 currencies)
+- Settings page with currency selection
+- Google Calendar integration setup (credentials storage)
+- ActionDropdown component (z-index fix)
+
 ### ✅ Dashboard & Analytics
 - Stats cards with trends
 - Revenue charts
@@ -147,16 +179,19 @@ Lead → AI Contacted → Interested → Opportunity → Customer → Repeat Cus
 
 ### P0 - Critical
 - ✅ Sales workflow (Done)
+- ✅ Tasks page with payment tracking (Done)
+- ✅ Multi-currency support (Done)
+- ✅ Dropdown z-index fix (Done)
 - ⏳ Rebranding to AISalesTask.com
 
 ### P1 - Important
+- ⏳ Google Calendar integration (credentials setup done, OAuth connection pending)
 - AI Call Agent integration (Twilio/Bland.ai/Vapi)
 - Email notifications
 - Data export (CSV/Excel)
 - Progress indicator for imports
 
 ### P2 - Nice to Have
-- Calendar integration
 - Automation workflows
 - Custom report builder
 - Mobile app
@@ -165,7 +200,9 @@ Lead → AI Contacted → Interested → Opportunity → Customer → Repeat Cus
 1. Lead conversion allows re-conversion (creates duplicate clients)
 2. Pipeline-stage endpoint uses query param instead of body
 3. React hydration warning in AssignmentSettings select
+4. Google Calendar requires user to provide OAuth credentials (working as designed)
 
 ## Test Credentials
 - Email: Register new user or use existing test accounts
 - First user in org becomes Org Admin automatically
+- Test user: testadmin2@example.com / Password123!
