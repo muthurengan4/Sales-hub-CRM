@@ -35,12 +35,14 @@ const initialFormData = {
   description: '',
   lead_id: '',
   client_id: '',
+  deal_id: '',
   assigned_to: '',
   due_date: '',
   payment_status: 'unpaid',
   payment_amount: '',
   paid_amount: '',
-  priority: 'medium'
+  priority: 'medium',
+  status: 'pending'
 };
 
 export default function Tasks() {
@@ -57,8 +59,10 @@ export default function Tasks() {
   // Data for dropdowns
   const [leads, setLeads] = useState([]);
   const [clients, setClients] = useState([]);
+  const [deals, setDeals] = useState([]);
   const [users, setUsers] = useState([]);
   const [orgSettings, setOrgSettings] = useState({ currency_symbol: '$' });
+  const [search, setSearch] = useState('');
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -70,7 +74,8 @@ export default function Tasks() {
   const [filters, setFilters] = useState({
     status: '',
     payment_status: '',
-    assigned_to: ''
+    assigned_to: '',
+    deal_id: ''
   });
 
   useEffect(() => {
@@ -88,6 +93,8 @@ export default function Tasks() {
       if (filters.status) params.append('status', filters.status);
       if (filters.payment_status) params.append('payment_status', filters.payment_status);
       if (filters.assigned_to) params.append('assigned_to', filters.assigned_to);
+      if (filters.deal_id) params.append('deal_id', filters.deal_id);
+      if (search) params.append('search', search);
       
       const response = await fetch(`${API}/api/tasks?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -124,6 +131,15 @@ export default function Tasks() {
       if (clientsRes.ok) {
         const data = await clientsRes.json();
         setClients(data.items || []);
+      }
+      
+      // Fetch deals
+      const dealsRes = await fetch(`${API}/api/deals`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (dealsRes.ok) {
+        const data = await dealsRes.json();
+        setDeals(data || []);
       }
       
       // Fetch users
@@ -308,76 +324,78 @@ export default function Tasks() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Tasks</h1>
-          <p className="text-muted-foreground mt-1">Manage your daily worklist and payment tracking</p>
+          <p className="text-muted-foreground mt-1">Your daily work list - all follow-ups and visits</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={() => setShowFilters(!showFilters)}
-            className={`elstar-btn-ghost ${Object.values(filters).some(v => v) ? 'text-primary' : ''}`}
-          >
-            <Filter className="w-4 h-4 mr-2" />
-            Filters
-          </button>
-          <button onClick={fetchTasks} className="elstar-btn-ghost">
-            <RefreshCw className="w-4 h-4" />
-          </button>
-          <button 
-            onClick={() => { setFormData(initialFormData); setIsCreateOpen(true); }} 
-            className="elstar-btn-primary"
-            data-testid="create-task-btn"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Task
-          </button>
-        </div>
+        <button 
+          onClick={() => { setFormData(initialFormData); setIsCreateOpen(true); }} 
+          className="elstar-btn-primary"
+          data-testid="create-task-btn"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          + Add Task
+        </button>
       </div>
 
-      {/* Filters */}
-      {showFilters && (
-        <div className="elstar-card p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="elstar-label">Status</label>
-              <select
-                value={filters.status}
-                onChange={(e) => { setFilters(prev => ({ ...prev, status: e.target.value })); setCurrentPage(1); }}
-                className="elstar-select"
-              >
-                <option value="">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-              </select>
-            </div>
-            <div>
-              <label className="elstar-label">Payment Status</label>
-              <select
-                value={filters.payment_status}
-                onChange={(e) => { setFilters(prev => ({ ...prev, payment_status: e.target.value })); setCurrentPage(1); }}
-                className="elstar-select"
-              >
-                <option value="">All</option>
-                <option value="paid">Paid</option>
-                <option value="partially_paid">Partially Paid</option>
-                <option value="unpaid">Unpaid</option>
-              </select>
-            </div>
-            <div>
-              <label className="elstar-label">Assigned To</label>
-              <select
-                value={filters.assigned_to}
-                onChange={(e) => { setFilters(prev => ({ ...prev, assigned_to: e.target.value })); setCurrentPage(1); }}
-                className="elstar-select"
-              >
-                <option value="">All</option>
-                {users.map(u => (
-                  <option key={u.id} value={u.id}>{u.name}</option>
-                ))}
-              </select>
-            </div>
+      {/* Filters Row - PDF style */}
+      <div className="elstar-card p-4">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search tasks..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+              className="elstar-input pl-10"
+              data-testid="search-tasks-input"
+            />
           </div>
+          <select
+            value={filters.deal_id}
+            onChange={(e) => { setFilters(prev => ({ ...prev, deal_id: e.target.value })); setCurrentPage(1); }}
+            className="elstar-select w-40"
+            data-testid="deals-filter"
+          >
+            <option value="">All Deals</option>
+            {deals.map(deal => (
+              <option key={deal.id} value={deal.id}>{deal.title}</option>
+            ))}
+          </select>
+          <select
+            value={filters.status}
+            onChange={(e) => { setFilters(prev => ({ ...prev, status: e.target.value })); setCurrentPage(1); }}
+            className="elstar-select w-40"
+            data-testid="status-filter"
+          >
+            <option value="">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+          </select>
+          <select
+            value={filters.assigned_to}
+            onChange={(e) => { setFilters(prev => ({ ...prev, assigned_to: e.target.value })); setCurrentPage(1); }}
+            className="elstar-select w-44"
+            data-testid="salesperson-filter"
+          >
+            <option value="">All Sales Person</option>
+            {users.map(u => (
+              <option key={u.id} value={u.id}>{u.name}</option>
+            ))}
+          </select>
+          <select
+            value={filters.payment_status}
+            onChange={(e) => { setFilters(prev => ({ ...prev, payment_status: e.target.value })); setCurrentPage(1); }}
+            className="elstar-select w-40"
+            data-testid="payment-filter"
+          >
+            <option value="">All Payment</option>
+            <option value="paid">Paid</option>
+            <option value="partially_paid">Partially Paid</option>
+            <option value="unpaid">Unpaid</option>
+          </select>
         </div>
-      )}
+      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -453,56 +471,56 @@ export default function Tasks() {
               <table className="elstar-table">
                 <thead>
                   <tr>
-                    <th>Task</th>
-                    <th className="hidden md:table-cell">Related To</th>
-                    <th className="hidden sm:table-cell">Assigned</th>
-                    <th>Status</th>
-                    <th>Payment</th>
-                    <th className="hidden lg:table-cell">Due Date</th>
+                    <th className="w-14">NO.</th>
+                    <th>COMPANY NAME</th>
+                    <th className="hidden md:table-cell">DEAL</th>
+                    <th>STATUS</th>
+                    <th className="hidden sm:table-cell">PIC NAME</th>
+                    <th className="hidden lg:table-cell">SALES PERSON</th>
+                    <th className="hidden xl:table-cell">REG TIME</th>
+                    <th>PAYMENT</th>
                     <th className="w-12"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {tasks.map((task) => (
+                  {tasks.map((task, index) => (
                     <tr key={task.id} data-testid={`task-row-${task.id}`}>
+                      <td className="text-center font-medium text-muted-foreground">
+                        {(currentPage - 1) * pageSize + index + 1}
+                      </td>
                       <td>
-                        <div>
-                          <p className="font-medium">{task.title}</p>
-                          <span className={`text-xs px-2 py-0.5 rounded ${priorityConfig[task.priority]?.class}`}>
-                            {priorityConfig[task.priority]?.label}
-                          </span>
-                        </div>
+                        <p className="font-medium">{task.company_name || task.lead_name || task.client_name || task.title}</p>
+                        {task.title !== task.company_name && task.title !== task.lead_name && (
+                          <p className="text-xs text-muted-foreground">{task.title}</p>
+                        )}
                       </td>
                       <td className="hidden md:table-cell">
-                        {task.lead_name && <span className="text-sm">Lead: {task.lead_name}</span>}
-                        {task.client_name && <span className="text-sm">Client: {task.client_name}</span>}
-                        {!task.lead_name && !task.client_name && <span className="text-muted-foreground">-</span>}
-                      </td>
-                      <td className="hidden sm:table-cell">
-                        {task.assigned_to_name || <span className="text-muted-foreground">Unassigned</span>}
+                        {task.deal_name ? (
+                          <span className="text-sm">{task.deal_name}</span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
                       </td>
                       <td>
                         <span className={`elstar-badge ${taskStatusConfig[task.status]?.class}`}>
                           {taskStatusConfig[task.status]?.label}
                         </span>
                       </td>
-                      <td>
-                        <div>
-                          <span className={`elstar-badge ${paymentStatusConfig[task.payment_status]?.class}`}>
-                            {paymentStatusConfig[task.payment_status]?.label}
-                          </span>
-                          {task.payment_amount && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {formatCurrency(task.paid_amount)} / {formatCurrency(task.payment_amount)}
-                            </p>
-                          )}
-                        </div>
+                      <td className="hidden sm:table-cell">
+                        <span className="text-sm">{task.pic_name || task.lead_name || '-'}</span>
                       </td>
                       <td className="hidden lg:table-cell">
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Calendar className="w-3 h-3" />
-                          {formatDate(task.due_date)}
+                        {task.assigned_to_name || <span className="text-muted-foreground">Unassigned</span>}
+                      </td>
+                      <td className="hidden xl:table-cell">
+                        <div className="text-xs text-muted-foreground">
+                          {formatDate(task.reg_time || task.created_at)}
                         </div>
+                      </td>
+                      <td>
+                        <span className={`elstar-badge ${paymentStatusConfig[task.payment_status]?.class}`}>
+                          {paymentStatusConfig[task.payment_status]?.label}
+                        </span>
                       </td>
                       <td>
                         <ActionDropdown testId={`task-actions-${task.id}`}>
@@ -571,31 +589,77 @@ export default function Tasks() {
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="elstar-label">Related Lead</label>
+                <label className="elstar-label">Company Name *</label>
                 <select
                   value={formData.lead_id}
                   onChange={(e) => setFormData(prev => ({ ...prev, lead_id: e.target.value }))}
                   className="elstar-select"
+                  data-testid="task-company-select"
                 >
-                  <option value="">None</option>
+                  <option value="">Select company...</option>
                   {leads.map(lead => (
-                    <option key={lead.id} value={lead.id}>{lead.name}</option>
+                    <option key={lead.id} value={lead.id}>{lead.company || lead.name}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="elstar-label">Related Client</label>
+                <label className="elstar-label">Deal *</label>
                 <select
-                  value={formData.client_id}
-                  onChange={(e) => setFormData(prev => ({ ...prev, client_id: e.target.value }))}
+                  value={formData.deal_id}
+                  onChange={(e) => setFormData(prev => ({ ...prev, deal_id: e.target.value }))}
                   className="elstar-select"
+                  data-testid="task-deal-select"
                 >
-                  <option value="">None</option>
-                  {clients.map(client => (
-                    <option key={client.id} value={client.id}>{client.customer_name}</option>
+                  <option value="">Select deal...</option>
+                  {deals.map(deal => (
+                    <option key={deal.id} value={deal.id}>{deal.title}</option>
                   ))}
                 </select>
               </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="elstar-label">Status *</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
+                  className="elstar-select"
+                  data-testid="task-status-select"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+              <div>
+                <label className="elstar-label">Sales Person *</label>
+                <select
+                  value={formData.assigned_to}
+                  onChange={(e) => setFormData(prev => ({ ...prev, assigned_to: e.target.value }))}
+                  className="elstar-select"
+                  data-testid="task-assigned-select"
+                >
+                  <option value="">Select sales person...</option>
+                  {users.map(u => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            
+            <div>
+              <label className="elstar-label">Payment Status *</label>
+              <select
+                value={formData.payment_status}
+                onChange={(e) => setFormData(prev => ({ ...prev, payment_status: e.target.value }))}
+                className="elstar-select"
+                data-testid="task-payment-select"
+              >
+                <option value="unpaid">Unpaid</option>
+                <option value="partially_paid">Partially Paid</option>
+                <option value="paid">Paid</option>
+              </select>
             </div>
             
             <div className="grid grid-cols-2 gap-4">

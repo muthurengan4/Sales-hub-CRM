@@ -7,7 +7,8 @@ import Pagination from '../components/Pagination';
 import ActionDropdown from '../components/ActionDropdown';
 import { 
   Plus, Search, Loader2, Sparkles, Mail, Phone, Building2, 
-  Trash2, Edit, RefreshCw, Upload, FileSpreadsheet, Eye, UserCheck, DollarSign
+  Trash2, Edit, RefreshCw, Upload, FileSpreadsheet, Eye, UserCheck, 
+  DollarSign, PhoneCall, MessageCircle, Globe, MapPin
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -39,141 +40,204 @@ const getScoreClass = (score) => {
 const initialFormData = {
   name: '', email: '', phone: '', company: '', title: '',
   linkedin: '', company_size: '', industry: '', source: '', notes: '',
-  address: '', postcode: '', city: '', state: '', is_public: false, status: 'new'
+  address: '', postcode: '', city: '', state: '', country: '', is_public: false, status: 'new',
+  website: '', pic_name: '', office_number: '', fax_number: '', pipeline_status: 'new'
 };
 
-// Form Fields Component - MOVED OUTSIDE to prevent re-renders
+// Enhanced Form Fields Component matching PDF spec
 const LeadFormFields = memo(({ data, onChange, isEdit = false }) => (
-  <div className="space-y-4">
-    <div className="grid grid-cols-2 gap-4">
-      <div>
-        <label className="block text-sm font-medium mb-2">Name *</label>
-        <input 
-          className="elstar-input" 
-          value={data.name || ''} 
-          onChange={(e) => onChange('name', e.target.value)} 
-          placeholder="Clinic Name / Contact Name" 
-          data-testid="lead-name-input" 
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-2">Email</label>
-        <input 
-          className="elstar-input" 
-          type="email" 
-          value={data.email || ''} 
-          onChange={(e) => onChange('email', e.target.value)} 
-          placeholder="email@company.com" 
-          data-testid="lead-email-input" 
-        />
-      </div>
-    </div>
-    
-    <div className="grid grid-cols-2 gap-4">
-      <div>
-        <label className="block text-sm font-medium mb-2">Phone / Contact Number</label>
-        <input 
-          className="elstar-input" 
-          value={data.phone || ''} 
-          onChange={(e) => onChange('phone', e.target.value)} 
-          placeholder="+60 123 456 789" 
-          data-testid="lead-phone-input" 
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-2">Company</label>
-        <input 
-          className="elstar-input" 
-          value={data.company || ''} 
-          onChange={(e) => onChange('company', e.target.value)} 
-          placeholder="Company Name" 
-          data-testid="lead-company-input" 
-        />
-      </div>
-    </div>
-
+  <div className="space-y-6">
+    {/* Clinic/Company Info Section */}
     <div>
-      <label className="block text-sm font-medium mb-2">Address</label>
-      <input 
-        className="elstar-input" 
-        value={data.address || ''} 
-        onChange={(e) => onChange('address', e.target.value)} 
-        placeholder="Full address" 
-        data-testid="lead-address-input" 
-      />
-    </div>
-
-    <div className="grid grid-cols-3 gap-4">
-      <div>
-        <label className="block text-sm font-medium mb-2">City</label>
-        <input 
-          className="elstar-input" 
-          value={data.city || ''} 
-          onChange={(e) => onChange('city', e.target.value)} 
-          placeholder="City" 
-          data-testid="lead-city-input" 
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-2">Postcode</label>
-        <input 
-          className="elstar-input" 
-          value={data.postcode || ''} 
-          onChange={(e) => onChange('postcode', e.target.value)} 
-          placeholder="Postcode" 
-          data-testid="lead-postcode-input" 
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-2">State</label>
-        <input 
-          className="elstar-input" 
-          value={data.state || ''} 
-          onChange={(e) => onChange('state', e.target.value)} 
-          placeholder="State" 
-          data-testid="lead-state-input" 
-        />
+      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Clinic/Company Info</h3>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">Clinic Name (Company Name) *</label>
+          <input 
+            className="elstar-input" 
+            value={data.name || ''} 
+            onChange={(e) => onChange('name', e.target.value)} 
+            placeholder="Klinik Sejahtera Sdn Bhd" 
+            data-testid="lead-name-input" 
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Website</label>
+          <input 
+            className="elstar-input" 
+            value={data.website || ''} 
+            onChange={(e) => onChange('website', e.target.value)} 
+            placeholder="www.company.com" 
+            data-testid="lead-website-input" 
+          />
+        </div>
       </div>
     </div>
 
-    <div className="grid grid-cols-2 gap-4">
-      <div>
-        <label className="block text-sm font-medium mb-2">Job Title</label>
-        <input 
-          className="elstar-input" 
-          value={data.title || ''} 
-          onChange={(e) => onChange('title', e.target.value)} 
-          placeholder="Sales Director" 
-          data-testid="lead-title-input" 
-        />
+    {/* Person in Charge Section */}
+    <div>
+      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Person in Charge (PIC)</h3>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">PIC Name *</label>
+          <input 
+            className="elstar-input" 
+            value={data.pic_name || ''} 
+            onChange={(e) => onChange('pic_name', e.target.value)} 
+            placeholder="Dr. Ahmad Fauzi" 
+            data-testid="lead-pic-name-input" 
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Job Title *</label>
+          <input 
+            className="elstar-input" 
+            value={data.title || ''} 
+            onChange={(e) => onChange('title', e.target.value)} 
+            placeholder="General Practitioner" 
+            data-testid="lead-title-input" 
+          />
+        </div>
+      </div>
+    </div>
+
+    {/* Location Section */}
+    <div>
+      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Location</h3>
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">State/Location *</label>
+          <input 
+            className="elstar-input" 
+            value={data.state || ''} 
+            onChange={(e) => onChange('state', e.target.value)} 
+            placeholder="Selangor" 
+            data-testid="lead-state-input" 
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Country</label>
+          <input 
+            className="elstar-input" 
+            value={data.country || ''} 
+            onChange={(e) => onChange('country', e.target.value)} 
+            placeholder="Malaysia" 
+            data-testid="lead-country-input" 
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-4 mb-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">Postcode</label>
+          <input 
+            className="elstar-input" 
+            value={data.postcode || ''} 
+            onChange={(e) => onChange('postcode', e.target.value)} 
+            placeholder="47500" 
+            data-testid="lead-postcode-input" 
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">City</label>
+          <input 
+            className="elstar-input" 
+            value={data.city || ''} 
+            onChange={(e) => onChange('city', e.target.value)} 
+            placeholder="Subang Jaya" 
+            data-testid="lead-city-input" 
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Industry</label>
+          <input 
+            className="elstar-input" 
+            value={data.industry || ''} 
+            onChange={(e) => onChange('industry', e.target.value)} 
+            placeholder="Healthcare" 
+            data-testid="lead-industry-input" 
+          />
+        </div>
       </div>
       <div>
-        <label className="block text-sm font-medium mb-2">Industry</label>
+        <label className="block text-sm font-medium mb-2">Full Address</label>
         <input 
           className="elstar-input" 
-          value={data.industry || ''} 
-          onChange={(e) => onChange('industry', e.target.value)} 
-          placeholder="Healthcare / Technology" 
-          data-testid="lead-industry-input" 
+          value={data.address || ''} 
+          onChange={(e) => onChange('address', e.target.value)} 
+          placeholder="No. 123, Jalan SS15/4" 
+          data-testid="lead-address-input" 
         />
       </div>
     </div>
-    
+
+    {/* Contact Details Section */}
+    <div>
+      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Contact Details</h3>
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">Mobile Number *</label>
+          <input 
+            className="elstar-input" 
+            value={data.phone || ''} 
+            onChange={(e) => onChange('phone', e.target.value)} 
+            placeholder="+60 12-345 6789" 
+            data-testid="lead-phone-input" 
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Office Number</label>
+          <input 
+            className="elstar-input" 
+            value={data.office_number || ''} 
+            onChange={(e) => onChange('office_number', e.target.value)} 
+            placeholder="+60 3-1234 5678" 
+            data-testid="lead-office-input" 
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">Fax Number</label>
+          <input 
+            className="elstar-input" 
+            value={data.fax_number || ''} 
+            onChange={(e) => onChange('fax_number', e.target.value)} 
+            placeholder="+60 3-1234 5679" 
+            data-testid="lead-fax-input" 
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Email *</label>
+          <input 
+            className="elstar-input" 
+            type="email" 
+            value={data.email || ''} 
+            onChange={(e) => onChange('email', e.target.value)} 
+            placeholder="clinic@email.com" 
+            data-testid="lead-email-input" 
+          />
+        </div>
+      </div>
+    </div>
+
+    {/* Other Fields */}
     <div className="grid grid-cols-2 gap-4">
       <div>
-        <label className="block text-sm font-medium mb-2">Company Size</label>
+        <label className="block text-sm font-medium mb-2">Pipeline Status *</label>
         <select 
           className="elstar-select" 
-          value={data.company_size || ''} 
-          onChange={(e) => onChange('company_size', e.target.value)} 
-          data-testid="lead-company-size-select"
+          value={data.pipeline_status || 'new'} 
+          onChange={(e) => onChange('pipeline_status', e.target.value)} 
+          data-testid="lead-pipeline-status-select"
         >
-          <option value="">Select size</option>
-          <option value="1-10">1-10</option>
-          <option value="11-50">11-50</option>
-          <option value="51-200">51-200</option>
-          <option value="201-500">201-500</option>
-          <option value="500+">500+</option>
+          <option value="new">New</option>
+          <option value="contacted">Contacted</option>
+          <option value="no_answer">No Answer</option>
+          <option value="interested">Interested</option>
+          <option value="follow_up">Follow Up</option>
+          <option value="booked">Booked</option>
+          <option value="won">Won</option>
+          <option value="lost">Lost</option>
         </select>
       </div>
       <div>
@@ -193,17 +257,6 @@ const LeadFormFields = memo(({ data, onChange, isEdit = false }) => (
           <option value="import">Excel Import</option>
         </select>
       </div>
-    </div>
-
-    <div className="flex items-center gap-2">
-      <input 
-        type="checkbox" 
-        id="lead_is_public" 
-        checked={data.is_public || false} 
-        onChange={(e) => onChange('is_public', e.target.checked)}
-        className="w-4 h-4 rounded border-input text-primary focus:ring-primary"
-      />
-      <label htmlFor="lead_is_public" className="text-sm">Is Public</label>
     </div>
 
     {isEdit && (
@@ -252,6 +305,8 @@ export default function Leads() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [stateFilter, setStateFilter] = useState('all');
+  const [states, setStates] = useState([]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -263,6 +318,10 @@ export default function Leads() {
   const [importFile, setImportFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
   
+  // Selection state for AI calling
+  const [selectedLeads, setSelectedLeads] = useState(new Set());
+  const [selectAll, setSelectAll] = useState(false);
+  
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -273,14 +332,32 @@ export default function Leads() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
-      setCurrentPage(1); // Reset to first page on search
+      setCurrentPage(1);
     }, 300);
     return () => clearTimeout(timer);
   }, [search]);
 
   useEffect(() => {
     fetchLeads();
-  }, [statusFilter, currentPage, pageSize, debouncedSearch]);
+  }, [statusFilter, stateFilter, currentPage, pageSize, debouncedSearch]);
+
+  useEffect(() => {
+    fetchStates();
+  }, []);
+
+  const fetchStates = async () => {
+    try {
+      const response = await fetch(`${API}/api/lookup/states`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setStates(data.states || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch states:', error);
+    }
+  };
 
   const fetchLeads = async () => {
     try {
@@ -289,6 +366,7 @@ export default function Leads() {
       params.append('page', currentPage);
       params.append('limit', pageSize);
       if (statusFilter && statusFilter !== 'all') params.append('status', statusFilter);
+      if (stateFilter && stateFilter !== 'all') params.append('state', stateFilter);
       if (debouncedSearch) params.append('search', debouncedSearch);
       
       const url = `${API}/api/leads?${params.toString()}`;
@@ -308,11 +386,68 @@ export default function Leads() {
   
   const handlePageChange = (page) => {
     setCurrentPage(page);
+    setSelectedLeads(new Set());
+    setSelectAll(false);
   };
   
   const handlePageSizeChange = (size) => {
     setPageSize(size);
-    setCurrentPage(1); // Reset to first page when changing page size
+    setCurrentPage(1);
+    setSelectedLeads(new Set());
+    setSelectAll(false);
+  };
+
+  const handleStatusFilterChange = (status) => {
+    setStatusFilter(status);
+    setCurrentPage(1);
+  };
+
+  const handleStateFilterChange = (state) => {
+    setStateFilter(state);
+    setCurrentPage(1);
+  };
+
+  // Selection handlers
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedLeads(new Set());
+    } else {
+      setSelectedLeads(new Set(leads.map(l => l.id)));
+    }
+    setSelectAll(!selectAll);
+  };
+
+  const handleSelectLead = (leadId) => {
+    const newSelected = new Set(selectedLeads);
+    if (newSelected.has(leadId)) {
+      newSelected.delete(leadId);
+    } else {
+      newSelected.add(leadId);
+    }
+    setSelectedLeads(newSelected);
+    setSelectAll(newSelected.size === leads.length);
+  };
+
+  const clearSelection = () => {
+    setSelectedLeads(new Set());
+    setSelectAll(false);
+  };
+
+  // AI Actions (Placeholder)
+  const handleStartAICalling = () => {
+    if (selectedLeads.size === 0) {
+      toast.error('Please select leads first');
+      return;
+    }
+    toast.info(`AI Calling feature coming soon for ${selectedLeads.size} leads`);
+  };
+
+  const handleStartAIWhatsapp = () => {
+    if (selectedLeads.size === 0) {
+      toast.error('Please select leads first');
+      return;
+    }
+    toast.info(`AI WhatsApp feature coming soon for ${selectedLeads.size} leads`);
   };
 
   // Stable callback to prevent re-renders
@@ -322,7 +457,7 @@ export default function Leads() {
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!formData.name) { toast.error('Name is required'); return; }
+    if (!formData.name) { toast.error('Clinic Name is required'); return; }
     setFormLoading(true);
     try {
       const response = await fetch(`${API}/api/leads`, {
@@ -335,6 +470,7 @@ export default function Leads() {
         setIsCreateOpen(false);
         setFormData(initialFormData);
         fetchLeads();
+        fetchStates();
       } else {
         const data = await response.json();
         toast.error(data.detail || 'Failed to create lead');
@@ -362,6 +498,7 @@ export default function Leads() {
         setSelectedLead(null);
         setFormData(initialFormData);
         fetchLeads();
+        fetchStates();
       }
     } catch (error) {
       toast.error('Failed to update lead');
@@ -403,14 +540,39 @@ export default function Leads() {
     setIsConvertOpen(true);
   };
 
-  const handleConvert = async (e) => {
+  const openCreateDialog = () => {
+    setFormData(initialFormData);
+    setIsCreateOpen(true);
+  };
+
+  const handleConvertAddService = () => {
+    setConvertData(prev => ({
+      ...prev,
+      services: [...prev.services, { name: '', amount: '', status: 'active' }]
+    }));
+  };
+
+  const handleConvertRemoveService = (index) => {
+    setConvertData(prev => ({
+      ...prev,
+      services: prev.services.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleConvertServiceChange = (index, field, value) => {
+    setConvertData(prev => ({
+      ...prev,
+      services: prev.services.map((s, i) => i === index ? { ...s, [field]: value } : s)
+    }));
+  };
+
+  const handleConvertSubmit = async (e) => {
     e.preventDefault();
     if (!selectedLead) return;
     
-    // Validate services
     const validServices = convertData.services.filter(s => s.name && s.amount);
     if (validServices.length === 0) {
-      toast.error('Please add at least one service');
+      toast.error('Please add at least one service with name and amount');
       return;
     }
     
@@ -420,21 +582,23 @@ export default function Leads() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          lead_id: selectedLead.id,
-          services: validServices.map(s => ({ ...s, amount: parseFloat(s.amount) })),
+          services: validServices.map(s => ({
+            name: s.name,
+            amount: parseFloat(s.amount),
+            status: s.status
+          })),
           notes: convertData.notes
         })
       });
       
       if (response.ok) {
-        toast.success('Lead converted to client successfully!');
+        toast.success('Lead converted to client successfully');
         setIsConvertOpen(false);
         setSelectedLead(null);
         fetchLeads();
-        navigate('/clients');
       } else {
-        const error = await response.json();
-        toast.error(error.detail || 'Failed to convert lead');
+        const data = await response.json();
+        toast.error(data.detail || 'Failed to convert lead');
       }
     } catch (error) {
       toast.error('Failed to convert lead');
@@ -443,59 +607,30 @@ export default function Leads() {
     }
   };
 
-  const addService = () => {
-    setConvertData(prev => ({
-      ...prev,
-      services: [...prev.services, { name: '', amount: '', status: 'active' }]
-    }));
-  };
-
-  const removeService = (index) => {
-    setConvertData(prev => ({
-      ...prev,
-      services: prev.services.filter((_, i) => i !== index)
-    }));
-  };
-
-  const updateService = (index, field, value) => {
-    setConvertData(prev => ({
-      ...prev,
-      services: prev.services.map((s, i) => i === index ? { ...s, [field]: value } : s)
-    }));
-  };
-
-  const openCreateDialog = () => {
-    setFormData(initialFormData);
-    setIsCreateOpen(true);
-  };
-
-  const handleStatusFilterChange = (value) => {
-    setStatusFilter(value);
-    setCurrentPage(1); // Reset to first page when changing filter
-  };
-
-  const handleImport = async (e) => {
-    e.preventDefault();
-    if (!importFile) { toast.error('Please select a file'); return; }
+  const handleImport = async () => {
+    if (!importFile) {
+      toast.error('Please select a file');
+      return;
+    }
     
     setImportLoading(true);
-    const formDataUpload = new FormData();
-    formDataUpload.append('file', importFile);
-    
     try {
+      const formData = new FormData();
+      formData.append('file', importFile);
+      
       const response = await fetch(`${API}/api/leads/import`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
-        body: formDataUpload
+        body: formData
       });
       
       if (response.ok) {
-        const result = await response.json();
-        toast.success(`Successfully imported ${result.imported} leads`);
+        const data = await response.json();
+        toast.success(`Successfully imported ${data.imported_count} leads`);
         setIsImportOpen(false);
         setImportFile(null);
-        setCurrentPage(1);
         fetchLeads();
+        fetchStates();
       } else {
         const data = await response.json();
         toast.error(data.detail || 'Failed to import leads');
@@ -535,6 +670,42 @@ export default function Leads() {
         </div>
       </div>
 
+      {/* Selection Actions Bar */}
+      {selectedLeads.size > 0 && (
+        <div className="elstar-card p-4 bg-primary/5 border-primary/20">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <span className="text-sm font-medium">
+              <span className="text-primary font-bold">{selectedLeads.size}</span> leads selected ready for AI calling
+            </span>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={clearSelection}
+                className="elstar-btn-ghost text-sm"
+                data-testid="clear-selection-btn"
+              >
+                Clear Selection
+              </button>
+              <button 
+                onClick={handleStartAICalling}
+                className="elstar-btn-primary flex items-center gap-2 text-sm"
+                data-testid="start-ai-calling-btn"
+              >
+                <PhoneCall className="w-4 h-4" />
+                Start AI Calling
+              </button>
+              <button 
+                onClick={handleStartAIWhatsapp}
+                className="elstar-btn-secondary flex items-center gap-2 text-sm"
+                data-testid="start-ai-whatsapp-btn"
+              >
+                <MessageCircle className="w-4 h-4" />
+                Start AI WhatsApp
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="elstar-card p-4">
         <div className="flex flex-col sm:flex-row gap-4">
@@ -552,7 +723,7 @@ export default function Leads() {
           <select 
             value={statusFilter} 
             onChange={(e) => handleStatusFilterChange(e.target.value)} 
-            className="elstar-select w-full sm:w-44" 
+            className="elstar-select w-full sm:w-40" 
             data-testid="status-filter"
           >
             <option value="all">All Statuses</option>
@@ -560,6 +731,17 @@ export default function Leads() {
             <option value="contacted">Contacted</option>
             <option value="qualified">Qualified</option>
             <option value="lost">Lost</option>
+          </select>
+          <select 
+            value={stateFilter} 
+            onChange={(e) => handleStateFilterChange(e.target.value)} 
+            className="elstar-select w-full sm:w-44" 
+            data-testid="state-filter"
+          >
+            <option value="all">All States / Areas</option>
+            {states.map(state => (
+              <option key={state} value={state}>{state}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -594,10 +776,23 @@ export default function Leads() {
               <table className="elstar-table">
                 <thead>
                   <tr>
+                    <th className="w-10">
+                      <input
+                        type="checkbox"
+                        checked={selectAll}
+                        onChange={handleSelectAll}
+                        className="w-4 h-4 rounded border-input"
+                        data-testid="select-all-checkbox"
+                      />
+                    </th>
                     <th>Name</th>
-                    <th className="hidden md:table-cell">Company</th>
+                    <th className="hidden md:table-cell">Company Name</th>
                     <th className="hidden sm:table-cell">Contact</th>
+                    <th className="hidden lg:table-cell">Mobile / Office</th>
+                    <th className="hidden xl:table-cell">Email</th>
                     <th className="hidden lg:table-cell">Location</th>
+                    <th className="hidden xl:table-cell">State</th>
+                    <th className="hidden xl:table-cell">Country</th>
                     <th>Status</th>
                     <th className="text-center">AI Score</th>
                     <th className="w-12"></th>
@@ -605,29 +800,53 @@ export default function Leads() {
                 </thead>
                 <tbody>
                   {leads.map((lead) => (
-                    <tr key={lead.id} data-testid={`lead-row-${lead.id}`}>
+                    <tr key={lead.id} data-testid={`lead-row-${lead.id}`} className={selectedLeads.has(lead.id) ? 'bg-primary/5' : ''}>
                       <td>
-                        <p className="font-medium">{lead.name}</p>
+                        <input
+                          type="checkbox"
+                          checked={selectedLeads.has(lead.id)}
+                          onChange={() => handleSelectLead(lead.id)}
+                          className="w-4 h-4 rounded border-input"
+                          data-testid={`select-lead-${lead.id}`}
+                        />
+                      </td>
+                      <td>
+                        <p className="font-medium">{lead.pic_name || lead.name}</p>
                         <p className="text-xs text-muted-foreground">{lead.title}</p>
                       </td>
                       <td className="hidden md:table-cell">
                         <div className="flex items-center gap-2 text-muted-foreground">
-                          <Building2 className="w-4 h-4" />
-                          <span>{lead.company || '-'}</span>
+                          <Building2 className="w-4 h-4 flex-shrink-0" />
+                          <span className="truncate max-w-[150px]">{lead.company || lead.name}</span>
                         </div>
                       </td>
                       <td className="hidden sm:table-cell">
-                        <div className="space-y-1">
-                          {lead.email && <div className="flex items-center gap-1 text-xs text-muted-foreground"><Mail className="w-3 h-3" />{lead.email}</div>}
-                          {lead.phone && <div className="flex items-center gap-1 text-xs text-muted-foreground"><Phone className="w-3 h-3" />{lead.phone}</div>}
+                        <p className="font-medium text-sm">{lead.pic_name || lead.name}</p>
+                      </td>
+                      <td className="hidden lg:table-cell">
+                        <div className="space-y-1 text-xs text-muted-foreground">
+                          {lead.phone && <div className="flex items-center gap-1"><Phone className="w-3 h-3" />{lead.phone}</div>}
+                          {lead.office_number && <div className="flex items-center gap-1"><Phone className="w-3 h-3" />{lead.office_number}</div>}
                         </div>
+                      </td>
+                      <td className="hidden xl:table-cell">
+                        {lead.email && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Mail className="w-3 h-3" />
+                            <span className="truncate max-w-[150px]">{lead.email}</span>
+                          </div>
+                        )}
                       </td>
                       <td className="hidden lg:table-cell">
                         <div className="text-xs text-muted-foreground">
                           {lead.city && <span>{lead.city}</span>}
-                          {lead.city && lead.state && <span>, </span>}
-                          {lead.state && <span>{lead.state}</span>}
                         </div>
+                      </td>
+                      <td className="hidden xl:table-cell">
+                        <div className="text-xs text-muted-foreground">{lead.state || '-'}</div>
+                      </td>
+                      <td className="hidden xl:table-cell">
+                        <div className="text-xs text-muted-foreground">{lead.country || 'Malaysia'}</div>
                       </td>
                       <td>
                         <span className={`elstar-badge ${statusConfig[lead.status]?.class || 'elstar-badge-info'}`}>
@@ -670,44 +889,44 @@ export default function Leads() {
                 </tbody>
               </table>
             </div>
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={totalItems}
-              pageSize={pageSize}
-              onPageChange={handlePageChange}
-              onPageSizeChange={handlePageSizeChange}
-            />
+            
+            {/* Pagination */}
+            <div className="p-4 border-t border-border">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                totalItems={totalItems}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+              />
+            </div>
           </>
         )}
       </div>
 
-      {/* Create Modal */}
-      <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Add New Lead" size="lg">
+      {/* Create Lead Modal */}
+      <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Add New Lead">
         <form onSubmit={handleCreate}>
-          <div className="elstar-modal-body max-h-96 overflow-y-auto">
-            <LeadFormFields data={formData} onChange={handleInputChange} />
-          </div>
-          <div className="elstar-modal-footer">
+          <LeadFormFields data={formData} onChange={handleInputChange} />
+          <div className="flex justify-end gap-2 mt-6">
             <button type="button" onClick={() => setIsCreateOpen(false)} className="elstar-btn-ghost">Cancel</button>
-            <button type="submit" disabled={formLoading} className="elstar-btn-primary flex items-center gap-2" data-testid="submit-lead-btn">
-              {formLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-              Create Lead
+            <button type="submit" disabled={formLoading} className="elstar-btn-primary" data-testid="save-lead-btn">
+              {formLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Save Lead
             </button>
           </div>
         </form>
       </Modal>
 
-      {/* Edit Modal */}
-      <Modal isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} title="Edit Lead" size="lg">
+      {/* Edit Lead Modal */}
+      <Modal isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} title="Edit Lead">
         <form onSubmit={handleEdit}>
-          <div className="elstar-modal-body max-h-96 overflow-y-auto">
-            <LeadFormFields data={formData} onChange={handleInputChange} isEdit />
-          </div>
-          <div className="elstar-modal-footer">
+          <LeadFormFields data={formData} onChange={handleInputChange} isEdit />
+          <div className="flex justify-end gap-2 mt-6">
             <button type="button" onClick={() => setIsEditOpen(false)} className="elstar-btn-ghost">Cancel</button>
-            <button type="submit" disabled={formLoading} className="elstar-btn-primary flex items-center gap-2" data-testid="update-lead-btn">
-              {formLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+            <button type="submit" disabled={formLoading} className="elstar-btn-primary" data-testid="update-lead-btn">
+              {formLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Update Lead
             </button>
           </div>
@@ -716,151 +935,111 @@ export default function Leads() {
 
       {/* Import Modal */}
       <Modal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} title="Import Leads from Excel">
-        <form onSubmit={handleImport}>
-          <div className="elstar-modal-body space-y-4">
-            <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-              <FileSpreadsheet className="w-12 h-12 mx-auto mb-4 text-primary" />
-              <p className="font-medium mb-2">Upload Excel File</p>
-              <p className="text-sm text-muted-foreground mb-4">
-                Supported columns: Clinic Name, Address, Postcode, City, State, Contact Number, Is public
-              </p>
-              <input
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                onChange={(e) => setImportFile(e.target.files[0])}
-                className="hidden"
-                id="excel-upload"
-              />
-              <label htmlFor="excel-upload" className="elstar-btn-primary cursor-pointer inline-flex items-center gap-2">
-                <Upload className="w-4 h-4" />
-                Choose File
-              </label>
-              {importFile && (
-                <p className="mt-4 text-sm text-primary font-medium">{importFile.name}</p>
-              )}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              <p className="font-medium mb-1">Expected columns:</p>
-              <ul className="list-disc list-inside space-y-0.5">
-                <li>Clinic Name → Name</li>
-                <li>Address → Address</li>
-                <li>Postcode → Postcode</li>
-                <li>City → City</li>
-                <li>State → State</li>
-                <li>Contact Number → Phone</li>
-                <li>Is public → Is Public</li>
-              </ul>
-            </div>
+        <div className="space-y-4">
+          <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
+            <FileSpreadsheet className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-sm text-muted-foreground mb-4">
+              Upload an Excel file (.xlsx, .xls) with columns: Name, Email, Phone, Company, Title, Industry, etc.
+            </p>
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+              className="hidden"
+              id="import-file"
+            />
+            <label htmlFor="import-file" className="elstar-btn-ghost cursor-pointer">
+              {importFile ? importFile.name : 'Choose File'}
+            </label>
           </div>
-          <div className="elstar-modal-footer">
-            <button type="button" onClick={() => { setIsImportOpen(false); setImportFile(null); }} className="elstar-btn-ghost">Cancel</button>
-            <button type="submit" disabled={importLoading || !importFile} className="elstar-btn-primary flex items-center gap-2">
-              {importLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-              Import Leads
+          <div className="flex justify-end gap-2">
+            <button onClick={() => { setIsImportOpen(false); setImportFile(null); }} className="elstar-btn-ghost">Cancel</button>
+            <button 
+              onClick={handleImport} 
+              disabled={!importFile || importLoading} 
+              className="elstar-btn-primary"
+              data-testid="import-submit-btn"
+            >
+              {importLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Import
             </button>
           </div>
-        </form>
+        </div>
       </Modal>
 
       {/* Convert to Client Modal */}
-      <Modal isOpen={isConvertOpen} onClose={() => setIsConvertOpen(false)} title="Convert Lead to Client" size="lg">
-        <form onSubmit={handleConvert}>
-          <div className="elstar-modal-body max-h-[60vh] overflow-y-auto space-y-4">
-            {/* Lead Info */}
+      <Modal isOpen={isConvertOpen} onClose={() => setIsConvertOpen(false)} title="Convert Lead to Client">
+        <form onSubmit={handleConvertSubmit}>
+          <div className="space-y-4">
             {selectedLead && (
-              <div className="p-4 rounded-lg bg-secondary/50">
-                <div className="flex items-center gap-3">
-                  <div className="elstar-avatar w-12 h-12">{selectedLead.name?.charAt(0)?.toUpperCase()}</div>
-                  <div>
-                    <p className="font-bold">{selectedLead.name}</p>
-                    <p className="text-sm text-muted-foreground">{selectedLead.company}</p>
-                    {selectedLead.email && <p className="text-xs text-muted-foreground">{selectedLead.email}</p>}
-                  </div>
-                </div>
+              <div className="p-4 bg-secondary/50 rounded-lg">
+                <p className="font-medium">{selectedLead.name}</p>
+                <p className="text-sm text-muted-foreground">{selectedLead.company}</p>
               </div>
             )}
-
-            {/* Services */}
+            
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className="font-medium">Purchased Services *</label>
-                <button type="button" onClick={addService} className="text-sm text-primary hover:underline flex items-center gap-1">
-                  <Plus className="w-3 h-3" /> Add Service
-                </button>
-              </div>
-              <div className="space-y-3">
-                {convertData.services.map((service, index) => (
-                  <div key={index} className="flex items-end gap-3 p-3 rounded-lg bg-secondary/30">
-                    <div className="flex-1">
-                      <label className="block text-xs font-medium mb-1">Service Name *</label>
-                      <input
-                        type="text"
-                        value={service.name}
-                        onChange={(e) => updateService(index, 'name', e.target.value)}
-                        placeholder="e.g., Premium Plan"
-                        className="elstar-input"
-                        data-testid={`service-name-${index}`}
-                      />
-                    </div>
-                    <div className="w-32">
-                      <label className="block text-xs font-medium mb-1">Amount ($) *</label>
-                      <input
-                        type="number"
-                        value={service.amount}
-                        onChange={(e) => updateService(index, 'amount', e.target.value)}
-                        placeholder="0.00"
-                        className="elstar-input"
-                        data-testid={`service-amount-${index}`}
-                      />
-                    </div>
-                    <div className="w-28">
-                      <label className="block text-xs font-medium mb-1">Status</label>
-                      <select
-                        value={service.status}
-                        onChange={(e) => updateService(index, 'status', e.target.value)}
-                        className="elstar-select"
-                      >
-                        <option value="active">Active</option>
-                        <option value="pending">Pending</option>
-                      </select>
-                    </div>
-                    {convertData.services.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeService(index)}
-                        className="p-2 text-red-500 hover:bg-red-500/10 rounded"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              {/* Total Value */}
-              <div className="mt-3 p-3 rounded-lg bg-green-500/10 flex items-center justify-between">
-                <span className="font-medium">Total Value:</span>
-                <span className="text-xl font-bold text-green-500">
-                  ${convertData.services.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0).toLocaleString()}
-                </span>
-              </div>
+              <label className="block text-sm font-medium mb-2">Services Purchased</label>
+              {convertData.services.map((service, index) => (
+                <div key={index} className="flex gap-2 mb-2">
+                  <input
+                    className="elstar-input flex-1"
+                    value={service.name}
+                    onChange={(e) => handleConvertServiceChange(index, 'name', e.target.value)}
+                    placeholder="Service name"
+                  />
+                  <input
+                    className="elstar-input w-32"
+                    type="number"
+                    value={service.amount}
+                    onChange={(e) => handleConvertServiceChange(index, 'amount', e.target.value)}
+                    placeholder="Amount"
+                  />
+                  <select
+                    className="elstar-select w-28"
+                    value={service.status}
+                    onChange={(e) => handleConvertServiceChange(index, 'status', e.target.value)}
+                  >
+                    <option value="active">Active</option>
+                    <option value="expired">Expired</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                  {convertData.services.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleConvertRemoveService(index)}
+                      className="p-2 text-red-500 hover:bg-red-50 rounded"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={handleConvertAddService}
+                className="text-sm text-primary hover:underline flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" /> Add another service
+              </button>
             </div>
-
-            {/* Notes */}
+            
             <div>
-              <label className="block text-sm font-medium mb-2">Conversion Notes</label>
+              <label className="block text-sm font-medium mb-2">Notes</label>
               <textarea
+                className="elstar-input min-h-[80px]"
                 value={convertData.notes}
                 onChange={(e) => setConvertData(prev => ({ ...prev, notes: e.target.value }))}
-                placeholder="Any notes about this conversion..."
-                className="elstar-input min-h-[80px]"
+                placeholder="Additional notes about this conversion..."
               />
             </div>
           </div>
-          <div className="elstar-modal-footer">
+          
+          <div className="flex justify-end gap-2 mt-6">
             <button type="button" onClick={() => setIsConvertOpen(false)} className="elstar-btn-ghost">Cancel</button>
-            <button type="submit" disabled={formLoading} className="elstar-btn-primary flex items-center gap-2" data-testid="convert-lead-btn">
-              {formLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-              <UserCheck className="w-4 h-4" />
+            <button type="submit" disabled={formLoading} className="elstar-btn-primary" data-testid="convert-lead-btn">
+              {formLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              <UserCheck className="w-4 h-4 mr-2" />
               Convert to Client
             </button>
           </div>

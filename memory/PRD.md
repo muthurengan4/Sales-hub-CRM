@@ -1,208 +1,121 @@
-# SalesHub CRM Platform - PRD
+# AISalesTask CRM Platform - PRD
 
 ## Original Problem Statement
 Build an AI-powered HubSpot CRM clone with Lead Management, Pipeline & Deals (Kanban), Basic Analytics Dashboard, and AI features powered by Claude Sonnet 4.5. Later expanded to include Multi-tenancy, Role-Based Access Control (RBAC), Excel Import, Enhanced Analytics, comprehensive sales workflow, and AI CRM features.
 
-## Latest Update (March 2026)
-Implemented comprehensive UI overhaul and new features:
-- **Tasks Page**: Full CRUD with payment status tracking (paid/partially paid/unpaid)
-- **Multi-Currency Support**: 16 currencies configurable per organization (USD, MYR, EUR, etc.)
-- **Settings Page**: Profile, Appearance, Currency selection, Google Calendar integration setup
-- **Dropdown Z-Index Fix**: ActionDropdown component with fixed positioning for reliable menu visibility
-- **Navigation Update**: Tasks link added to sidebar
+## Latest Update (March 2026) - PDF Specification Implementation
 
-## Previous Update (December 2025)
-Implemented comprehensive sales workflow based on AI CRM Feature Specification:
-- **Assignment System**: 4 modes (manual, round-robin, territory, default agent)
-- **Call-Based Pipeline**: New → Contacted → No Answer → Interested → Follow Up → Booked → Won/Lost
-- **Lead-to-Client Conversion**: Convert leads to clients with service tracking
-- **Clients Page**: View all converted leads with purchased services
-- **Terminology**: "Contacts" renamed to "Customers"
+### Completed UI/UX Overhaul
 
-## Architecture
+**1. Leads Page (Picture 2 in PDF)**
+- ✅ New table columns: Name, Company Name, Contact, Mobile/Office, Email, Location, State, Country, Status, AI Score
+- ✅ Checkboxes for multi-select with selection counter
+- ✅ "Start AI Calling" and "Start AI WhatsApp" placeholder buttons
+- ✅ "All States/Areas" filter dropdown populated from database
+- ✅ New form sections: Clinic/Company Info, Person in Charge (PIC), Location, Contact Details
+- ✅ New form fields: Website, PIC Name, Office Number, Fax Number, Country, Pipeline Status
 
-### Tech Stack
-- **Frontend**: React 19, TailwindCSS (Elstar theme), Lucide React icons, Recharts
-- **Backend**: FastAPI (Python)
-- **Database**: MongoDB
-- **AI**: Claude Sonnet 4.5 via emergentintegrations library
+**2. Tasks Page (Picture 10, 11 in PDF)**
+- ✅ New table columns: NO., Company Name, Deal, Status, PIC Name, Sales Person, Reg Time, Payment
+- ✅ Filter dropdowns: All Deals, All Statuses, All Sales Person, All Payment
+- ✅ Task-to-Deal linking in create/edit form
+- ✅ Summary stats cards (Total Tasks, Pending, Total Payable, Total Paid)
 
-### Key Components
+**3. Pipeline Page (Picture 7, 8, 9 in PDF)**
+- ✅ Linked companies feature - link multiple leads/customers to deals
+- ✅ Company search in Create/Edit Deal form
+- ✅ Linked companies display on deal cards
+- ✅ Deal detail modal showing full linked companies list
+- ✅ ActionDropdown component replacing old dropdown (z-index fix)
+
+**4. Customers Page (Picture 13, 14 in PDF)**
+- ✅ Table layout with columns: Company Name, PIC/Doctor, Role, Mobile, Email, Status
+- ✅ Preview button for quick access
+- ✅ ActionDropdown for edit/delete actions
+
+**5. ActionDropdown Component (Z-Index Fix)**
+- ✅ Created reusable component with fixed positioning (z-index: 70)
+- ✅ Applied to all table-based pages (Leads, Tasks, Clients, Customers, Pipeline)
+- ✅ Dropdowns now appear above table content correctly
+
+### Previous Updates (December 2025)
+- Assignment System: 4 modes (manual, round-robin, territory, default agent)
+- Call-Based Pipeline: New → Contacted → No Answer → Interested → Follow Up → Booked → Won/Lost
+- Lead-to-Client Conversion with service tracking
+- Clients page for converted leads
+- "Contacts" renamed to "Customers"
+
+## Code Architecture
 ```
 /app/
 ├── backend/
-│   ├── server.py           # FastAPI with all endpoints
+│   ├── server.py           # Monolithic FastAPI (needs refactoring)
 │   ├── tests/              # pytest test files
-│   └── .env                # MONGO_URL, JWT_SECRET, EMERGENT_LLM_KEY
+│   └── .env
 ├── frontend/src/
-│   ├── App.js              # Auth/Theme providers, routing
+│   ├── App.js
 │   ├── components/
-│   │   ├── Layout.jsx      # Sidebar with all navigation
-│   │   ├── Pagination.jsx  # Reusable pagination
-│   │   ├── ActionDropdown.jsx  # Fixed-position dropdown (z-index fix)
-│   │   ├── NotificationsDropdown.jsx  # In-app notifications
-│   │   └── AssignmentSettings.jsx     # Lead assignment config
+│   │   ├── Layout.jsx
+│   │   ├── Pagination.jsx
+│   │   ├── ActionDropdown.jsx  # NEW: Fixed-position dropdown
+│   │   ├── NotificationsDropdown.jsx
+│   │   └── AssignmentSettings.jsx
 │   ├── pages/
-│   │   ├── Dashboard.jsx   # Analytics + org setup
-│   │   ├── Worklist.jsx    # Operational lead dashboard
-│   │   ├── Leads.jsx       # Lead table + Convert to Client
-│   │   ├── Tasks.jsx       # Task management with payment status
-│   │   ├── Pipeline.jsx    # Kanban with call-based stages
-│   │   ├── Customers.jsx   # Customer management (renamed from Contacts)
-│   │   ├── Clients.jsx     # Converted leads with services + multi-currency
-│   │   ├── Users.jsx       # Team management
-│   │   ├── Settings.jsx    # Currency, Google Calendar, Profile
-│   │   ├── CustomerProfile.jsx  # Detailed profile view
-│   │   └── Organization.jsx     # Org settings + Assignment settings
-│   └── index.css           # Elstar theme styles
+│   │   ├── Dashboard.jsx
+│   │   ├── Worklist.jsx
+│   │   ├── Leads.jsx           # UPDATED: New columns, form, filters
+│   │   ├── Tasks.jsx           # UPDATED: New columns, deal linking
+│   │   ├── Pipeline.jsx        # UPDATED: Linked companies
+│   │   ├── Customers.jsx       # UPDATED: Table layout
+│   │   ├── Clients.jsx
+│   │   ├── Users.jsx
+│   │   ├── Settings.jsx
+│   │   ├── CustomerProfile.jsx
+│   │   └── Organization.jsx
+│   └── index.css
 ```
 
-## Sales Workflow
+## Key API Endpoints
 
-### Lead Assignment (on Excel Import)
-1. **Manual**: Leads not auto-assigned, admins assign later
-2. **Round Robin**: Distributed evenly among sales reps
-3. **Territory**: Assigned based on state/city to specific agents
-4. **Default Agent**: All leads go to one agent
+### New/Updated Endpoints
+- GET /api/lookup/states - Unique states from leads for filtering
+- GET /api/lookup/companies - Leads/customers for deal linking
+- GET /api/lookup/sales-persons - Users for assignment dropdowns
+- GET/POST/PUT/DELETE /api/customers - Customer CRUD (alias for contacts)
+- POST /api/customers/import - Excel import for customers
 
-### Call-Based Pipeline Stages
-1. **New** - Fresh lead, not contacted
-2. **Contacted** - Initial contact made
-3. **No Answer** - Called but no response
-4. **Interested** - Lead shows interest
-5. **Follow Up** - Scheduled for follow-up
-6. **Booked** - Meeting/demo scheduled
-7. **Won** - Converted to client
-8. **Lost** - Did not convert
+### Updated Models
+- **Lead**: Added website, pic_name, office_number, fax_number, country, pipeline_status
+- **Deal**: Added linked_company_ids array, linked_companies populated list
+- **Task**: Added deal_id, deal_name, company_name, pic_name, reg_time
 
-### Customer Lifecycle
-Lead → AI Contacted → Interested → Opportunity → Customer → Repeat Customer
-
-### Lead to Client Conversion
-1. Lead in pipeline reaches "Won" stage
-2. User clicks "Convert to Client"
-3. Adds purchased services (name, amount, status)
-4. Client record created in /clients
-5. Lead marked as converted
-6. Customer record auto-created
-
-## API Endpoints
-
-### Authentication
-- POST /api/auth/register
-- POST /api/auth/login
-- GET /api/auth/me
-
-### Leads
-- GET/POST /api/leads (paginated)
-- GET/PUT/DELETE /api/leads/{id}
-- POST /api/leads/{id}/refresh-score
-- POST /api/leads/{id}/convert (Convert to Client)
-- PUT /api/leads/{id}/pipeline-stage
-- POST /api/leads/import
-
-### Clients (NEW)
-- GET /api/clients (paginated)
-- GET /api/clients/{id}
-- POST /api/clients/{id}/services
-
-### Assignment Settings (NEW)
-- GET /api/assignment-settings
-- PUT /api/assignment-settings
-
-### Tasks (NEW - March 2026)
-- GET /api/tasks (paginated, filter by status/payment_status/assigned_to)
-- POST /api/tasks
-- PUT /api/tasks/{id}
-- DELETE /api/tasks/{id}
-
-### Organization Settings (NEW - March 2026)
-- GET /api/organization-settings (currency, Google Calendar settings)
-- PUT /api/organization-settings
-
-### Currencies
-- GET /api/currencies (returns 16 available currencies)
-
-### Other Endpoints
-- GET/POST /api/deals
-- GET /api/customers (formerly contacts)
-- GET /api/users (paginated)
-- GET /api/worklist (paginated, filtered)
-- GET /api/notifications
-- GET /api/profile/lead/{id}
-- GET /api/filter-options
-- GET/POST /api/ai-calls (PLACEHOLDER)
-
-## Features Implemented
-
-### ✅ Core CRM
-- Multi-tenant architecture
-- RBAC (Super Admin, Org Admin, Manager, Sales Rep, Viewer)
-- Lead/Contact/Deal management
-- Excel import with auto-assignment
-- AI-powered lead scoring
-
-### ✅ Sales Workflow (December 2025)
-- Assignment Settings (4 modes)
-- Call-based Pipeline stages
-- Lead to Client conversion
-- Clients page with services
-- Customers page (renamed)
-
-### ✅ Tasks & Settings (March 2026)
-- Tasks page with CRUD operations
-- Payment status tracking (paid/partially paid/unpaid)
-- Multi-currency support (16 currencies)
-- Settings page with currency selection
-- Google Calendar integration setup (credentials storage)
-- ActionDropdown component (z-index fix)
-
-### ✅ Dashboard & Analytics
-- Stats cards with trends
-- Revenue charts
-- Sales funnel
-- Team leaderboard
-- Activity timeline
-
-### ✅ Notifications
-- Bell icon with unread count
-- In-app notifications
-- Auto-refresh
-
-### ✅ UI/UX
-- Elstar Admin theme (White & Gold)
-- Dark/Light mode
-- Pagination (10, 25, 50, 100)
-- Responsive layout
-
-## Pending/Future
+## Pending/Future Tasks
 
 ### P0 - Critical
-- ✅ Sales workflow (Done)
-- ✅ Tasks page with payment tracking (Done)
-- ✅ Multi-currency support (Done)
+- ✅ UI Overhaul (Done)
 - ✅ Dropdown z-index fix (Done)
-- ⏳ Rebranding to AISalesTask.com
+- ⏳ Rebrand to "AISalesTask.com" (logo, favicon, name)
 
 ### P1 - Important
-- ⏳ Google Calendar integration (credentials setup done, OAuth connection pending)
+- ⏳ Google Calendar OAuth integration (credentials storage ready)
 - AI Call Agent integration (Twilio/Bland.ai/Vapi)
 - Email notifications
 - Data export (CSV/Excel)
-- Progress indicator for imports
 
 ### P2 - Nice to Have
-- Automation workflows
 - Custom report builder
+- Automation workflows
 - Mobile app
 
-## Known Issues (Minor)
-1. Lead conversion allows re-conversion (creates duplicate clients)
-2. Pipeline-stage endpoint uses query param instead of body
-3. React hydration warning in AssignmentSettings select
-4. Google Calendar requires user to provide OAuth credentials (working as designed)
+### Refactoring Needed
+- **CRITICAL**: Split server.py (~3500 lines) into domain routers
+- Abstract repeated table logic into hooks/components
 
 ## Test Credentials
-- Email: Register new user or use existing test accounts
-- First user in org becomes Org Admin automatically
-- Test user: testadmin2@example.com / Password123!
+- Email: testadmin2@example.com
+- Password: Password123!
+
+## Known Mocked Features
+- AI Calling button (placeholder)
+- AI WhatsApp button (placeholder)
+- Google Calendar integration (credentials storage ready, OAuth not connected)

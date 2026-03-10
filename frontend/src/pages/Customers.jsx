@@ -330,40 +330,67 @@ export default function Customers() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-              {customers.map((customer) => (
-                <div key={customer.id} className="elstar-card p-4" data-testid={`customer-card-${customer.id}`}>
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="elstar-avatar w-10 h-10">{customer.first_name?.charAt(0)?.toUpperCase()}</div>
-                      <div>
-                        <p className="font-medium">{customer.first_name} {customer.last_name}</p>
-                        <p className="text-xs text-muted-foreground">{customer.job_title}</p>
-                      </div>
-                    </div>
-                    <ActionDropdown testId={`customer-actions-${customer.id}`}>
-                      {(closeDropdown) => (
-                        <>
-                          <button onClick={() => { navigate(`/profile/customer/${customer.id}`); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2"><Eye className="w-4 h-4" /> View Profile</button>
-                          <button onClick={() => openEditDialog(customer, closeDropdown)} className="elstar-dropdown-item w-full text-left flex items-center gap-2"><Edit className="w-4 h-4" /> Edit</button>
-                          <button onClick={() => { handleDelete(customer.id); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500"><Trash2 className="w-4 h-4" /> Delete</button>
-                        </>
-                      )}
-                    </ActionDropdown>
-                  </div>
-                  <div className="space-y-2">
-                    {customer.company && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Building2 className="w-4 h-4" />{customer.company}</div>}
-                    {customer.email && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Mail className="w-4 h-4" /><span className="truncate">{customer.email}</span></div>}
-                    {customer.phone && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Phone className="w-4 h-4" />{customer.phone}</div>}
-                    {(customer.city || customer.state) && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <MapPin className="w-4 h-4" />
-                        {customer.city}{customer.city && customer.state && ', '}{customer.state}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="elstar-table">
+                <thead>
+                  <tr>
+                    <th>COMPANY NAME</th>
+                    <th className="hidden sm:table-cell">PIC/DOCTOR</th>
+                    <th className="hidden md:table-cell">ROLE</th>
+                    <th className="hidden lg:table-cell">MOBILE</th>
+                    <th className="hidden xl:table-cell">EMAIL</th>
+                    <th>STATUS</th>
+                    <th className="w-24"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {customers.map((customer) => (
+                    <tr key={customer.id} data-testid={`customer-row-${customer.id}`}>
+                      <td>
+                        <div className="flex items-center gap-3">
+                          <div className="elstar-avatar w-8 h-8 text-sm">{customer.first_name?.charAt(0)?.toUpperCase()}</div>
+                          <span className="font-medium">{customer.company || `${customer.first_name} ${customer.last_name}`}</span>
+                        </div>
+                      </td>
+                      <td className="hidden sm:table-cell">
+                        <span>{customer.first_name} {customer.last_name}</span>
+                      </td>
+                      <td className="hidden md:table-cell">
+                        <span className="text-muted-foreground">{customer.job_title || '-'}</span>
+                      </td>
+                      <td className="hidden lg:table-cell">
+                        <span className="text-muted-foreground">{customer.phone || '-'}</span>
+                      </td>
+                      <td className="hidden xl:table-cell">
+                        <span className="text-muted-foreground truncate max-w-[150px] block">{customer.email || '-'}</span>
+                      </td>
+                      <td>
+                        <span className="elstar-badge elstar-badge-success">Customer</span>
+                      </td>
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => navigate(`/profile/customer/${customer.id}`)}
+                            className="text-xs text-primary hover:underline"
+                            data-testid={`preview-customer-${customer.id}`}
+                          >
+                            Preview
+                          </button>
+                          <ActionDropdown testId={`customer-actions-${customer.id}`}>
+                            {(closeDropdown) => (
+                              <>
+                                <button onClick={() => { navigate(`/profile/customer/${customer.id}`); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2"><Eye className="w-4 h-4" /> View Profile</button>
+                                <button onClick={() => openEditDialog(customer, closeDropdown)} className="elstar-dropdown-item w-full text-left flex items-center gap-2"><Edit className="w-4 h-4" /> Edit</button>
+                                <button onClick={() => { handleDelete(customer.id); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500"><Trash2 className="w-4 h-4" /> Delete</button>
+                              </>
+                            )}
+                          </ActionDropdown>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
             <Pagination
               currentPage={currentPage}

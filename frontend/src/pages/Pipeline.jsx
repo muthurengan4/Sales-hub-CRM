@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useAuth } from '../App';
 import { toast } from 'sonner';
 import Modal from '../components/Modal';
-import { Plus, Loader2, DollarSign, Calendar, MoreHorizontal, Trash2, Edit, Sparkles, Building2 } from 'lucide-react';
+import ActionDropdown from '../components/ActionDropdown';
+import { Plus, Loader2, DollarSign, Calendar, Trash2, Edit, Sparkles, Building2, Search, Eye } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -25,74 +26,102 @@ const getHealthClass = (score) => {
 };
 
 const initialFormData = {
-  title: '', value: '', company: '', contact_name: '', stage: 'new', expected_close_date: '', notes: ''
+  title: '', value: '', company: '', contact_name: '', stage: 'new', expected_close_date: '', notes: '', linked_company_ids: []
 };
 
 // Deal Form Fields - MOVED OUTSIDE to prevent re-renders
-const DealFormFields = memo(({ data, onChange, isEdit = false }) => (
+const DealFormFields = memo(({ data, onChange, isEdit = false, companies = [], companySearch, setCompanySearch }) => (
   <div className="space-y-4">
     <div>
-      <label className="block text-sm font-medium mb-2">Title *</label>
+      <label className="block text-sm font-medium mb-2">Deal Title *</label>
       <input 
         className="elstar-input" 
         value={data.title || ''} 
         onChange={(e) => onChange('title', e.target.value)} 
-        placeholder="Enterprise License" 
+        placeholder="GLOCO Cloud EMR" 
         data-testid="deal-title-input"
       />
     </div>
     <div className="grid grid-cols-2 gap-4">
       <div>
-        <label className="block text-sm font-medium mb-2">Value *</label>
+        <label className="block text-sm font-medium mb-2">Deal Value (RM) *</label>
         <input 
           className="elstar-input" 
           type="number" 
           value={data.value || ''} 
           onChange={(e) => onChange('value', e.target.value)} 
-          placeholder="10000"
+          placeholder="8800"
           data-testid="deal-value-input"
         />
       </div>
       <div>
-        <label className="block text-sm font-medium mb-2">Stage</label>
-        <select 
-          className="elstar-select" 
-          value={data.stage || 'lead'} 
-          onChange={(e) => onChange('stage', e.target.value)}
-        >
-          {STAGES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-        </select>
-      </div>
-    </div>
-    <div className="grid grid-cols-2 gap-4">
-      <div>
-        <label className="block text-sm font-medium mb-2">Company</label>
+        <label className="block text-sm font-medium mb-2">Expected Close Date *</label>
         <input 
           className="elstar-input" 
-          value={data.company || ''} 
-          onChange={(e) => onChange('company', e.target.value)} 
-          placeholder="Acme Inc"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-2">Contact Name</label>
-        <input 
-          className="elstar-input" 
-          value={data.contact_name || ''} 
-          onChange={(e) => onChange('contact_name', e.target.value)} 
-          placeholder="John Doe"
+          type="date" 
+          value={data.expected_close_date || ''} 
+          onChange={(e) => onChange('expected_close_date', e.target.value)}
+          data-testid="deal-close-date-input"
         />
       </div>
     </div>
     <div>
-      <label className="block text-sm font-medium mb-2">Expected Close Date</label>
-      <input 
-        className="elstar-input" 
-        type="date" 
-        value={data.expected_close_date || ''} 
-        onChange={(e) => onChange('expected_close_date', e.target.value)}
-      />
+      <label className="block text-sm font-medium mb-2">Pipeline Stage</label>
+      <select 
+        className="elstar-select" 
+        value={data.stage || 'new'} 
+        onChange={(e) => onChange('stage', e.target.value)}
+      >
+        {STAGES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+      </select>
     </div>
+    
+    {/* Link Companies Section */}
+    <div>
+      <label className="block text-sm font-medium mb-2">Link Companies</label>
+      <div className="relative mb-2">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <input
+          type="text"
+          value={companySearch || ''}
+          onChange={(e) => setCompanySearch(e.target.value)}
+          className="elstar-input pl-10"
+          placeholder="Search companies..."
+        />
+      </div>
+      <div className="max-h-40 overflow-y-auto border border-border rounded-lg">
+        {companies.filter(c => 
+          !companySearch || 
+          c.name?.toLowerCase().includes(companySearch.toLowerCase()) ||
+          c.pic_name?.toLowerCase().includes(companySearch.toLowerCase())
+        ).map(company => (
+          <label key={company.id} className="flex items-center gap-3 p-2 hover:bg-secondary cursor-pointer border-b border-border last:border-0">
+            <input
+              type="checkbox"
+              checked={(data.linked_company_ids || []).includes(company.id)}
+              onChange={(e) => {
+                const newIds = e.target.checked 
+                  ? [...(data.linked_company_ids || []), company.id]
+                  : (data.linked_company_ids || []).filter(id => id !== company.id);
+                onChange('linked_company_ids', newIds);
+              }}
+              className="w-4 h-4 rounded"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{company.name}</p>
+              <p className="text-xs text-muted-foreground truncate">{company.pic_name}</p>
+            </div>
+          </label>
+        ))}
+        {companies.length === 0 && (
+          <p className="p-4 text-sm text-muted-foreground text-center">No companies available</p>
+        )}
+      </div>
+      {(data.linked_company_ids || []).length > 0 && (
+        <p className="text-xs text-primary mt-2">{data.linked_company_ids.length} company(ies) selected</p>
+      )}
+    </div>
+
     <div>
       <label className="block text-sm font-medium mb-2">Notes</label>
       <textarea 
@@ -113,13 +142,15 @@ export default function Pipeline() {
   const [loading, setLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDealDetailOpen, setIsDealDetailOpen] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   const [draggedDeal, setDraggedDeal] = useState(null);
-  const [dropdownOpen, setDropdownOpen] = useState(null);
   const [formData, setFormData] = useState(initialFormData);
+  const [companies, setCompanies] = useState([]);
+  const [companySearch, setCompanySearch] = useState('');
 
-  useEffect(() => { fetchDeals(); }, []);
+  useEffect(() => { fetchDeals(); fetchCompanies(); }, []);
 
   const fetchDeals = async () => {
     try {
@@ -127,6 +158,16 @@ export default function Pipeline() {
       if (response.ok) setDeals(await response.json());
     } catch (error) { toast.error('Failed to fetch deals'); }
     finally { setLoading(false); }
+  };
+
+  const fetchCompanies = async () => {
+    try {
+      const response = await fetch(`${API}/api/lookup/companies`, { headers: { Authorization: `Bearer ${token}` } });
+      if (response.ok) {
+        const data = await response.json();
+        setCompanies(data.companies || []);
+      }
+    } catch (error) { console.error('Failed to fetch companies:', error); }
   };
 
   // Stable callback to prevent re-renders
@@ -190,9 +231,21 @@ export default function Pipeline() {
 
   const openEditDialog = (deal) => {
     setSelectedDeal(deal);
-    setFormData({ ...deal, value: deal.value?.toString() || '' });
+    setFormData({ ...deal, value: deal.value?.toString() || '', linked_company_ids: deal.linked_company_ids || [] });
     setIsEditOpen(true);
-    setDropdownOpen(null);
+  };
+
+  const openDealDetail = async (deal) => {
+    try {
+      const response = await fetch(`${API}/api/deals/${deal.id}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (response.ok) {
+        const fullDeal = await response.json();
+        setSelectedDeal(fullDeal);
+        setIsDealDetailOpen(true);
+      }
+    } catch (error) {
+      toast.error('Failed to load deal details');
+    }
   };
 
   const getDealsByStage = (stageId) => deals.filter(d => d.stage === stageId);
@@ -249,31 +302,39 @@ export default function Pipeline() {
                   >
                     <div className="flex items-start justify-between mb-2">
                       <h4 className="font-medium text-sm line-clamp-2 pr-2">{deal.title}</h4>
-                      <div className="relative flex-shrink-0">
-                        <button onClick={() => setDropdownOpen(dropdownOpen === deal.id ? null : deal.id)} className="p-1 hover:bg-secondary rounded">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </button>
-                        {dropdownOpen === deal.id && (
+                      <ActionDropdown testId={`deal-actions-${deal.id}`}>
+                        {(closeDropdown) => (
                           <>
-                            <div className="fixed inset-0" onClick={() => setDropdownOpen(null)} />
-                            <div className="elstar-dropdown animate-fade-in" style={{ right: 0 }}>
-                              <button onClick={() => openEditDialog(deal)} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
-                                <Edit className="w-4 h-4" /> Edit
-                              </button>
-                              <button onClick={() => { handleDelete(deal.id); setDropdownOpen(null); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500">
-                                <Trash2 className="w-4 h-4" /> Delete
-                              </button>
-                            </div>
+                            <button onClick={() => { openDealDetail(deal); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
+                              <Eye className="w-4 h-4" /> View Details
+                            </button>
+                            <button onClick={() => { openEditDialog(deal); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
+                              <Edit className="w-4 h-4" /> Edit
+                            </button>
+                            <button onClick={() => { handleDelete(deal.id); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500">
+                              <Trash2 className="w-4 h-4" /> Delete
+                            </button>
                           </>
                         )}
-                      </div>
+                      </ActionDropdown>
                     </div>
+                    
+                    {/* Linked Companies */}
+                    {deal.linked_companies && deal.linked_companies.length > 0 && (
+                      <div className="mb-2 text-xs">
+                        <span className="text-primary font-medium">{deal.linked_companies[0]?.name}</span>
+                        {deal.linked_companies_count > 1 && (
+                          <span className="text-muted-foreground ml-1">+{deal.linked_companies_count - 1} more</span>
+                        )}
+                      </div>
+                    )}
+                    
                     <div className="space-y-2 text-xs text-muted-foreground">
                       <div className="flex items-center gap-1.5">
                         <DollarSign className="w-3.5 h-3.5" />
                         <span className="font-mono font-medium text-foreground">{formatCurrency(deal.value)}</span>
                       </div>
-                      {deal.company && <div className="flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5" /><span>{deal.company}</span></div>}
+                      {deal.company && !deal.linked_companies?.length && <div className="flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5" /><span>{deal.company}</span></div>}
                       {deal.expected_close_date && <div className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /><span>{deal.expected_close_date}</span></div>}
                     </div>
                     <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
@@ -300,7 +361,7 @@ export default function Pipeline() {
       <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create New Deal">
         <form onSubmit={handleCreate}>
           <div className="elstar-modal-body">
-            <DealFormFields data={formData} onChange={handleInputChange} />
+            <DealFormFields data={formData} onChange={handleInputChange} companies={companies} companySearch={companySearch} setCompanySearch={setCompanySearch} />
           </div>
           <div className="elstar-modal-footer">
             <button type="button" onClick={() => setIsCreateOpen(false)} className="elstar-btn-ghost">Cancel</button>
@@ -315,7 +376,7 @@ export default function Pipeline() {
       <Modal isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} title="Edit Deal">
         <form onSubmit={handleEdit}>
           <div className="elstar-modal-body">
-            <DealFormFields data={formData} onChange={handleInputChange} isEdit />
+            <DealFormFields data={formData} onChange={handleInputChange} isEdit companies={companies} companySearch={companySearch} setCompanySearch={setCompanySearch} />
           </div>
           <div className="elstar-modal-footer">
             <button type="button" onClick={() => setIsEditOpen(false)} className="elstar-btn-ghost">Cancel</button>
@@ -324,6 +385,65 @@ export default function Pipeline() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Deal Detail Modal */}
+      <Modal isOpen={isDealDetailOpen} onClose={() => setIsDealDetailOpen(false)} title="Deal Details">
+        {selectedDeal && (
+          <div className="space-y-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-xl font-bold">{selectedDeal.title}</h3>
+                <p className="text-2xl font-bold text-primary mt-2">{formatCurrency(selectedDeal.value)}</p>
+              </div>
+              <span className={`px-3 py-1 rounded-full text-sm ${STAGES.find(s => s.id === selectedDeal.stage)?.color} text-white`}>
+                {STAGES.find(s => s.id === selectedDeal.stage)?.label}
+              </span>
+            </div>
+            
+            {selectedDeal.linked_companies && selectedDeal.linked_companies.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Linked Companies ({selectedDeal.linked_companies.length})</h4>
+                <div className="space-y-2">
+                  {selectedDeal.linked_companies.map((company, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+                      <div>
+                        <p className="font-medium">{company.name}</p>
+                        <p className="text-sm text-muted-foreground">{company.pic_name} - {company.location}</p>
+                      </div>
+                      <span className="text-sm text-muted-foreground">{company.mobile}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">Expected Close</p>
+                <p className="font-medium">{selectedDeal.expected_close_date || 'Not set'}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Health Score</p>
+                <p className={`font-bold ${getHealthClass(selectedDeal.ai_health_score)}`}>{selectedDeal.ai_health_score}</p>
+              </div>
+            </div>
+            
+            {selectedDeal.notes && (
+              <div>
+                <p className="text-muted-foreground text-sm">Notes</p>
+                <p className="mt-1">{selectedDeal.notes}</p>
+              </div>
+            )}
+            
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <button onClick={() => setIsDealDetailOpen(false)} className="elstar-btn-ghost">Close</button>
+              <button onClick={() => { setIsDealDetailOpen(false); openEditDialog(selectedDeal); }} className="elstar-btn-primary">
+                <Edit className="w-4 h-4 mr-2" /> Edit Deal
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

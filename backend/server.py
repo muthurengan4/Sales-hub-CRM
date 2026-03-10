@@ -276,11 +276,11 @@ class ContactResponse(BaseModel):
 
 # Lead Models
 class LeadCreate(BaseModel):
-    name: str
+    name: str  # Clinic Name / Company Name
     email: Optional[str] = None
-    phone: Optional[str] = None
+    phone: Optional[str] = None  # Mobile Number
     company: Optional[str] = None
-    title: Optional[str] = None
+    title: Optional[str] = None  # Job Title
     linkedin: Optional[str] = None
     company_size: Optional[str] = None
     industry: Optional[str] = None
@@ -291,8 +291,15 @@ class LeadCreate(BaseModel):
     postcode: Optional[str] = None
     city: Optional[str] = None
     state: Optional[str] = None
+    country: Optional[str] = None
     is_public: Optional[bool] = False
     lifecycle_stage: Optional[str] = "lead"
+    # New fields from PDF spec
+    website: Optional[str] = None
+    pic_name: Optional[str] = None  # Person in Charge
+    office_number: Optional[str] = None
+    fax_number: Optional[str] = None
+    pipeline_status: Optional[str] = "new"
 
 class LeadUpdate(BaseModel):
     name: Optional[str] = None
@@ -312,8 +319,15 @@ class LeadUpdate(BaseModel):
     postcode: Optional[str] = None
     city: Optional[str] = None
     state: Optional[str] = None
+    country: Optional[str] = None
     is_public: Optional[bool] = None
     lifecycle_stage: Optional[str] = None
+    # New fields
+    website: Optional[str] = None
+    pic_name: Optional[str] = None
+    office_number: Optional[str] = None
+    fax_number: Optional[str] = None
+    pipeline_status: Optional[str] = None
 
 class LeadResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -338,6 +352,7 @@ class LeadResponse(BaseModel):
     postcode: Optional[str] = None
     city: Optional[str] = None
     state: Optional[str] = None
+    country: Optional[str] = None
     is_public: Optional[bool] = False
     converted_to_client: Optional[bool] = False
     client_id: Optional[str] = None
@@ -348,6 +363,12 @@ class LeadResponse(BaseModel):
     assigned_to_name: Optional[str] = None
     created_at: str
     updated_at: str
+    # New fields
+    website: Optional[str] = None
+    pic_name: Optional[str] = None
+    office_number: Optional[str] = None
+    fax_number: Optional[str] = None
+    pipeline_status: Optional[str] = "new"
 
 # Deal Models
 class DealCreate(BaseModel):
@@ -361,6 +382,8 @@ class DealCreate(BaseModel):
     expected_close_date: Optional[str] = None
     notes: Optional[str] = None
     probability: Optional[int] = None
+    # New: linked companies (list of lead/customer IDs)
+    linked_company_ids: List[str] = []
 
 class DealUpdate(BaseModel):
     title: Optional[str] = None
@@ -370,6 +393,15 @@ class DealUpdate(BaseModel):
     notes: Optional[str] = None
     probability: Optional[int] = None
     assigned_to: Optional[str] = None
+    linked_company_ids: Optional[List[str]] = None
+
+class LinkedCompany(BaseModel):
+    id: str
+    name: str
+    pic_name: Optional[str] = None
+    location: Optional[str] = None
+    mobile: Optional[str] = None
+    entity_type: str = "lead"  # lead or customer
 
 class DealResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -392,6 +424,10 @@ class DealResponse(BaseModel):
     assigned_to_name: Optional[str] = None
     created_at: str
     updated_at: str
+    # New: linked companies
+    linked_company_ids: List[str] = []
+    linked_companies: List[Dict[str, Any]] = []
+    linked_companies_count: int = 0
 
 # Activity Models
 class ActivityCreate(BaseModel):
@@ -564,6 +600,7 @@ class TaskCreate(BaseModel):
     description: Optional[str] = None
     lead_id: Optional[str] = None
     client_id: Optional[str] = None
+    deal_id: Optional[str] = None  # NEW: Link to deal
     assigned_to: Optional[str] = None
     due_date: Optional[str] = None
     payment_status: str = "unpaid"
@@ -571,10 +608,14 @@ class TaskCreate(BaseModel):
     paid_amount: Optional[float] = 0
     calendar_event_id: Optional[str] = None
     priority: str = "medium"  # low, medium, high
+    status: str = "pending"  # NEW: pending, in_progress, completed
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
+    lead_id: Optional[str] = None
+    client_id: Optional[str] = None
+    deal_id: Optional[str] = None
     assigned_to: Optional[str] = None
     due_date: Optional[str] = None
     payment_status: Optional[str] = None
@@ -592,6 +633,11 @@ class TaskResponse(BaseModel):
     lead_name: Optional[str] = None
     client_id: Optional[str] = None
     client_name: Optional[str] = None
+    deal_id: Optional[str] = None
+    deal_name: Optional[str] = None
+    deal_value: Optional[float] = None
+    company_name: Optional[str] = None  # From lead or client
+    pic_name: Optional[str] = None  # Person in charge
     assigned_to: Optional[str] = None
     assigned_to_name: Optional[str] = None
     due_date: Optional[str] = None
@@ -605,6 +651,7 @@ class TaskResponse(BaseModel):
     created_by: str
     created_at: str
     updated_at: str
+    reg_time: Optional[str] = None  # Same as created_at, for display
 
 # Organization Settings Models
 class OrganizationSettingsUpdate(BaseModel):
@@ -1287,6 +1334,120 @@ async def import_contacts(file: UploadFile = File(...), user: dict = Depends(get
         logging.error(f"Import error: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Failed to import file: {str(e)}")
 
+# ============= CUSTOMERS ROUTES (Alias for Contacts) =============
+# These routes use the 'contacts' collection but expose as '/customers' for frontend consistency
+
+@api_router.get("/customers", response_model=PaginatedContactsResponse)
+async def get_customers(
+    search: Optional[str] = None, 
+    page: int = 1,
+    limit: int = 10,
+    user: dict = Depends(get_current_user)
+):
+    """Get customers (contacts) for the organization"""
+    query = get_data_filter(user, Permission.VIEW_CONTACTS, Permission.VIEW_CONTACTS)
+    
+    page = max(1, page)
+    limit = min(max(1, limit), 100)
+    skip = (page - 1) * limit
+    
+    if search:
+        query['$or'] = [
+            {'first_name': {'$regex': search, '$options': 'i'}},
+            {'last_name': {'$regex': search, '$options': 'i'}},
+            {'email': {'$regex': search, '$options': 'i'}},
+            {'company': {'$regex': search, '$options': 'i'}}
+        ]
+    
+    total = await db.contacts.count_documents(query)
+    total_pages = (total + limit - 1) // limit
+    
+    customers = await db.contacts.find(query, {'_id': 0}).sort('created_at', -1).skip(skip).limit(limit).to_list(limit)
+    
+    return PaginatedContactsResponse(
+        items=[ContactResponse(**c) for c in customers],
+        total=total,
+        page=page,
+        limit=limit,
+        total_pages=total_pages
+    )
+
+@api_router.post("/customers", response_model=ContactResponse)
+async def create_customer(contact_data: ContactCreate, user: dict = Depends(get_current_user)):
+    """Create a new customer (contact)"""
+    check_permission(user, Permission.MANAGE_CONTACTS)
+    
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="You must belong to an organization")
+    
+    contact_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    contact_doc = {
+        'id': contact_id,
+        **contact_data.model_dump(),
+        'organization_id': user['organization_id'],
+        'owner_id': user['id'],
+        'created_at': now,
+        'updated_at': now
+    }
+    
+    await db.contacts.insert_one(contact_doc)
+    contact_doc.pop('_id', None)
+    
+    return ContactResponse(**contact_doc)
+
+@api_router.get("/customers/{customer_id}", response_model=ContactResponse)
+async def get_customer(customer_id: str, user: dict = Depends(get_current_user)):
+    """Get a specific customer (contact)"""
+    query = get_data_filter(user, Permission.VIEW_CONTACTS, Permission.VIEW_CONTACTS)
+    query['id'] = customer_id
+    
+    customer = await db.contacts.find_one(query, {'_id': 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    return ContactResponse(**customer)
+
+@api_router.put("/customers/{customer_id}", response_model=ContactResponse)
+async def update_customer(customer_id: str, contact_data: ContactUpdate, user: dict = Depends(get_current_user)):
+    """Update a customer (contact)"""
+    check_permission(user, Permission.MANAGE_CONTACTS)
+    
+    update_data = {k: v for k, v in contact_data.model_dump().items() if v is not None}
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.contacts.find_one_and_update(
+        {'id': customer_id, 'organization_id': user.get('organization_id')},
+        {'$set': update_data},
+        return_document=True,
+        projection={'_id': 0}
+    )
+    
+    if not result:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    return ContactResponse(**result)
+
+@api_router.delete("/customers/{customer_id}")
+async def delete_customer(customer_id: str, user: dict = Depends(get_current_user)):
+    """Delete a customer (contact)"""
+    check_permission(user, Permission.MANAGE_CONTACTS)
+    
+    result = await db.contacts.delete_one(
+        {'id': customer_id, 'organization_id': user.get('organization_id')}
+    )
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    return {"message": "Customer deleted successfully"}
+
+@api_router.post("/customers/import")
+async def import_customers(file: UploadFile = File(...), user: dict = Depends(get_current_user)):
+    """Import customers from Excel file (uses contacts import logic)"""
+    return await import_contacts(file, user)
+
 # ============= LEAD ROUTES =============
 
 @api_router.post("/leads", response_model=LeadResponse)
@@ -1335,7 +1496,10 @@ class PaginatedLeadsResponse(BaseModel):
 @api_router.get("/leads", response_model=PaginatedLeadsResponse)
 async def get_leads(
     status: Optional[str] = None, 
-    search: Optional[str] = None, 
+    search: Optional[str] = None,
+    state: Optional[str] = None,
+    country: Optional[str] = None,
+    assigned_to: Optional[str] = None,
     page: int = 1,
     limit: int = 10,
     user: dict = Depends(get_current_user)
@@ -1349,11 +1513,18 @@ async def get_leads(
     
     if status:
         query['status'] = status
+    if state:
+        query['state'] = state
+    if country:
+        query['country'] = country
+    if assigned_to:
+        query['assigned_to'] = assigned_to
     if search:
         query['$or'] = [
             {'name': {'$regex': search, '$options': 'i'}},
             {'company': {'$regex': search, '$options': 'i'}},
-            {'email': {'$regex': search, '$options': 'i'}}
+            {'email': {'$regex': search, '$options': 'i'}},
+            {'pic_name': {'$regex': search, '$options': 'i'}}
         ]
     
     # Get total count
@@ -1637,6 +1808,8 @@ async def create_deal(deal_data: DealCreate, user: dict = Depends(get_current_us
     deal_doc.pop('_id', None)
     deal_doc['owner_name'] = user['name']
     deal_doc['assigned_to_name'] = user['name']
+    deal_doc['linked_companies'] = []
+    deal_doc['linked_companies_count'] = len(deal_data.linked_company_ids)
     
     return DealResponse(**deal_doc)
 
@@ -1655,6 +1828,35 @@ async def get_deals(stage: Optional[str] = None, user: dict = Depends(get_curren
         if deal.get('assigned_to'):
             assigned = await db.users.find_one({'id': deal['assigned_to']}, {'_id': 0, 'name': 1})
             deal['assigned_to_name'] = assigned['name'] if assigned else None
+        
+        # Populate linked companies
+        linked_ids = deal.get('linked_company_ids', [])
+        deal['linked_companies_count'] = len(linked_ids)
+        linked_companies = []
+        for lid in linked_ids[:3]:  # Only fetch first 3 for list view
+            lead = await db.leads.find_one({'id': lid}, {'_id': 0, 'id': 1, 'name': 1, 'company': 1, 'pic_name': 1, 'phone': 1, 'city': 1, 'state': 1})
+            if lead:
+                linked_companies.append({
+                    'id': lead['id'],
+                    'name': lead.get('company') or lead.get('name'),
+                    'pic_name': lead.get('pic_name') or lead.get('name'),
+                    'location': f"{lead.get('city', '')}, {lead.get('state', '')}".strip(', '),
+                    'mobile': lead.get('phone'),
+                    'entity_type': 'lead'
+                })
+            else:
+                # Check customers
+                customer = await db.customers.find_one({'id': lid}, {'_id': 0, 'id': 1, 'first_name': 1, 'last_name': 1, 'company': 1, 'phone': 1, 'city': 1, 'state': 1})
+                if customer:
+                    linked_companies.append({
+                        'id': customer['id'],
+                        'name': customer.get('company') or f"{customer.get('first_name', '')} {customer.get('last_name', '')}",
+                        'pic_name': f"{customer.get('first_name', '')} {customer.get('last_name', '')}",
+                        'location': f"{customer.get('city', '')}, {customer.get('state', '')}".strip(', '),
+                        'mobile': customer.get('phone'),
+                        'entity_type': 'customer'
+                    })
+        deal['linked_companies'] = linked_companies
     
     return [DealResponse(**deal) for deal in deals]
 
@@ -1666,6 +1868,35 @@ async def get_deal(deal_id: str, user: dict = Depends(get_current_user)):
     deal = await db.deals.find_one(query, {'_id': 0})
     if not deal:
         raise HTTPException(status_code=404, detail="Deal not found")
+    
+    # Populate all linked companies for detail view
+    linked_ids = deal.get('linked_company_ids', [])
+    linked_companies = []
+    for lid in linked_ids:
+        lead = await db.leads.find_one({'id': lid}, {'_id': 0, 'id': 1, 'name': 1, 'company': 1, 'pic_name': 1, 'phone': 1, 'city': 1, 'state': 1})
+        if lead:
+            linked_companies.append({
+                'id': lead['id'],
+                'name': lead.get('company') or lead.get('name'),
+                'pic_name': lead.get('pic_name') or lead.get('name'),
+                'location': f"{lead.get('city', '')}, {lead.get('state', '')}".strip(', '),
+                'mobile': lead.get('phone'),
+                'entity_type': 'lead'
+            })
+        else:
+            customer = await db.customers.find_one({'id': lid}, {'_id': 0, 'id': 1, 'first_name': 1, 'last_name': 1, 'company': 1, 'phone': 1, 'city': 1, 'state': 1})
+            if customer:
+                linked_companies.append({
+                    'id': customer['id'],
+                    'name': customer.get('company') or f"{customer.get('first_name', '')} {customer.get('last_name', '')}",
+                    'pic_name': f"{customer.get('first_name', '')} {customer.get('last_name', '')}",
+                    'location': f"{customer.get('city', '')}, {customer.get('state', '')}".strip(', '),
+                    'mobile': customer.get('phone'),
+                    'entity_type': 'customer'
+                })
+    
+    deal['linked_companies'] = linked_companies
+    deal['linked_companies_count'] = len(linked_ids)
     
     return DealResponse(**deal)
 
@@ -2710,6 +2941,8 @@ async def get_tasks(
     status: Optional[str] = None,
     payment_status: Optional[str] = None,
     assigned_to: Optional[str] = None,
+    deal_id: Optional[str] = None,
+    search: Optional[str] = None,
     page: int = 1,
     limit: int = 20,
     user: dict = Depends(get_current_user)
@@ -2730,6 +2963,13 @@ async def get_tasks(
         query['payment_status'] = payment_status
     if assigned_to:
         query['assigned_to'] = assigned_to
+    if deal_id:
+        query['deal_id'] = deal_id
+    if search:
+        query['$or'] = [
+            {'title': {'$regex': search, '$options': 'i'}},
+            {'description': {'$regex': search, '$options': 'i'}}
+        ]
     
     total = await db.tasks.count_documents(query)
     total_pages = (total + limit - 1) // limit
@@ -2738,15 +2978,31 @@ async def get_tasks(
     
     # Populate related data
     for task in tasks:
+        task['reg_time'] = task.get('created_at')
+        
         if task.get('assigned_to'):
             assignee = await db.users.find_one({'id': task['assigned_to']}, {'_id': 0, 'name': 1})
             task['assigned_to_name'] = assignee['name'] if assignee else None
+        
         if task.get('lead_id'):
-            lead = await db.leads.find_one({'id': task['lead_id']}, {'_id': 0, 'name': 1})
-            task['lead_name'] = lead['name'] if lead else None
+            lead = await db.leads.find_one({'id': task['lead_id']}, {'_id': 0, 'name': 1, 'company': 1, 'pic_name': 1})
+            if lead:
+                task['lead_name'] = lead.get('name')
+                task['company_name'] = lead.get('company') or lead.get('name')
+                task['pic_name'] = lead.get('pic_name') or lead.get('name')
+        
         if task.get('client_id'):
-            client = await db.clients.find_one({'id': task['client_id']}, {'_id': 0, 'customer_name': 1})
-            task['client_name'] = client['customer_name'] if client else None
+            client = await db.clients.find_one({'id': task['client_id']}, {'_id': 0, 'customer_name': 1, 'company': 1})
+            if client:
+                task['client_name'] = client.get('customer_name')
+                if not task.get('company_name'):
+                    task['company_name'] = client.get('company') or client.get('customer_name')
+        
+        if task.get('deal_id'):
+            deal = await db.deals.find_one({'id': task['deal_id']}, {'_id': 0, 'title': 1, 'value': 1})
+            if deal:
+                task['deal_name'] = deal.get('title')
+                task['deal_value'] = deal.get('value')
     
     return {
         "items": tasks,
@@ -2771,12 +3027,13 @@ async def create_task(task_data: TaskCreate, user: dict = Depends(get_current_us
         'description': task_data.description,
         'lead_id': task_data.lead_id,
         'client_id': task_data.client_id,
+        'deal_id': task_data.deal_id,
         'assigned_to': task_data.assigned_to or user['id'],
         'due_date': task_data.due_date,
         'payment_status': task_data.payment_status,
         'payment_amount': task_data.payment_amount,
         'paid_amount': task_data.paid_amount or 0,
-        'status': 'pending',
+        'status': task_data.status or 'pending',
         'priority': task_data.priority,
         'calendar_event_id': None,
         'organization_id': user['organization_id'],
@@ -2844,6 +3101,96 @@ async def delete_task(task_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Task not found")
     
     return {"message": "Task deleted successfully"}
+
+# ============= LOOKUP DATA ROUTES =============
+
+@api_router.get("/lookup/states")
+async def get_states(user: dict = Depends(get_current_user)):
+    """Get unique states from leads for filtering"""
+    if not user.get('organization_id'):
+        return {"states": []}
+    
+    pipeline = [
+        {'$match': {'organization_id': user['organization_id'], 'state': {'$nin': [None, '']}}},
+        {'$group': {'_id': '$state'}},
+        {'$sort': {'_id': 1}}
+    ]
+    
+    states = await db.leads.aggregate(pipeline).to_list(100)
+    return {"states": [s['_id'] for s in states if s['_id']]}
+
+@api_router.get("/lookup/sales-persons")
+async def get_sales_persons(user: dict = Depends(get_current_user)):
+    """Get users who can be assigned to tasks/leads"""
+    if not user.get('organization_id'):
+        return {"sales_persons": []}
+    
+    users = await db.users.find(
+        {'organization_id': user['organization_id'], 'is_active': True},
+        {'_id': 0, 'id': 1, 'name': 1, 'role': 1}
+    ).to_list(100)
+    
+    return {"sales_persons": users}
+
+@api_router.get("/lookup/companies")
+async def get_companies_for_linking(
+    search: Optional[str] = None,
+    user: dict = Depends(get_current_user)
+):
+    """Get leads and customers for linking to deals"""
+    if not user.get('organization_id'):
+        return {"companies": []}
+    
+    query = {'organization_id': user['organization_id']}
+    if search:
+        query['$or'] = [
+            {'name': {'$regex': search, '$options': 'i'}},
+            {'company': {'$regex': search, '$options': 'i'}},
+            {'pic_name': {'$regex': search, '$options': 'i'}}
+        ]
+    
+    # Get leads
+    leads = await db.leads.find(
+        query,
+        {'_id': 0, 'id': 1, 'name': 1, 'company': 1, 'pic_name': 1, 'phone': 1, 'city': 1, 'state': 1}
+    ).limit(20).to_list(20)
+    
+    companies = []
+    for lead in leads:
+        companies.append({
+            'id': lead['id'],
+            'name': lead.get('company') or lead.get('name'),
+            'pic_name': lead.get('pic_name') or lead.get('name'),
+            'phone': lead.get('phone'),
+            'location': f"{lead.get('city', '')}, {lead.get('state', '')}".strip(', '),
+            'entity_type': 'lead'
+        })
+    
+    # Get customers
+    customer_query = {'organization_id': user['organization_id']}
+    if search:
+        customer_query['$or'] = [
+            {'first_name': {'$regex': search, '$options': 'i'}},
+            {'last_name': {'$regex': search, '$options': 'i'}},
+            {'company': {'$regex': search, '$options': 'i'}}
+        ]
+    
+    customers = await db.customers.find(
+        customer_query,
+        {'_id': 0, 'id': 1, 'first_name': 1, 'last_name': 1, 'company': 1, 'phone': 1, 'city': 1, 'state': 1}
+    ).limit(20).to_list(20)
+    
+    for customer in customers:
+        companies.append({
+            'id': customer['id'],
+            'name': customer.get('company') or f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip(),
+            'pic_name': f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip(),
+            'phone': customer.get('phone'),
+            'location': f"{customer.get('city', '')}, {customer.get('state', '')}".strip(', '),
+            'entity_type': 'customer'
+        })
+    
+    return {"companies": companies}
 
 # ============= ORGANIZATION SETTINGS ROUTES =============
 
