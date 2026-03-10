@@ -3,9 +3,10 @@ import { useAuth } from '../App';
 import { toast } from 'sonner';
 import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
+import ActionDropdown from '../components/ActionDropdown';
 import { 
   Plus, Search, Loader2, Calendar, Clock, User, DollarSign,
-  MoreHorizontal, Trash2, Edit, CheckCircle, AlertCircle, 
+  Trash2, Edit, CheckCircle, AlertCircle, 
   Filter, RefreshCw, CalendarPlus
 } from 'lucide-react';
 
@@ -50,7 +51,6 @@ export default function Tasks() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(null);
   const [formData, setFormData] = useState(initialFormData);
   const [showFilters, setShowFilters] = useState(false);
   
@@ -244,7 +244,7 @@ export default function Tasks() {
     }
   };
 
-  const syncToCalendar = async (taskId) => {
+  const syncToCalendar = async (taskId, closeDropdown) => {
     try {
       const response = await fetch(`${API}/api/google-calendar/sync-task/${taskId}`, {
         method: 'POST',
@@ -261,10 +261,10 @@ export default function Tasks() {
     } catch (error) {
       toast.error('Failed to sync to calendar');
     }
-    setDropdownOpen(null);
+    if (closeDropdown) closeDropdown();
   };
 
-  const openEditDialog = (task) => {
+  const openEditDialog = (task, closeDropdown) => {
     setSelectedTask(task);
     setFormData({
       title: task.title || '',
@@ -280,7 +280,7 @@ export default function Tasks() {
       status: task.status || 'pending'
     });
     setIsEditOpen(true);
-    setDropdownOpen(null);
+    if (closeDropdown) closeDropdown();
   };
 
   const formatDate = (dateStr) => {
@@ -505,30 +505,21 @@ export default function Tasks() {
                         </div>
                       </td>
                       <td>
-                        <div className="relative">
-                          <button 
-                            onClick={() => setDropdownOpen(dropdownOpen === task.id ? null : task.id)}
-                            className="p-2 hover:bg-secondary rounded-lg"
-                          >
-                            <MoreHorizontal className="w-4 h-4" />
-                          </button>
-                          {dropdownOpen === task.id && (
+                        <ActionDropdown testId={`task-actions-${task.id}`}>
+                          {(closeDropdown) => (
                             <>
-                              <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(null)} />
-                              <div className="absolute right-0 mt-2 w-48 bg-card rounded-lg border border-border shadow-xl z-50 overflow-hidden animate-fade-in">
-                                <button onClick={() => openEditDialog(task)} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
-                                  <Edit className="w-4 h-4" /> Edit
-                                </button>
-                                <button onClick={() => syncToCalendar(task.id)} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
-                                  <CalendarPlus className="w-4 h-4" /> Sync to Calendar
-                                </button>
-                                <button onClick={() => { handleDelete(task.id); setDropdownOpen(null); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500">
-                                  <Trash2 className="w-4 h-4" /> Delete
-                                </button>
-                              </div>
+                              <button onClick={() => openEditDialog(task, closeDropdown)} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
+                                <Edit className="w-4 h-4" /> Edit
+                              </button>
+                              <button onClick={() => syncToCalendar(task.id, closeDropdown)} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
+                                <CalendarPlus className="w-4 h-4" /> Sync to Calendar
+                              </button>
+                              <button onClick={() => { handleDelete(task.id); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500">
+                                <Trash2 className="w-4 h-4" /> Delete
+                              </button>
                             </>
                           )}
-                        </div>
+                        </ActionDropdown>
                       </td>
                     </tr>
                   ))}

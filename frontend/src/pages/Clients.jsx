@@ -4,9 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
+import ActionDropdown from '../components/ActionDropdown';
 import { 
   Search, Loader2, Plus, DollarSign, User, Mail, Phone, Building2,
-  Calendar, CheckCircle, AlertCircle, MoreHorizontal, Eye, Package
+  Calendar, CheckCircle, AlertCircle, Eye, Package
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -26,7 +27,7 @@ export default function Clients() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedClient, setSelectedClient] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(null);
+  const [orgSettings, setOrgSettings] = useState({ currency_symbol: '$' });
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -45,6 +46,7 @@ export default function Clients() {
 
   useEffect(() => {
     fetchClients();
+    fetchOrgSettings();
   }, [currentPage, pageSize, debouncedSearch]);
 
   const fetchClients = async () => {
@@ -72,7 +74,21 @@ export default function Clients() {
     }
   };
 
-  const openClientDetail = async (clientId) => {
+  const fetchOrgSettings = async () => {
+    try {
+      const response = await fetch(`${API}/api/organization-settings`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setOrgSettings(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch org settings:', error);
+    }
+  };
+
+  const openClientDetail = async (clientId, closeDropdown) => {
     try {
       const response = await fetch(`${API}/api/clients/${clientId}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -85,7 +101,7 @@ export default function Clients() {
     } catch (error) {
       toast.error('Failed to load client details');
     }
-    setDropdownOpen(null);
+    if (closeDropdown) closeDropdown();
   };
 
   const formatDate = (dateStr) => {
@@ -98,10 +114,8 @@ export default function Clients() {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount || 0);
+    if (!amount && amount !== 0) return '-';
+    return `${orgSettings.currency_symbol}${parseFloat(amount).toLocaleString()}`;
   };
 
   // Calculate stats
@@ -253,27 +267,16 @@ export default function Clients() {
                         </div>
                       </td>
                       <td>
-                        <div className="relative">
-                          <button 
-                            onClick={() => setDropdownOpen(dropdownOpen === client.id ? null : client.id)}
-                            className="p-2 hover:bg-secondary rounded-lg"
-                          >
-                            <MoreHorizontal className="w-4 h-4" />
-                          </button>
-                          {dropdownOpen === client.id && (
-                            <>
-                              <div className="fixed inset-0" onClick={() => setDropdownOpen(null)} />
-                              <div className="elstar-dropdown animate-fade-in">
-                                <button 
-                                  onClick={() => openClientDetail(client.id)}
-                                  className="elstar-dropdown-item w-full text-left flex items-center gap-2"
-                                >
-                                  <Eye className="w-4 h-4" /> View Details
-                                </button>
-                              </div>
-                            </>
+                        <ActionDropdown testId={`client-actions-${client.id}`}>
+                          {(closeDropdown) => (
+                            <button 
+                              onClick={() => openClientDetail(client.id, closeDropdown)}
+                              className="elstar-dropdown-item w-full text-left flex items-center gap-2"
+                            >
+                              <Eye className="w-4 h-4" /> View Details
+                            </button>
                           )}
-                        </div>
+                        </ActionDropdown>
                       </td>
                     </tr>
                   ))}

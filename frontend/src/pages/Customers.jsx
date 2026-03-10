@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
-import { Plus, Search, Loader2, Mail, Phone, Building2, MoreHorizontal, Trash2, Edit, MapPin, User, Upload, FileSpreadsheet, X, Eye } from 'lucide-react';
+import ActionDropdown from '../components/ActionDropdown';
+import { Plus, Search, Loader2, Mail, Phone, Building2, Trash2, Edit, MapPin, User, Upload, FileSpreadsheet, X, Eye } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -154,7 +155,6 @@ export default function Customers() {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(null);
   const [formData, setFormData] = useState(initialFormData);
   const [importFile, setImportFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
@@ -249,11 +249,11 @@ export default function Customers() {
     } catch (error) { toast.error('Failed to delete customer'); }
   };
 
-  const openEditDialog = (customer) => {
+  const openEditDialog = (customer, closeDropdown) => {
     setSelectedCustomer(customer);
     setFormData({ ...initialFormData, ...customer });
     setIsEditOpen(true);
-    setDropdownOpen(null);
+    if (closeDropdown) closeDropdown();
   };
 
   const handleImport = async (e) => {
@@ -341,21 +341,15 @@ export default function Customers() {
                         <p className="text-xs text-muted-foreground">{customer.job_title}</p>
                       </div>
                     </div>
-                    <div className="relative">
-                      <button onClick={() => setDropdownOpen(dropdownOpen === customer.id ? null : customer.id)} className="p-1 hover:bg-secondary rounded">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </button>
-                      {dropdownOpen === customer.id && (
+                    <ActionDropdown testId={`customer-actions-${customer.id}`}>
+                      {(closeDropdown) => (
                         <>
-                          <div className="fixed inset-0" onClick={() => setDropdownOpen(null)} />
-                          <div className="elstar-dropdown animate-fade-in">
-                            <button onClick={() => { navigate(`/profile/customer/${customer.id}`); setDropdownOpen(null); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2"><Eye className="w-4 h-4" /> View Profile</button>
-                            <button onClick={() => openEditDialog(customer)} className="elstar-dropdown-item w-full text-left flex items-center gap-2"><Edit className="w-4 h-4" /> Edit</button>
-                            <button onClick={() => { handleDelete(customer.id); setDropdownOpen(null); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500"><Trash2 className="w-4 h-4" /> Delete</button>
-                          </div>
+                          <button onClick={() => { navigate(`/profile/customer/${customer.id}`); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2"><Eye className="w-4 h-4" /> View Profile</button>
+                          <button onClick={() => openEditDialog(customer, closeDropdown)} className="elstar-dropdown-item w-full text-left flex items-center gap-2"><Edit className="w-4 h-4" /> Edit</button>
+                          <button onClick={() => { handleDelete(customer.id); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500"><Trash2 className="w-4 h-4" /> Delete</button>
                         </>
                       )}
-                    </div>
+                    </ActionDropdown>
                   </div>
                   <div className="space-y-2">
                     {customer.company && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Building2 className="w-4 h-4" />{customer.company}</div>}

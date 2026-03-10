@@ -4,7 +4,7 @@ import { useAuth, useTheme } from '../App';
 import NotificationsDropdown from './NotificationsDropdown';
 import { 
   LayoutDashboard, Users, Kanban, Settings, LogOut, Moon, Sun,
-  Menu, X, ChevronDown, Building2, UserCircle, Contact2, Shield, ClipboardList, Briefcase
+  Menu, X, ChevronDown, Building2, UserCircle, Contact2, Shield, ClipboardList, Briefcase, CheckSquare
 } from 'lucide-react';
 
 export default function Layout() {
@@ -24,6 +24,7 @@ export default function Layout() {
     { to: '/pipeline', icon: Kanban, label: 'Pipeline', show: hasPermission('view_all_deals') || hasPermission('view_own_deals') },
     { to: '/customers', icon: Contact2, label: 'Customers', show: hasPermission('view_contacts') },
     { to: '/clients', icon: Briefcase, label: 'Clients', show: hasPermission('view_contacts') },
+    { to: '/tasks', icon: CheckSquare, label: 'Tasks', show: hasPermission('view_all_leads') || hasPermission('view_own_leads') },
     { to: '/users', icon: UserCircle, label: 'Team', show: hasPermission('view_users') },
     { to: '/organization', icon: Building2, label: 'Organization', show: hasPermission('view_organization') },
     { to: '/settings', icon: Settings, label: 'Settings', show: true },

@@ -15,6 +15,7 @@ import Users from './pages/Users';
 import Organization from './pages/Organization';
 import Settings from './pages/Settings';
 import Worklist from './pages/Worklist';
+import Tasks from './pages/Tasks';
 import CustomerProfile from './pages/CustomerProfile';
 import Layout from './components/Layout';
 
@@ -159,6 +160,7 @@ function App() {
               <Route path="pipeline" element={<Pipeline />} />
               <Route path="customers" element={<Customers />} />
               <Route path="clients" element={<Clients />} />
+              <Route path="tasks" element={<Tasks />} />
               <Route path="users" element={<Users />} />
               <Route path="organization" element={<Organization />} />
               <Route path="settings" element={<Settings />} />

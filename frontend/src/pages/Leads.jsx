@@ -4,9 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
+import ActionDropdown from '../components/ActionDropdown';
 import { 
   Plus, Search, Loader2, Sparkles, Mail, Phone, Building2, 
-  MoreHorizontal, Trash2, Edit, RefreshCw, Upload, FileSpreadsheet, Eye, UserCheck, DollarSign
+  Trash2, Edit, RefreshCw, Upload, FileSpreadsheet, Eye, UserCheck, DollarSign
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -257,7 +258,6 @@ export default function Leads() {
   const [isConvertOpen, setIsConvertOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(null);
   const [formData, setFormData] = useState(initialFormData);
   const [convertData, setConvertData] = useState({ services: [{ name: '', amount: '', status: 'active' }], notes: '' });
   const [importFile, setImportFile] = useState(null);
@@ -395,14 +395,12 @@ export default function Leads() {
     setSelectedLead(lead);
     setFormData({ ...initialFormData, ...lead });
     setIsEditOpen(true);
-    setDropdownOpen(null);
   };
 
   const openConvertDialog = (lead) => {
     setSelectedLead(lead);
     setConvertData({ services: [{ name: '', amount: '', status: 'active' }], notes: '' });
     setIsConvertOpen(true);
-    setDropdownOpen(null);
   };
 
   const handleConvert = async (e) => {
@@ -643,35 +641,29 @@ export default function Leads() {
                         </div>
                       </td>
                       <td>
-                        <div className="relative">
-                          <button onClick={() => setDropdownOpen(dropdownOpen === lead.id ? null : lead.id)} className="p-2 hover:bg-secondary rounded-lg">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </button>
-                          {dropdownOpen === lead.id && (
+                        <ActionDropdown testId={`lead-actions-${lead.id}`}>
+                          {(closeDropdown) => (
                             <>
-                              <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(null)} />
-                              <div className="absolute right-0 mt-2 w-48 bg-card rounded-lg border border-border shadow-xl z-50 overflow-hidden animate-fade-in" style={{ boxShadow: '0 10px 40px -10px rgba(0,0,0,0.3)' }}>
-                                <button onClick={() => { navigate(`/profile/lead/${lead.id}`); setDropdownOpen(null); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
-                                  <Eye className="w-4 h-4" /> View Profile
+                              <button onClick={() => { navigate(`/profile/lead/${lead.id}`); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
+                                <Eye className="w-4 h-4" /> View Profile
+                              </button>
+                              <button onClick={() => { openEditDialog(lead); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
+                                <Edit className="w-4 h-4" /> Edit
+                              </button>
+                              <button onClick={() => { handleRefreshScore(lead.id); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
+                                <RefreshCw className="w-4 h-4" /> Refresh Score
+                              </button>
+                              {!lead.converted_to_client && (
+                                <button onClick={() => { openConvertDialog(lead); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-green-600">
+                                  <UserCheck className="w-4 h-4" /> Convert to Client
                                 </button>
-                                <button onClick={() => openEditDialog(lead)} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
-                                  <Edit className="w-4 h-4" /> Edit
-                                </button>
-                                <button onClick={() => { handleRefreshScore(lead.id); setDropdownOpen(null); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
-                                  <RefreshCw className="w-4 h-4" /> Refresh Score
-                                </button>
-                                {!lead.converted_to_client && (
-                                  <button onClick={() => openConvertDialog(lead)} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-green-600">
-                                    <UserCheck className="w-4 h-4" /> Convert to Client
-                                  </button>
-                                )}
-                                <button onClick={() => { handleDelete(lead.id); setDropdownOpen(null); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500">
-                                  <Trash2 className="w-4 h-4" /> Delete
-                                </button>
-                              </div>
+                              )}
+                              <button onClick={() => { handleDelete(lead.id); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500">
+                                <Trash2 className="w-4 h-4" /> Delete
+                              </button>
                             </>
                           )}
-                        </div>
+                        </ActionDropdown>
                       </td>
                     </tr>
                   ))}
