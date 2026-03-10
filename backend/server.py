@@ -553,6 +553,75 @@ class ClientResponse(BaseModel):
     created_at: str
     updated_at: str
 
+# Task Models
+class PaymentStatus(str, Enum):
+    PAID = "paid"
+    PARTIALLY_PAID = "partially_paid"
+    UNPAID = "unpaid"
+
+class TaskCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    lead_id: Optional[str] = None
+    client_id: Optional[str] = None
+    assigned_to: Optional[str] = None
+    due_date: Optional[str] = None
+    payment_status: str = "unpaid"
+    payment_amount: Optional[float] = None
+    paid_amount: Optional[float] = 0
+    calendar_event_id: Optional[str] = None
+    priority: str = "medium"  # low, medium, high
+
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    assigned_to: Optional[str] = None
+    due_date: Optional[str] = None
+    payment_status: Optional[str] = None
+    payment_amount: Optional[float] = None
+    paid_amount: Optional[float] = None
+    status: Optional[str] = None
+    priority: Optional[str] = None
+
+class TaskResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    title: str
+    description: Optional[str] = None
+    lead_id: Optional[str] = None
+    lead_name: Optional[str] = None
+    client_id: Optional[str] = None
+    client_name: Optional[str] = None
+    assigned_to: Optional[str] = None
+    assigned_to_name: Optional[str] = None
+    due_date: Optional[str] = None
+    payment_status: str = "unpaid"
+    payment_amount: Optional[float] = None
+    paid_amount: Optional[float] = 0
+    status: str = "pending"  # pending, in_progress, completed
+    priority: str = "medium"
+    calendar_event_id: Optional[str] = None
+    organization_id: str
+    created_by: str
+    created_at: str
+    updated_at: str
+
+# Organization Settings Models
+class OrganizationSettingsUpdate(BaseModel):
+    currency: Optional[str] = None  # USD, MYR, EUR, GBP, etc.
+    currency_symbol: Optional[str] = None  # $, RM, €, £
+    google_calendar_client_id: Optional[str] = None
+    google_calendar_client_secret: Optional[str] = None
+    google_calendar_enabled: Optional[bool] = None
+
+class OrganizationSettingsResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    organization_id: str
+    currency: str = "USD"
+    currency_symbol: str = "$"
+    google_calendar_enabled: bool = False
+    google_calendar_connected: bool = False
+
 # ============= AUTH HELPERS =============
 
 def hash_password(password: str) -> str:
@@ -2633,6 +2702,386 @@ async def update_lead_pipeline_stage(lead_id: str, stage: str, user: dict = Depe
     )
     
     return {"message": f"Lead moved to {stage}", "pipeline_stage": stage, "lifecycle_stage": lifecycle_stage}
+
+# ============= TASK ROUTES =============
+
+@api_router.get("/tasks")
+async def get_tasks(
+    status: Optional[str] = None,
+    payment_status: Optional[str] = None,
+    assigned_to: Optional[str] = None,
+    page: int = 1,
+    limit: int = 20,
+    user: dict = Depends(get_current_user)
+):
+    """Get tasks for organization"""
+    if not user.get('organization_id'):
+        return {"items": [], "total": 0, "page": 1, "limit": limit, "total_pages": 0}
+    
+    page = max(1, page)
+    limit = min(max(1, limit), 100)
+    skip = (page - 1) * limit
+    
+    query = {'organization_id': user['organization_id']}
+    
+    if status:
+        query['status'] = status
+    if payment_status:
+        query['payment_status'] = payment_status
+    if assigned_to:
+        query['assigned_to'] = assigned_to
+    
+    total = await db.tasks.count_documents(query)
+    total_pages = (total + limit - 1) // limit
+    
+    tasks = await db.tasks.find(query, {'_id': 0}).sort('created_at', -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Populate related data
+    for task in tasks:
+        if task.get('assigned_to'):
+            assignee = await db.users.find_one({'id': task['assigned_to']}, {'_id': 0, 'name': 1})
+            task['assigned_to_name'] = assignee['name'] if assignee else None
+        if task.get('lead_id'):
+            lead = await db.leads.find_one({'id': task['lead_id']}, {'_id': 0, 'name': 1})
+            task['lead_name'] = lead['name'] if lead else None
+        if task.get('client_id'):
+            client = await db.clients.find_one({'id': task['client_id']}, {'_id': 0, 'customer_name': 1})
+            task['client_name'] = client['customer_name'] if client else None
+    
+    return {
+        "items": tasks,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": total_pages
+    }
+
+@api_router.post("/tasks")
+async def create_task(task_data: TaskCreate, user: dict = Depends(get_current_user)):
+    """Create a new task"""
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="You must belong to an organization")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    task_id = str(uuid.uuid4())
+    
+    task_doc = {
+        'id': task_id,
+        'title': task_data.title,
+        'description': task_data.description,
+        'lead_id': task_data.lead_id,
+        'client_id': task_data.client_id,
+        'assigned_to': task_data.assigned_to or user['id'],
+        'due_date': task_data.due_date,
+        'payment_status': task_data.payment_status,
+        'payment_amount': task_data.payment_amount,
+        'paid_amount': task_data.paid_amount or 0,
+        'status': 'pending',
+        'priority': task_data.priority,
+        'calendar_event_id': None,
+        'organization_id': user['organization_id'],
+        'created_by': user['id'],
+        'created_at': now,
+        'updated_at': now
+    }
+    
+    await db.tasks.insert_one(task_doc)
+    
+    # Notify assignee if different from creator
+    if task_data.assigned_to and task_data.assigned_to != user['id']:
+        await create_notification(
+            org_id=user['organization_id'],
+            user_id=task_data.assigned_to,
+            notification_type='task_due',
+            title='New Task Assigned',
+            message=f'Task "{task_data.title}" has been assigned to you',
+            link='/tasks',
+            entity_type='task',
+            entity_id=task_id
+        )
+    
+    task_doc.pop('_id', None)
+    return task_doc
+
+@api_router.put("/tasks/{task_id}")
+async def update_task(task_id: str, task_data: TaskUpdate, user: dict = Depends(get_current_user)):
+    """Update a task"""
+    task = await db.tasks.find_one(
+        {'id': task_id, 'organization_id': user.get('organization_id')},
+        {'_id': 0}
+    )
+    
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    update_data = {k: v for k, v in task_data.model_dump().items() if v is not None}
+    update_data['updated_at'] = now
+    
+    # Auto-update payment status based on paid_amount
+    if 'paid_amount' in update_data and task.get('payment_amount'):
+        paid = update_data['paid_amount']
+        total = task['payment_amount']
+        if paid >= total:
+            update_data['payment_status'] = 'paid'
+        elif paid > 0:
+            update_data['payment_status'] = 'partially_paid'
+        else:
+            update_data['payment_status'] = 'unpaid'
+    
+    await db.tasks.update_one({'id': task_id}, {'$set': update_data})
+    
+    return {"message": "Task updated successfully"}
+
+@api_router.delete("/tasks/{task_id}")
+async def delete_task(task_id: str, user: dict = Depends(get_current_user)):
+    """Delete a task"""
+    result = await db.tasks.delete_one(
+        {'id': task_id, 'organization_id': user.get('organization_id')}
+    )
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    return {"message": "Task deleted successfully"}
+
+# ============= ORGANIZATION SETTINGS ROUTES =============
+
+@api_router.get("/organization-settings")
+async def get_organization_settings(user: dict = Depends(get_current_user)):
+    """Get organization settings including currency and integrations"""
+    check_permission(user, Permission.VIEW_ORGANIZATION)
+    
+    if not user.get('organization_id'):
+        return {
+            "organization_id": None,
+            "currency": "USD",
+            "currency_symbol": "$",
+            "google_calendar_enabled": False,
+            "google_calendar_connected": False
+        }
+    
+    settings = await db.organization_settings.find_one(
+        {'organization_id': user['organization_id']},
+        {'_id': 0, 'google_calendar_client_secret': 0}  # Don't return secrets
+    )
+    
+    if not settings:
+        return {
+            "organization_id": user['organization_id'],
+            "currency": "USD",
+            "currency_symbol": "$",
+            "google_calendar_enabled": False,
+            "google_calendar_connected": False
+        }
+    
+    # Check if Google Calendar credentials are configured
+    full_settings = await db.organization_settings.find_one(
+        {'organization_id': user['organization_id']},
+        {'_id': 0}
+    )
+    
+    settings['google_calendar_connected'] = bool(
+        full_settings.get('google_calendar_client_id') and 
+        full_settings.get('google_calendar_client_secret') and
+        full_settings.get('google_calendar_access_token')
+    )
+    
+    return settings
+
+@api_router.put("/organization-settings")
+async def update_organization_settings(settings: OrganizationSettingsUpdate, user: dict = Depends(get_current_user)):
+    """Update organization settings"""
+    check_permission(user, Permission.MANAGE_ORGANIZATION)
+    
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="You must belong to an organization")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    
+    update_data = {k: v for k, v in settings.model_dump().items() if v is not None}
+    update_data['organization_id'] = user['organization_id']
+    update_data['updated_at'] = now
+    
+    await db.organization_settings.update_one(
+        {'organization_id': user['organization_id']},
+        {'$set': update_data},
+        upsert=True
+    )
+    
+    return {"message": "Organization settings updated successfully"}
+
+@api_router.get("/currencies")
+async def get_available_currencies():
+    """Get list of available currencies"""
+    return {
+        "currencies": [
+            {"code": "USD", "symbol": "$", "name": "US Dollar"},
+            {"code": "MYR", "symbol": "RM", "name": "Malaysian Ringgit"},
+            {"code": "EUR", "symbol": "€", "name": "Euro"},
+            {"code": "GBP", "symbol": "£", "name": "British Pound"},
+            {"code": "SGD", "symbol": "S$", "name": "Singapore Dollar"},
+            {"code": "AUD", "symbol": "A$", "name": "Australian Dollar"},
+            {"code": "JPY", "symbol": "¥", "name": "Japanese Yen"},
+            {"code": "CNY", "symbol": "¥", "name": "Chinese Yuan"},
+            {"code": "INR", "symbol": "₹", "name": "Indian Rupee"},
+            {"code": "THB", "symbol": "฿", "name": "Thai Baht"},
+            {"code": "IDR", "symbol": "Rp", "name": "Indonesian Rupiah"},
+            {"code": "PHP", "symbol": "₱", "name": "Philippine Peso"},
+            {"code": "VND", "symbol": "₫", "name": "Vietnamese Dong"},
+            {"code": "KRW", "symbol": "₩", "name": "South Korean Won"},
+            {"code": "AED", "symbol": "د.إ", "name": "UAE Dirham"},
+            {"code": "SAR", "symbol": "﷼", "name": "Saudi Riyal"}
+        ]
+    }
+
+# ============= GOOGLE CALENDAR ROUTES =============
+
+@api_router.get("/google-calendar/auth-url")
+async def get_google_calendar_auth_url(user: dict = Depends(get_current_user)):
+    """Get Google OAuth authorization URL"""
+    check_permission(user, Permission.MANAGE_ORGANIZATION)
+    
+    settings = await db.organization_settings.find_one(
+        {'organization_id': user['organization_id']},
+        {'_id': 0}
+    )
+    
+    if not settings or not settings.get('google_calendar_client_id'):
+        raise HTTPException(status_code=400, detail="Google Calendar credentials not configured")
+    
+    client_id = settings['google_calendar_client_id']
+    redirect_uri = os.environ.get('REACT_APP_BACKEND_URL', '') + '/api/google-calendar/callback'
+    
+    scope = 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events'
+    
+    auth_url = (
+        f"https://accounts.google.com/o/oauth2/v2/auth?"
+        f"client_id={client_id}&"
+        f"redirect_uri={redirect_uri}&"
+        f"response_type=code&"
+        f"scope={scope}&"
+        f"access_type=offline&"
+        f"prompt=consent&"
+        f"state={user['organization_id']}"
+    )
+    
+    return {"auth_url": auth_url}
+
+@api_router.get("/google-calendar/callback")
+async def google_calendar_callback(code: str, state: str):
+    """Handle Google OAuth callback"""
+    org_id = state
+    
+    settings = await db.organization_settings.find_one(
+        {'organization_id': org_id},
+        {'_id': 0}
+    )
+    
+    if not settings:
+        return {"error": "Organization settings not found"}
+    
+    client_id = settings.get('google_calendar_client_id')
+    client_secret = settings.get('google_calendar_client_secret')
+    redirect_uri = os.environ.get('REACT_APP_BACKEND_URL', '') + '/api/google-calendar/callback'
+    
+    # Exchange code for tokens
+    import httpx
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            'https://oauth2.googleapis.com/token',
+            data={
+                'client_id': client_id,
+                'client_secret': client_secret,
+                'code': code,
+                'grant_type': 'authorization_code',
+                'redirect_uri': redirect_uri
+            }
+        )
+        
+        if response.status_code != 200:
+            return {"error": "Failed to exchange code for tokens"}
+        
+        tokens = response.json()
+    
+    # Store tokens
+    now = datetime.now(timezone.utc).isoformat()
+    await db.organization_settings.update_one(
+        {'organization_id': org_id},
+        {'$set': {
+            'google_calendar_access_token': tokens.get('access_token'),
+            'google_calendar_refresh_token': tokens.get('refresh_token'),
+            'google_calendar_token_expiry': tokens.get('expires_in'),
+            'google_calendar_connected_at': now,
+            'updated_at': now
+        }}
+    )
+    
+    # Redirect to settings page
+    frontend_url = os.environ.get('REACT_APP_BACKEND_URL', '').replace('/api', '')
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url=f"{frontend_url}/settings?google_calendar=connected")
+
+@api_router.post("/google-calendar/sync-task/{task_id}")
+async def sync_task_to_calendar(task_id: str, user: dict = Depends(get_current_user)):
+    """Sync a task to Google Calendar"""
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="You must belong to an organization")
+    
+    # Get task
+    task = await db.tasks.find_one(
+        {'id': task_id, 'organization_id': user['organization_id']},
+        {'_id': 0}
+    )
+    
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    # Get Google Calendar settings
+    settings = await db.organization_settings.find_one(
+        {'organization_id': user['organization_id']},
+        {'_id': 0}
+    )
+    
+    if not settings or not settings.get('google_calendar_access_token'):
+        raise HTTPException(status_code=400, detail="Google Calendar not connected")
+    
+    access_token = settings['google_calendar_access_token']
+    
+    # Create calendar event
+    import httpx
+    event = {
+        'summary': task['title'],
+        'description': task.get('description', ''),
+        'start': {
+            'dateTime': task.get('due_date') or datetime.now(timezone.utc).isoformat(),
+            'timeZone': 'UTC'
+        },
+        'end': {
+            'dateTime': task.get('due_date') or datetime.now(timezone.utc).isoformat(),
+            'timeZone': 'UTC'
+        }
+    }
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            'https://www.googleapis.com/calendar/v3/calendars/primary/events',
+            headers={'Authorization': f'Bearer {access_token}'},
+            json=event
+        )
+        
+        if response.status_code not in [200, 201]:
+            raise HTTPException(status_code=400, detail="Failed to create calendar event")
+        
+        calendar_event = response.json()
+    
+    # Update task with calendar event ID
+    await db.tasks.update_one(
+        {'id': task_id},
+        {'$set': {'calendar_event_id': calendar_event.get('id')}}
+    )
+    
+    return {"message": "Task synced to Google Calendar", "event_id": calendar_event.get('id')}
 
 # ============= ROOT ROUTE =============
 
