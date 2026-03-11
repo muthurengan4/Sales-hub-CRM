@@ -795,11 +795,10 @@ export default function Leads() {
                         data-testid="select-all-checkbox"
                       />
                     </th>
-                    <th>Name</th>
-                    <th className="hidden md:table-cell">Company Name</th>
-                    <th className="hidden sm:table-cell">Contact</th>
-                    <th className="hidden lg:table-cell">Mobile / Office</th>
-                    <th className="hidden xl:table-cell">Email</th>
+                    <th>Company Name</th>
+                    <th className="hidden sm:table-cell">POC Name</th>
+                    <th className="hidden md:table-cell">Mobile / Office</th>
+                    <th className="hidden lg:table-cell">Email</th>
                     <th className="hidden lg:table-cell">Location</th>
                     <th className="hidden xl:table-cell">State</th>
                     <th className="hidden xl:table-cell">Country</th>
@@ -810,8 +809,17 @@ export default function Leads() {
                 </thead>
                 <tbody>
                   {leads.map((lead) => (
-                    <tr key={lead.id} data-testid={`lead-row-${lead.id}`} className={selectedLeads.has(lead.id) ? 'bg-primary/5' : ''}>
-                      <td>
+                    <tr 
+                      key={lead.id} 
+                      data-testid={`lead-row-${lead.id}`} 
+                      className={`cursor-pointer hover:bg-primary/5 ${selectedLeads.has(lead.id) ? 'bg-primary/5' : ''}`}
+                      onClick={(e) => {
+                        // Don't navigate if clicking checkbox or dropdown
+                        if (e.target.type === 'checkbox' || e.target.closest('[data-dropdown]')) return;
+                        navigate(`/leads/${lead.id}`);
+                      }}
+                    >
+                      <td onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={selectedLeads.has(lead.id)}
@@ -821,35 +829,33 @@ export default function Leads() {
                         />
                       </td>
                       <td>
-                        <p className="font-medium">{lead.pic_name || lead.name}</p>
-                        <p className="text-xs text-muted-foreground">{lead.title}</p>
-                      </td>
-                      <td className="hidden md:table-cell">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Building2 className="w-4 h-4 flex-shrink-0" />
-                          <span className="truncate max-w-[150px]">{lead.company || lead.name}</span>
+                        <div className="flex items-center gap-2">
+                          <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+                          <span className="font-medium truncate max-w-[180px]">{lead.company || lead.name}</span>
                         </div>
                       </td>
                       <td className="hidden sm:table-cell">
-                        <p className="font-medium text-sm">{lead.pic_name || lead.name}</p>
+                        <p className="font-medium text-sm">{lead.pic_name || '-'}</p>
+                        <p className="text-xs text-muted-foreground">{lead.title || ''}</p>
                       </td>
-                      <td className="hidden lg:table-cell">
+                      <td className="hidden md:table-cell">
                         <div className="space-y-1 text-xs text-muted-foreground">
                           {lead.phone && <div className="flex items-center gap-1"><Phone className="w-3 h-3" />{lead.phone}</div>}
                           {lead.office_number && <div className="flex items-center gap-1"><Phone className="w-3 h-3" />{lead.office_number}</div>}
+                          {!lead.phone && !lead.office_number && '-'}
                         </div>
                       </td>
-                      <td className="hidden xl:table-cell">
-                        {lead.email && (
+                      <td className="hidden lg:table-cell">
+                        {lead.email ? (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Mail className="w-3 h-3" />
                             <span className="truncate max-w-[150px]">{lead.email}</span>
                           </div>
-                        )}
+                        ) : '-'}
                       </td>
                       <td className="hidden lg:table-cell">
                         <div className="text-xs text-muted-foreground">
-                          {lead.city && <span>{lead.city}</span>}
+                          {lead.city || '-'}
                         </div>
                       </td>
                       <td className="hidden xl:table-cell">
@@ -869,12 +875,12 @@ export default function Leads() {
                           <span className={`font-mono font-bold ${getScoreClass(lead.ai_score)}`}>{lead.ai_score}</span>
                         </div>
                       </td>
-                      <td>
+                      <td onClick={(e) => e.stopPropagation()}>
                         <ActionDropdown testId={`lead-actions-${lead.id}`}>
                           {(closeDropdown) => (
                             <>
-                              <button onClick={() => { navigate(`/profile/lead/${lead.id}`); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
-                                <Eye className="w-4 h-4" /> View Profile
+                              <button onClick={() => { navigate(`/leads/${lead.id}`); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
+                                <Eye className="w-4 h-4" /> View Details
                               </button>
                               <button onClick={() => { openWhatsappWithLead(lead); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-green-600">
                                 <MessageCircle className="w-4 h-4" /> WhatsApp

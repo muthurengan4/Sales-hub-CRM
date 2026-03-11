@@ -8,13 +8,12 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Leads from './pages/Leads';
+import LeadDetailPage from './pages/LeadDetailPage';
 import Pipeline from './pages/Pipeline';
 import Customers from './pages/Customers';
-import Clients from './pages/Clients';
 import Users from './pages/Users';
 import Organization from './pages/Organization';
 import Settings from './pages/Settings';
-import Worklist from './pages/Worklist';
 import Tasks from './pages/Tasks';
 import CustomerProfile from './pages/CustomerProfile';
 import CalendarPage from './pages/CalendarPage';
@@ -157,11 +156,10 @@ function App() {
             <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
-              <Route path="worklist" element={<Worklist />} />
               <Route path="leads" element={<Leads />} />
+              <Route path="leads/:id" element={<LeadDetailPage />} />
               <Route path="pipeline" element={<Pipeline />} />
               <Route path="customers" element={<Customers />} />
-              <Route path="clients" element={<Clients />} />
               <Route path="tasks" element={<Tasks />} />
               <Route path="calendar" element={<CalendarPage />} />
               <Route path="whatsapp" element={<WhatsAppMessages />} />

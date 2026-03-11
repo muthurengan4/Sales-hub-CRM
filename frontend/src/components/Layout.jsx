@@ -19,12 +19,10 @@ export default function Layout() {
   // Dynamic navigation based on permissions
   const navItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', show: true },
-    { to: '/worklist', icon: ClipboardList, label: 'Worklist', show: hasPermission('view_all_leads') || hasPermission('view_own_leads') },
     { to: '/leads', icon: Users, label: 'Leads', show: hasPermission('view_all_leads') || hasPermission('view_own_leads') },
     { to: '/pipeline', icon: Kanban, label: 'Pipeline', show: hasPermission('view_all_deals') || hasPermission('view_own_deals') },
-    { to: '/customers', icon: Contact2, label: 'Customers', show: hasPermission('view_contacts') },
-    { to: '/clients', icon: Briefcase, label: 'Clients', show: hasPermission('view_contacts') },
     { to: '/tasks', icon: CheckSquare, label: 'Tasks', show: hasPermission('view_all_leads') || hasPermission('view_own_leads') },
+    { to: '/customers', icon: Contact2, label: 'Customers', show: hasPermission('view_contacts') },
     { to: '/calendar', icon: Calendar, label: 'Calendar', show: true },
     { to: '/whatsapp', icon: MessageCircle, label: 'WhatsApp', show: hasPermission('view_all_leads') || hasPermission('view_own_leads') },
     { to: '/users', icon: UserCircle, label: 'Team', show: hasPermission('view_users') },

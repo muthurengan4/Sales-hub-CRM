@@ -1643,6 +1643,64 @@ async def delete_lead(lead_id: str, user: dict = Depends(get_current_user)):
     
     return {"message": "Lead deleted"}
 
+@api_router.get("/leads/{lead_id}/activities")
+async def get_lead_activities(lead_id: str, user: dict = Depends(get_current_user)):
+    """Get activities for a specific lead"""
+    # Verify lead exists and user has access
+    query = get_data_filter(user, Permission.VIEW_ALL_LEADS, Permission.VIEW_OWN_LEADS)
+    query['id'] = lead_id
+    
+    lead = await db.leads.find_one(query, {'_id': 0})
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    # Get activities for this lead
+    activities = await db.activities.find(
+        {'entity_id': lead_id, 'entity_type': 'lead'},
+        {'_id': 0}
+    ).sort('created_at', -1).to_list(100)
+    
+    # Convert ObjectId if present
+    for activity in activities:
+        if '_id' in activity:
+            del activity['_id']
+    
+    return {"activities": activities}
+
+@api_router.post("/leads/{lead_id}/activities")
+async def create_lead_activity(lead_id: str, activity_data: dict, user: dict = Depends(get_current_user)):
+    """Log an activity for a specific lead"""
+    # Verify lead exists and user has access
+    query = get_data_filter(user, Permission.VIEW_ALL_LEADS, Permission.VIEW_OWN_LEADS)
+    query['id'] = lead_id
+    
+    lead = await db.leads.find_one(query, {'_id': 0})
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    activity_doc = {
+        'id': str(uuid.uuid4()),
+        'entity_type': 'lead',
+        'entity_id': lead_id,
+        'type': activity_data.get('type', 'note'),
+        'description': activity_data.get('description', ''),
+        'notes': activity_data.get('notes', ''),
+        'user_id': user['id'],
+        'user_name': user['name'],
+        'organization_id': user.get('organization_id'),
+        'created_at': now
+    }
+    
+    await db.activities.insert_one(activity_doc)
+    if '_id' in activity_doc:
+        del activity_doc['_id']
+    
+    # Update lead's updated_at
+    await db.leads.update_one({'id': lead_id}, {'$set': {'updated_at': now}})
+    
+    return activity_doc
+
 @api_router.post("/leads/import")
 async def import_leads(file: UploadFile = File(...), user: dict = Depends(get_current_user)):
     """Import leads from Excel file with auto-assignment"""
