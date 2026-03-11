@@ -3,65 +3,56 @@
 ## Original Problem Statement
 Build an AI-powered CRM with Lead Management, Pipeline & Deals, Analytics Dashboard, and AI features.
 
-## Latest Update (March 10, 2026)
+## Latest Update (March 11, 2026)
 
-### Excel Import Investigation & Enhancement
-- ✅ **Excel Import Bug Reported - RESOLVED (NOT BROKEN)**
-  - Investigation confirmed import feature was working correctly
-  - Backend `/api/customers/import` endpoint functional
-  - Frontend upload modal working properly
-- ✅ **Enhanced Column Mapping** - Added support for many more Excel column variations:
-  - Name: `Clinic Name`, `Customer Name`, `FirstName`, `Name`
-  - Phone: `Customer Number`, `Mobile Number`, `Tel`, `Telephone`
-  - Address: `Full Address`, `Street Address`
-  - Postal: `Postal Code`, `Post Code`, `Zip`, `Zip Code`
-  - Email: `Email Address`, `E-mail`
-  - And more variations for City, State, Company, Job Title
-- ✅ **Improved Error Messages** - Clear actionable guidance when user has no organization
-- ✅ **All Tests Passed** - 100% backend (10/10) and frontend tests
+### UI/Navigation Changes
+- ✅ **Removed Worklist tab** from sidebar navigation
+- ✅ **Removed Clients tab** from sidebar navigation
+- ✅ **Color scheme reverted** from blue (#A0C4FF) back to Gold (#D4A017)
 
-### Previous Session Completed
+### Leads Page Redesign
+- ✅ **Updated table columns** in order: Company Name, POC Name, Mobile/Office, Email, Location, State, Country, Status, AI Score
+- ✅ **Clickable lead rows** - Navigate to lead detail page on click
 
-**1. Rebranding to AISalesTask**
-- ✅ Login page: "AISalesTask" title and branding
-- ✅ Register page: "AISalesTask" branding  
-- ✅ Sidebar: "AISalesTask v2.0" logo
-- ✅ Browser tab: "AISalesTask | AI-Powered Sales Platform"
+### New Lead Detail Page (`/leads/:id`)
+- ✅ **Header**: Back button, Lead name, "Detail View" subtitle, Edit and "Convert to Customer" buttons
+- ✅ **Left sidebar - Contact Info**: Company Name, Mobile, Office, Fax, Email, Website, Location, Country
+- ✅ **Left sidebar - Pipeline section**: Status badge, AI Score, Last Contact, Owner
+- ✅ **Middle section - Activity tabs**: Activity, Notes, Emails, Calls, Tasks, WhatsApp, Meetings
+- ✅ **Middle section - Log Activity**: Task, Call, WhatsApp, Email, Meeting buttons
+- ✅ **Middle section - Update Pipeline Status**: New, Qualified, Proposal, Negotiation, Sales Closed tabs with remark textarea
+- ✅ **Right sidebar**: Company section, Deals section with "+Add", AI Score display with progress bar
+- ✅ **Backend endpoints**: `/api/leads/{id}/activities` for GET and POST activity logging
 
-**2. Create Event Modal Fix**
-- ✅ Fixed modal CSS (z-index: 9998/9999, proper centering)
-- ✅ Modal now displays fully with all form fields visible
-- ✅ Max height prevents overflow
+### Previous Session (March 10, 2026)
 
-**3. WhatsApp Lead Navigation**
-- ✅ Added "WhatsApp" option in lead action dropdown (green icon)
-- ✅ Clicking navigates to `/whatsapp?leadId={id}` 
-- ✅ WhatsApp page auto-selects the lead on load
-- ✅ User can go back to contact list to chat with others
+**Excel Import Enhancement**
+- ✅ Excel import working correctly
+- ✅ Enhanced column mapping for 40+ variations
+- ✅ Improved error messages
 
-### Previous Updates
-- ActionDropdown using React Portal (z-index fix)
-- Calendar page with Month/Week/Day views
-- WhatsApp messaging interface
-- Color scheme changed to blue (#A0C4FF)
-- PDF-spec UI for Leads, Tasks, Pipeline, Customers
+**Rebranding & Fixes**
+- ✅ Rebranded to "AISalesTask"
+- ✅ Fixed modal CSS issues
+- ✅ WhatsApp lead navigation
 
 ## Code Architecture
 ```
 /app/
-├── backend/server.py           # FastAPI
+├── backend/server.py           # FastAPI (~3700 lines)
 ├── frontend/src/
 │   ├── components/
 │   │   ├── ActionDropdown.jsx  # React Portal (z-index: 9999)
 │   │   ├── Modal.jsx           # Fixed modal component
-│   │   └── Layout.jsx          # "AISalesTask" branding
+│   │   └── Layout.jsx          # Sidebar navigation (no Worklist/Clients)
 │   ├── pages/
+│   │   ├── LeadDetailPage.jsx  # NEW: Full lead detail view with activity logging
+│   │   ├── Leads.jsx           # Updated table columns, clickable rows
 │   │   ├── CalendarPage.jsx    # Full calendar with event modal
 │   │   ├── WhatsAppMessages.jsx # Auto-selects lead from URL param
-│   │   ├── Leads.jsx           # WhatsApp action in dropdown
-│   │   ├── Login.jsx           # "AISalesTask" branding
-│   │   └── Register.jsx        # "AISalesTask" branding
-│   └── index.css               # Blue theme, modal fixes
+│   │   ├── Login.jsx           # Gold theme
+│   │   └── Register.jsx        # Gold theme
+│   └── index.css               # Gold theme (#D4A017)
 └── frontend/public/
     └── index.html              # "AISalesTask" title
 ```
