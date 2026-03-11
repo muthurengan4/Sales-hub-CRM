@@ -1,22 +1,20 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useAuth } from '../App';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import Modal from '../components/Modal';
+import SlideInPanel from '../components/SlideInPanel';
 import ActionDropdown from '../components/ActionDropdown';
-import { Plus, Loader2, DollarSign, Calendar, Trash2, Edit, Sparkles, Building2, Search, Eye } from 'lucide-react';
+import { Plus, Loader2, DollarSign, Calendar, Trash2, Edit, Sparkles, Building2, Search, Eye, X } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
-// Call-based pipeline stages
+// Pipeline stages matching Picture 1
 const STAGES = [
-  { id: 'new', label: 'New', color: 'bg-slate-500' },
-  { id: 'contacted', label: 'Contacted', color: 'bg-blue-500' },
-  { id: 'no_answer', label: 'No Answer', color: 'bg-amber-400' },
-  { id: 'interested', label: 'Interested', color: 'bg-emerald-400' },
-  { id: 'follow_up', label: 'Follow Up', color: 'bg-purple-500' },
-  { id: 'booked', label: 'Booked', color: 'bg-amber-500' },
-  { id: 'won', label: 'Won', color: 'bg-emerald-500' },
-  { id: 'lost', label: 'Lost', color: 'bg-red-500' }
+  { id: 'lead', label: 'Lead', color: 'bg-slate-500' },
+  { id: 'qualified', label: 'Qualified', color: 'bg-amber-500' },
+  { id: 'proposal', label: 'Proposal', color: 'bg-orange-500' },
+  { id: 'negotiation', label: 'Negotiation', color: 'bg-red-500' },
+  { id: 'sales_closed', label: 'Sales Closed', color: 'bg-blue-500' }
 ];
 
 const getHealthClass = (score) => {
@@ -26,19 +24,19 @@ const getHealthClass = (score) => {
 };
 
 const initialFormData = {
-  title: '', value: '', company: '', contact_name: '', stage: 'new', expected_close_date: '', notes: '', linked_company_ids: []
+  title: '', value: '', company: '', contact_name: '', stage: 'lead', expected_close_date: '', notes: '', linked_company_ids: []
 };
 
 // Deal Form Fields - MOVED OUTSIDE to prevent re-renders
 const DealFormFields = memo(({ data, onChange, isEdit = false, companies = [], companySearch, setCompanySearch }) => (
-  <div className="space-y-4">
+  <div className="space-y-6">
     <div>
       <label className="block text-sm font-medium mb-2">Deal Title *</label>
       <input 
         className="elstar-input" 
         value={data.title || ''} 
         onChange={(e) => onChange('title', e.target.value)} 
-        placeholder="GLOCO Cloud EMR" 
+        placeholder="e.g. GLOCO Cloud EMR" 
         data-testid="deal-title-input"
       />
     </div>
@@ -69,33 +67,32 @@ const DealFormFields = memo(({ data, onChange, isEdit = false, companies = [], c
       <label className="block text-sm font-medium mb-2">Pipeline Stage</label>
       <select 
         className="elstar-select" 
-        value={data.stage || 'new'} 
+        value={data.stage || 'lead'} 
         onChange={(e) => onChange('stage', e.target.value)}
       >
         {STAGES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
       </select>
     </div>
     
-    {/* Link Companies Section */}
+    {/* LINK COMPANIES Section - matching Picture 2 */}
     <div>
-      <label className="block text-sm font-medium mb-2">Link Companies</label>
-      <div className="relative mb-2">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider mb-3">LINK COMPANIES</h3>
+      <div className="relative mb-3">
         <input
           type="text"
           value={companySearch || ''}
           onChange={(e) => setCompanySearch(e.target.value)}
-          className="elstar-input pl-10"
+          className="elstar-input"
           placeholder="Search companies..."
         />
       </div>
-      <div className="max-h-40 overflow-y-auto border border-border rounded-lg">
+      <div className="space-y-2 max-h-48 overflow-y-auto">
         {companies.filter(c => 
           !companySearch || 
           c.name?.toLowerCase().includes(companySearch.toLowerCase()) ||
           c.pic_name?.toLowerCase().includes(companySearch.toLowerCase())
         ).map(company => (
-          <label key={company.id} className="flex items-center gap-3 p-2 hover:bg-secondary cursor-pointer border-b border-border last:border-0">
+          <label key={company.id} className="flex items-center gap-3 p-3 hover:bg-secondary cursor-pointer rounded-lg border border-border">
             <input
               type="checkbox"
               checked={(data.linked_company_ids || []).includes(company.id)}
@@ -105,31 +102,17 @@ const DealFormFields = memo(({ data, onChange, isEdit = false, companies = [], c
                   : (data.linked_company_ids || []).filter(id => id !== company.id);
                 onChange('linked_company_ids', newIds);
               }}
-              className="w-4 h-4 rounded"
+              className="w-4 h-4 rounded border-2 border-border"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{company.name}</p>
-              <p className="text-xs text-muted-foreground truncate">{company.pic_name}</p>
+              <p className="text-sm font-medium">{company.name} — {company.pic_name || 'No PIC'}</p>
             </div>
           </label>
         ))}
         {companies.length === 0 && (
-          <p className="p-4 text-sm text-muted-foreground text-center">No companies available</p>
+          <p className="p-4 text-sm text-muted-foreground text-center">No companies available. Add leads first.</p>
         )}
       </div>
-      {(data.linked_company_ids || []).length > 0 && (
-        <p className="text-xs text-primary mt-2">{data.linked_company_ids.length} company(ies) selected</p>
-      )}
-    </div>
-
-    <div>
-      <label className="block text-sm font-medium mb-2">Notes</label>
-      <textarea 
-        className="elstar-input min-h-[80px]" 
-        value={data.notes || ''} 
-        onChange={(e) => onChange('notes', e.target.value)} 
-        placeholder="Additional notes..."
-      />
     </div>
   </div>
 ));
@@ -138,6 +121,7 @@ DealFormFields.displayName = 'DealFormFields';
 
 export default function Pipeline() {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [deals, setDeals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -297,35 +281,50 @@ export default function Pipeline() {
                     key={deal.id}
                     draggable
                     onDragStart={(e) => handleDragStart(e, deal)}
-                    className={`elstar-kanban-card ${draggedDeal?.id === deal.id ? 'opacity-50' : ''}`}
+                    onClick={() => openDealDetail(deal)}
+                    className={`elstar-kanban-card cursor-pointer hover:border-primary/50 transition-colors ${draggedDeal?.id === deal.id ? 'opacity-50' : ''}`}
                     data-testid={`deal-card-${deal.id}`}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <h4 className="font-medium text-sm line-clamp-2 pr-2">{deal.title}</h4>
-                      <ActionDropdown testId={`deal-actions-${deal.id}`}>
-                        {(closeDropdown) => (
-                          <>
-                            <button onClick={() => { openDealDetail(deal); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
-                              <Eye className="w-4 h-4" /> View Details
-                            </button>
-                            <button onClick={() => { openEditDialog(deal); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
-                              <Edit className="w-4 h-4" /> Edit
-                            </button>
-                            <button onClick={() => { handleDelete(deal.id); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500">
-                              <Trash2 className="w-4 h-4" /> Delete
-                            </button>
-                          </>
-                        )}
-                      </ActionDropdown>
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <ActionDropdown testId={`deal-actions-${deal.id}`}>
+                          {(closeDropdown) => (
+                            <>
+                              <button onClick={() => { openDealDetail(deal); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
+                                <Eye className="w-4 h-4" /> View Details
+                              </button>
+                              <button onClick={() => { openEditDialog(deal); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
+                                <Edit className="w-4 h-4" /> Edit
+                              </button>
+                              <button onClick={() => { handleDelete(deal.id); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500">
+                                <Trash2 className="w-4 h-4" /> Delete
+                              </button>
+                            </>
+                          )}
+                        </ActionDropdown>
+                      </div>
                     </div>
                     
-                    {/* Linked Companies */}
-                    {deal.linked_companies && deal.linked_companies.length > 0 && (
-                      <div className="mb-2 text-xs">
-                        <span className="text-primary font-medium">{deal.linked_companies[0]?.name}</span>
-                        {deal.linked_companies_count > 1 && (
-                          <span className="text-muted-foreground ml-1">+{deal.linked_companies_count - 1} more</span>
-                        )}
+                    {/* Linked Companies - matching Picture 1 with icon */}
+                    {deal.linked_companies && deal.linked_companies.length > 0 ? (
+                      <div className="mb-2 flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                          <Building2 className="w-3 h-3 text-emerald-500" />
+                        </div>
+                        <div className="text-xs">
+                          <span className="text-foreground font-medium">{deal.linked_companies[0]?.name}</span>
+                          {deal.linked_companies_count > 1 && (
+                            <span className="text-amber-500 ml-1">+{deal.linked_companies_count - 1} more</span>
+                          )}
+                        </div>
+                      </div>
+                    ) : deal.company && (
+                      <div className="mb-2 flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                          <Building2 className="w-3 h-3 text-emerald-500" />
+                        </div>
+                        <span className="text-xs text-foreground">{deal.company}</span>
                       </div>
                     )}
                     
@@ -334,14 +333,13 @@ export default function Pipeline() {
                         <DollarSign className="w-3.5 h-3.5" />
                         <span className="font-mono font-medium text-foreground">{formatCurrency(deal.value)}</span>
                       </div>
-                      {deal.company && !deal.linked_companies?.length && <div className="flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5" /><span>{deal.company}</span></div>}
                       {deal.expected_close_date && <div className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /><span>{deal.expected_close_date}</span></div>}
                     </div>
                     <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">Health Score</span>
                       <div className="flex items-center gap-1">
                         <Sparkles className={`w-3.5 h-3.5 ${getHealthClass(deal.ai_health_score)}`} />
-                        <span className={`font-mono text-xs font-bold ${getHealthClass(deal.ai_health_score)}`}>{deal.ai_health_score}</span>
+                        <span className={`font-mono text-xs font-bold ${getHealthClass(deal.ai_health_score)}`}>+{deal.ai_health_score}</span>
                       </div>
                     </div>
                   </div>
@@ -357,94 +355,172 @@ export default function Pipeline() {
         </div>
       </div>
 
-      {/* Create Modal */}
-      <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create New Deal">
+      {/* Create Deal Slide-in Panel */}
+      <SlideInPanel isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create New Deal">
         <form onSubmit={handleCreate}>
-          <div className="elstar-modal-body">
-            <DealFormFields data={formData} onChange={handleInputChange} companies={companies} companySearch={companySearch} setCompanySearch={setCompanySearch} />
-          </div>
-          <div className="elstar-modal-footer">
-            <button type="button" onClick={() => setIsCreateOpen(false)} className="elstar-btn-ghost">Cancel</button>
-            <button type="submit" disabled={formLoading} className="elstar-btn-primary flex items-center gap-2" data-testid="submit-deal-btn">
+          <DealFormFields data={formData} onChange={handleInputChange} companies={companies} companySearch={companySearch} setCompanySearch={setCompanySearch} />
+          <div className="flex gap-3 mt-6 pt-4 border-t border-border">
+            <button type="submit" disabled={formLoading} className="elstar-btn-primary flex-1 flex items-center justify-center gap-2" data-testid="submit-deal-btn">
               {formLoading && <Loader2 className="w-4 h-4 animate-spin" />} Create Deal
             </button>
+            <button type="button" onClick={() => setIsCreateOpen(false)} className="elstar-btn-ghost">Cancel</button>
           </div>
         </form>
-      </Modal>
+      </SlideInPanel>
 
-      {/* Edit Modal */}
-      <Modal isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} title="Edit Deal">
+      {/* Edit Deal Slide-in Panel */}
+      <SlideInPanel isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} title="Edit Deal">
         <form onSubmit={handleEdit}>
-          <div className="elstar-modal-body">
-            <DealFormFields data={formData} onChange={handleInputChange} isEdit companies={companies} companySearch={companySearch} setCompanySearch={setCompanySearch} />
-          </div>
-          <div className="elstar-modal-footer">
-            <button type="button" onClick={() => setIsEditOpen(false)} className="elstar-btn-ghost">Cancel</button>
-            <button type="submit" disabled={formLoading} className="elstar-btn-primary flex items-center gap-2">
+          <DealFormFields data={formData} onChange={handleInputChange} isEdit companies={companies} companySearch={companySearch} setCompanySearch={setCompanySearch} />
+          <div className="flex gap-3 mt-6 pt-4 border-t border-border">
+            <button type="submit" disabled={formLoading} className="elstar-btn-primary flex-1 flex items-center justify-center gap-2">
               {formLoading && <Loader2 className="w-4 h-4 animate-spin" />} Update Deal
             </button>
+            <button type="button" onClick={() => setIsEditOpen(false)} className="elstar-btn-ghost">Cancel</button>
           </div>
         </form>
-      </Modal>
+      </SlideInPanel>
 
-      {/* Deal Detail Modal */}
-      <Modal isOpen={isDealDetailOpen} onClose={() => setIsDealDetailOpen(false)} title="Deal Details">
+      {/* Deal Detail Slide-in Panel - matching Picture 3 */}
+      <SlideInPanel isOpen={isDealDetailOpen} onClose={() => setIsDealDetailOpen(false)} title={selectedDeal?.title || 'Deal Details'} width="w-[520px]">
         {selectedDeal && (
           <div className="space-y-6">
-            <div className="flex items-start justify-between">
+            {/* Deal Info */}
+            <div className="space-y-3">
               <div>
-                <h3 className="text-xl font-bold">{selectedDeal.title}</h3>
-                <p className="text-2xl font-bold text-primary mt-2">{formatCurrency(selectedDeal.value)}</p>
+                <p className="text-xs text-muted-foreground uppercase">DEAL TITLE</p>
+                <p className="font-semibold">{selectedDeal.title}</p>
               </div>
-              <span className={`px-3 py-1 rounded-full text-sm ${STAGES.find(s => s.id === selectedDeal.stage)?.color} text-white`}>
-                {STAGES.find(s => s.id === selectedDeal.stage)?.label}
-              </span>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase">DEAL VALUE</p>
+                  <p className="font-semibold text-lg">{formatCurrency(selectedDeal.value)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase">EXPECTED CLOSE</p>
+                  <p className="font-medium">{selectedDeal.expected_close_date || 'Not set'}</p>
+                </div>
+              </div>
             </div>
-            
-            {selectedDeal.linked_companies && selectedDeal.linked_companies.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Linked Companies ({selectedDeal.linked_companies.length})</h4>
-                <div className="space-y-2">
+
+            {/* Pipeline Stage - matching Picture 3 */}
+            <div>
+              <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider mb-3">PIPELINE STAGE</h3>
+              <div className="flex gap-2 flex-wrap">
+                {STAGES.map(stage => (
+                  <button
+                    key={stage.id}
+                    onClick={async () => {
+                      if (selectedDeal.stage === stage.id) return;
+                      try {
+                        await fetch(`${API}/api/deals/${selectedDeal.id}`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                          body: JSON.stringify({ stage: stage.id })
+                        });
+                        setSelectedDeal(prev => ({ ...prev, stage: stage.id }));
+                        fetchDeals();
+                        toast.success(`Stage updated to ${stage.label}`);
+                      } catch (error) {
+                        toast.error('Failed to update stage');
+                      }
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      selectedDeal.stage === stage.id
+                        ? 'bg-amber-500 text-black'
+                        : 'bg-secondary hover:bg-secondary/80 text-foreground'
+                    }`}
+                  >
+                    {stage.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Linked Companies - matching Picture 3 */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider">LINKED COMPANIES</h3>
+                <span className="text-xs text-muted-foreground">
+                  {selectedDeal.linked_companies?.length || 0} companies
+                </span>
+              </div>
+              
+              {selectedDeal.linked_companies && selectedDeal.linked_companies.length > 0 ? (
+                <div className="space-y-3">
                   {selectedDeal.linked_companies.map((company, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
-                      <div>
-                        <p className="font-medium">{company.name}</p>
-                        <p className="text-sm text-muted-foreground">{company.pic_name} - {company.location}</p>
+                    <div key={idx} className="p-4 bg-secondary/50 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        {/* Avatar with initials */}
+                        <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold flex-shrink-0">
+                          {company.name?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'CO'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold truncate">{company.name}</p>
+                          <p className="text-xs text-muted-foreground">Healthcare - {company.country || 'Malaysia'}</p>
+                          
+                          <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
+                            <div>
+                              <p className="text-muted-foreground uppercase">PIC</p>
+                              <p className="font-medium">{company.pic_name || '-'}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground uppercase">MOBILE</p>
+                              <p className="font-medium">{company.mobile || company.phone || '-'}</p>
+                            </div>
+                            <div className="col-span-2">
+                              <p className="text-muted-foreground uppercase">LOCATION</p>
+                              <p className="font-medium">{company.city || company.location || '-'}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => navigate(`/leads/${company.id}`)}
+                          className="px-3 py-1 bg-amber-500 text-black text-xs font-medium rounded hover:bg-amber-400 transition-colors flex-shrink-0"
+                        >
+                          View
+                        </button>
                       </div>
-                      <span className="text-sm text-muted-foreground">{company.mobile}</span>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-            
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Expected Close</p>
-                <p className="font-medium">{selectedDeal.expected_close_date || 'Not set'}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Health Score</p>
-                <p className={`font-bold ${getHealthClass(selectedDeal.ai_health_score)}`}>{selectedDeal.ai_health_score}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">No companies linked to this deal</p>
+              )}
+            </div>
+
+            {/* Health Score */}
+            <div className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg">
+              <span className="text-sm">Health Score</span>
+              <div className="flex items-center gap-2">
+                <Sparkles className={`w-5 h-5 ${getHealthClass(selectedDeal.ai_health_score)}`} />
+                <span className={`text-xl font-bold ${getHealthClass(selectedDeal.ai_health_score)}`}>
+                  +{selectedDeal.ai_health_score || 0}
+                </span>
               </div>
             </div>
-            
+
+            {/* Notes */}
             {selectedDeal.notes && (
               <div>
-                <p className="text-muted-foreground text-sm">Notes</p>
-                <p className="mt-1">{selectedDeal.notes}</p>
+                <p className="text-xs text-muted-foreground uppercase mb-2">NOTES</p>
+                <p className="text-sm">{selectedDeal.notes}</p>
               </div>
             )}
-            
-            <div className="flex justify-end gap-2 pt-4 border-t">
-              <button onClick={() => setIsDealDetailOpen(false)} className="elstar-btn-ghost">Close</button>
-              <button onClick={() => { setIsDealDetailOpen(false); openEditDialog(selectedDeal); }} className="elstar-btn-primary">
-                <Edit className="w-4 h-4 mr-2" /> Edit Deal
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-4 border-t border-border">
+              <button 
+                onClick={() => { setIsDealDetailOpen(false); openEditDialog(selectedDeal); }} 
+                className="elstar-btn-primary flex-1 flex items-center justify-center gap-2"
+              >
+                <Edit className="w-4 h-4" /> Edit Deal
               </button>
+              <button onClick={() => setIsDealDetailOpen(false)} className="elstar-btn-ghost">Close</button>
             </div>
           </div>
         )}
-      </Modal>
+      </SlideInPanel>
     </div>
   );
 }
