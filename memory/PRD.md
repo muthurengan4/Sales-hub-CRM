@@ -5,7 +5,17 @@ Build an AI-powered CRM with Lead Management, Pipeline & Deals, Analytics Dashbo
 
 ## Latest Update (March 11, 2026)
 
-### Add Lead Slide-In Panel (NEW)
+### Pipeline Page Enhancements (NEW)
+- ✅ **Pipeline stages updated**: Lead, Qualified, Proposal, Negotiation, Sales Closed (5 stages)
+- ✅ **Deal cards show linked companies**: Green icon with clinic name, "+X more" for multiple companies
+- ✅ **Deal Detail slide-in panel**: Opens when clicking a deal card
+  - Shows DEAL TITLE, DEAL VALUE, EXPECTED CLOSE
+  - PIPELINE STAGE tabs (clickable to update stage)
+  - LINKED COMPANIES section with company cards
+- ✅ **Company cards show**: Avatar with initials, name, industry, PIC, Mobile, Location, View button
+- ✅ **Create/Edit Deal slide-in panels** with LINK COMPANIES section (search + checkboxes)
+
+### Add Lead Slide-In Panel
 - ✅ **Slide-in panel from right** - Mac-style side scroll panel replaces modal
 - ✅ **CLINIC / COMPANY INFO section**: Company Name, Country dropdown, State/Location, City, Postcode, Company Size, Full Address, Website
 - ✅ **PERSON IN CHARGE (PIC) section**: PIC Name, Job Title  
