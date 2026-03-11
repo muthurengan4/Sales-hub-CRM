@@ -3,6 +3,7 @@ import { useAuth } from '../App';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import Modal from '../components/Modal';
+import SlideInPanel from '../components/SlideInPanel';
 import Pagination from '../components/Pagination';
 import ActionDropdown from '../components/ActionDropdown';
 import { 
@@ -44,21 +45,98 @@ const initialFormData = {
   website: '', pic_name: '', office_number: '', fax_number: '', pipeline_status: 'new'
 };
 
-// Enhanced Form Fields Component matching PDF spec
+// Enhanced Form Fields Component matching Picture 5 spec
 const LeadFormFields = memo(({ data, onChange, isEdit = false }) => (
   <div className="space-y-6">
-    {/* Clinic/Company Info Section */}
+    {/* CLINIC/COMPANY INFO Section */}
     <div>
-      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Clinic/Company Info</h3>
-      <div className="grid grid-cols-2 gap-4">
+      <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider mb-4">CLINIC / COMPANY INFO</h3>
+      <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium mb-2">Clinic Name (Company Name) *</label>
           <input 
             className="elstar-input" 
             value={data.name || ''} 
             onChange={(e) => onChange('name', e.target.value)} 
-            placeholder="Klinik Sejahtera Sdn Bhd" 
+            placeholder="e.g. Klinik Sejahtera Sdn Bhd" 
             data-testid="lead-name-input" 
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Country *</label>
+            <select 
+              className="elstar-select" 
+              value={data.country || 'Malaysia'} 
+              onChange={(e) => onChange('country', e.target.value)} 
+              data-testid="lead-country-select"
+            >
+              <option value="Malaysia">Malaysia</option>
+              <option value="Singapore">Singapore</option>
+              <option value="Indonesia">Indonesia</option>
+              <option value="Thailand">Thailand</option>
+              <option value="Philippines">Philippines</option>
+              <option value="Vietnam">Vietnam</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">State / Location *</label>
+            <input 
+              className="elstar-input" 
+              value={data.state || ''} 
+              onChange={(e) => onChange('state', e.target.value)} 
+              placeholder="e.g. Selangor" 
+              data-testid="lead-state-input" 
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">City</label>
+            <input 
+              className="elstar-input" 
+              value={data.city || ''} 
+              onChange={(e) => onChange('city', e.target.value)} 
+              placeholder="e.g. Kuala Lumpur" 
+              data-testid="lead-city-input" 
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Postcode</label>
+            <input 
+              className="elstar-input" 
+              value={data.postcode || ''} 
+              onChange={(e) => onChange('postcode', e.target.value)} 
+              placeholder="e.g. 47500" 
+              data-testid="lead-postcode-input" 
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Company Size</label>
+            <select 
+              className="elstar-select" 
+              value={data.company_size || ''} 
+              onChange={(e) => onChange('company_size', e.target.value)} 
+              data-testid="lead-company-size-select"
+            >
+              <option value="">Select size</option>
+              <option value="1-10">1-10</option>
+              <option value="11-50">11-50</option>
+              <option value="51-200">51-200</option>
+              <option value="201-500">201-500</option>
+              <option value="500+">500+</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Full Address</label>
+          <input 
+            className="elstar-input" 
+            value={data.address || ''} 
+            onChange={(e) => onChange('address', e.target.value)} 
+            placeholder="No. 123, Jalan SS15/4" 
+            data-testid="lead-address-input" 
           />
         </div>
         <div>
@@ -67,163 +145,96 @@ const LeadFormFields = memo(({ data, onChange, isEdit = false }) => (
             className="elstar-input" 
             value={data.website || ''} 
             onChange={(e) => onChange('website', e.target.value)} 
-            placeholder="www.company.com" 
+            placeholder="https://..." 
             data-testid="lead-website-input" 
           />
         </div>
       </div>
     </div>
 
-    {/* Person in Charge Section */}
+    {/* PERSON IN CHARGE (PIC) Section */}
     <div>
-      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Person in Charge (PIC)</h3>
-      <div className="grid grid-cols-2 gap-4">
+      <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider mb-4">PERSON IN CHARGE (PIC)</h3>
+      <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium mb-2">PIC Name *</label>
           <input 
             className="elstar-input" 
             value={data.pic_name || ''} 
             onChange={(e) => onChange('pic_name', e.target.value)} 
-            placeholder="Dr. Ahmad Fauzi" 
+            placeholder="e.g. Dr. Ahmad Fauzi" 
             data-testid="lead-pic-name-input" 
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-2">Job Title *</label>
+          <label className="block text-sm font-medium mb-2">Job Title</label>
           <input 
             className="elstar-input" 
             value={data.title || ''} 
             onChange={(e) => onChange('title', e.target.value)} 
-            placeholder="General Practitioner" 
+            placeholder="e.g. General Practitioner" 
             data-testid="lead-title-input" 
           />
         </div>
       </div>
     </div>
 
-    {/* Location Section */}
+    {/* CONTACT DETAILS Section */}
     <div>
-      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Location</h3>
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div>
-          <label className="block text-sm font-medium mb-2">State/Location *</label>
-          <input 
-            className="elstar-input" 
-            value={data.state || ''} 
-            onChange={(e) => onChange('state', e.target.value)} 
-            placeholder="Selangor" 
-            data-testid="lead-state-input" 
-          />
+      <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider mb-4">CONTACT DETAILS</h3>
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Mobile Number *</label>
+            <input 
+              className="elstar-input" 
+              value={data.phone || ''} 
+              onChange={(e) => onChange('phone', e.target.value)} 
+              placeholder="012-XXXXXXX" 
+              data-testid="lead-phone-input" 
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Office Number</label>
+            <input 
+              className="elstar-input" 
+              value={data.office_number || ''} 
+              onChange={(e) => onChange('office_number', e.target.value)} 
+              placeholder="03-XXXXXXXX" 
+              data-testid="lead-office-input" 
+            />
+          </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">Country</label>
-          <input 
-            className="elstar-input" 
-            value={data.country || ''} 
-            onChange={(e) => onChange('country', e.target.value)} 
-            placeholder="Malaysia" 
-            data-testid="lead-country-input" 
-          />
-        </div>
-      </div>
-      <div className="grid grid-cols-3 gap-4 mb-4">
-        <div>
-          <label className="block text-sm font-medium mb-2">Postcode</label>
-          <input 
-            className="elstar-input" 
-            value={data.postcode || ''} 
-            onChange={(e) => onChange('postcode', e.target.value)} 
-            placeholder="47500" 
-            data-testid="lead-postcode-input" 
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">City</label>
-          <input 
-            className="elstar-input" 
-            value={data.city || ''} 
-            onChange={(e) => onChange('city', e.target.value)} 
-            placeholder="Subang Jaya" 
-            data-testid="lead-city-input" 
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">Industry</label>
-          <input 
-            className="elstar-input" 
-            value={data.industry || ''} 
-            onChange={(e) => onChange('industry', e.target.value)} 
-            placeholder="Healthcare" 
-            data-testid="lead-industry-input" 
-          />
-        </div>
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-2">Full Address</label>
-        <input 
-          className="elstar-input" 
-          value={data.address || ''} 
-          onChange={(e) => onChange('address', e.target.value)} 
-          placeholder="No. 123, Jalan SS15/4" 
-          data-testid="lead-address-input" 
-        />
-      </div>
-    </div>
-
-    {/* Contact Details Section */}
-    <div>
-      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Contact Details</h3>
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div>
-          <label className="block text-sm font-medium mb-2">Mobile Number *</label>
-          <input 
-            className="elstar-input" 
-            value={data.phone || ''} 
-            onChange={(e) => onChange('phone', e.target.value)} 
-            placeholder="+60 12-345 6789" 
-            data-testid="lead-phone-input" 
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">Office Number</label>
-          <input 
-            className="elstar-input" 
-            value={data.office_number || ''} 
-            onChange={(e) => onChange('office_number', e.target.value)} 
-            placeholder="+60 3-1234 5678" 
-            data-testid="lead-office-input" 
-          />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-2">Fax Number</label>
-          <input 
-            className="elstar-input" 
-            value={data.fax_number || ''} 
-            onChange={(e) => onChange('fax_number', e.target.value)} 
-            placeholder="+60 3-1234 5679" 
-            data-testid="lead-fax-input" 
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">Email *</label>
-          <input 
-            className="elstar-input" 
-            type="email" 
-            value={data.email || ''} 
-            onChange={(e) => onChange('email', e.target.value)} 
-            placeholder="clinic@email.com" 
-            data-testid="lead-email-input" 
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Fax Number</label>
+            <input 
+              className="elstar-input" 
+              value={data.fax_number || ''} 
+              onChange={(e) => onChange('fax_number', e.target.value)} 
+              placeholder="03-XXXXXXXX" 
+              data-testid="lead-fax-input" 
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Email *</label>
+            <input 
+              className="elstar-input" 
+              type="email" 
+              value={data.email || ''} 
+              onChange={(e) => onChange('email', e.target.value)} 
+              placeholder="clinic@email.com" 
+              data-testid="lead-email-input" 
+            />
+          </div>
         </div>
       </div>
     </div>
 
-    {/* Other Fields */}
-    <div className="grid grid-cols-2 gap-4">
+    {/* Pipeline Status & Source */}
+    <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium mb-2">Pipeline Status *</label>
+        <label className="block text-sm font-medium mb-2">Pipeline Status</label>
         <select 
           className="elstar-select" 
           value={data.pipeline_status || 'new'} 
@@ -275,17 +286,6 @@ const LeadFormFields = memo(({ data, onChange, isEdit = false }) => (
         </select>
       </div>
     )}
-
-    <div>
-      <label className="block text-sm font-medium mb-2">Notes</label>
-      <textarea 
-        className="elstar-input min-h-[80px]" 
-        value={data.notes || ''} 
-        onChange={(e) => onChange('notes', e.target.value)} 
-        placeholder="Additional notes..."
-        data-testid="lead-notes-input"
-      />
-    </div>
   </div>
 ));
 
@@ -924,33 +924,33 @@ export default function Leads() {
         )}
       </div>
 
-      {/* Create Lead Modal */}
-      <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Add New Lead">
+      {/* Create Lead Slide-in Panel */}
+      <SlideInPanel isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Add New Lead">
         <form onSubmit={handleCreate}>
           <LeadFormFields data={formData} onChange={handleInputChange} />
-          <div className="flex justify-end gap-2 mt-6">
-            <button type="button" onClick={() => setIsCreateOpen(false)} className="elstar-btn-ghost">Cancel</button>
-            <button type="submit" disabled={formLoading} className="elstar-btn-primary" data-testid="save-lead-btn">
+          <div className="flex gap-3 mt-6 pt-4 border-t border-border">
+            <button type="submit" disabled={formLoading} className="elstar-btn-primary flex-1" data-testid="save-lead-btn">
               {formLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Save Lead
             </button>
+            <button type="button" onClick={() => setIsCreateOpen(false)} className="elstar-btn-ghost">Cancel</button>
           </div>
         </form>
-      </Modal>
+      </SlideInPanel>
 
-      {/* Edit Lead Modal */}
-      <Modal isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} title="Edit Lead">
+      {/* Edit Lead Slide-in Panel */}
+      <SlideInPanel isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} title="Edit Lead">
         <form onSubmit={handleEdit}>
           <LeadFormFields data={formData} onChange={handleInputChange} isEdit />
-          <div className="flex justify-end gap-2 mt-6">
-            <button type="button" onClick={() => setIsEditOpen(false)} className="elstar-btn-ghost">Cancel</button>
-            <button type="submit" disabled={formLoading} className="elstar-btn-primary" data-testid="update-lead-btn">
+          <div className="flex gap-3 mt-6 pt-4 border-t border-border">
+            <button type="submit" disabled={formLoading} className="elstar-btn-primary flex-1" data-testid="update-lead-btn">
               {formLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Update Lead
             </button>
+            <button type="button" onClick={() => setIsEditOpen(false)} className="elstar-btn-ghost">Cancel</button>
           </div>
         </form>
-      </Modal>
+      </SlideInPanel>
 
       {/* Import Modal */}
       <Modal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} title="Import Leads from Excel">

@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
 import { toast } from 'sonner';
+import Modal from '../components/Modal';
 import { 
   ArrowLeft, Edit, UserCheck, Phone, Mail, MessageCircle, Calendar,
   Building2, MapPin, Globe, Sparkles, Clock, CheckSquare, Send,
-  PhoneCall, Video, FileText, Plus, Loader2
+  PhoneCall, Video, FileText, Plus, Loader2, X
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -41,6 +42,16 @@ export default function LeadDetailPage() {
   const [activities, setActivities] = useState([]);
   const [deals, setDeals] = useState([]);
   const [saving, setSaving] = useState(false);
+  
+  // Activity modal states
+  const [activityModal, setActivityModal] = useState({ isOpen: false, type: null });
+  const [activityForm, setActivityForm] = useState({ 
+    title: '', 
+    description: '', 
+    notes: '', 
+    scheduled_at: '',
+    duration: '30'
+  });
 
   useEffect(() => {
     fetchLead();
@@ -142,10 +153,58 @@ export default function LeadDetailPage() {
     }
   };
 
-  const handleLogActivity = async (type) => {
-    const activityLabel = LOG_ACTIVITY_TYPES.find(t => t.id === type)?.label;
-    toast.info(`Opening ${activityLabel} logger...`);
-    // This would open a modal for logging the specific activity type
+  const handleLogActivity = (type) => {
+    // For WhatsApp, navigate to WhatsApp page
+    if (type === 'whatsapp') {
+      navigate(`/whatsapp?leadId=${id}`);
+      return;
+    }
+    
+    // For other types, open the modal
+    setActivityForm({ 
+      title: '', 
+      description: '', 
+      notes: '', 
+      scheduled_at: new Date().toISOString().slice(0, 16),
+      duration: '30'
+    });
+    setActivityModal({ isOpen: true, type });
+  };
+
+  const handleSubmitActivity = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    
+    const activityType = activityModal.type;
+    const activityLabel = LOG_ACTIVITY_TYPES.find(t => t.id === activityType)?.label;
+    
+    try {
+      const response = await fetch(`${API}/api/leads/${id}/activities`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify({
+          type: activityType,
+          description: activityForm.title || `${activityLabel} logged`,
+          notes: activityForm.notes,
+          scheduled_at: activityForm.scheduled_at
+        })
+      });
+      
+      if (response.ok) {
+        toast.success(`${activityLabel} logged successfully`);
+        setActivityModal({ isOpen: false, type: null });
+        fetchActivities();
+      } else {
+        toast.error('Failed to log activity');
+      }
+    } catch (error) {
+      toast.error('Failed to log activity');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleConvertToCustomer = () => {
@@ -552,6 +611,144 @@ export default function LeadDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Activity Log Modal */}
+      <Modal 
+        isOpen={activityModal.isOpen} 
+        onClose={() => setActivityModal({ isOpen: false, type: null })} 
+        title={`Log ${LOG_ACTIVITY_TYPES.find(t => t.id === activityModal.type)?.label || 'Activity'}`}
+      >
+        <form onSubmit={handleSubmitActivity} className="space-y-4">
+          {activityModal.type === 'task' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium mb-2">Task Title *</label>
+                <input
+                  className="elstar-input"
+                  value={activityForm.title}
+                  onChange={(e) => setActivityForm(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="e.g. Follow up call"
+                  required
+                  data-testid="activity-title-input"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Due Date</label>
+                <input
+                  type="datetime-local"
+                  className="elstar-input"
+                  value={activityForm.scheduled_at}
+                  onChange={(e) => setActivityForm(prev => ({ ...prev, scheduled_at: e.target.value }))}
+                  data-testid="activity-date-input"
+                />
+              </div>
+            </>
+          )}
+          
+          {activityModal.type === 'call' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium mb-2">Call Summary *</label>
+                <input
+                  className="elstar-input"
+                  value={activityForm.title}
+                  onChange={(e) => setActivityForm(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="e.g. Discussed pricing"
+                  required
+                  data-testid="activity-title-input"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Call Duration (minutes)</label>
+                <select
+                  className="elstar-select"
+                  value={activityForm.duration}
+                  onChange={(e) => setActivityForm(prev => ({ ...prev, duration: e.target.value }))}
+                  data-testid="activity-duration-select"
+                >
+                  <option value="5">5 minutes</option>
+                  <option value="15">15 minutes</option>
+                  <option value="30">30 minutes</option>
+                  <option value="45">45 minutes</option>
+                  <option value="60">1 hour</option>
+                </select>
+              </div>
+            </>
+          )}
+          
+          {activityModal.type === 'email' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium mb-2">Email Subject *</label>
+                <input
+                  className="elstar-input"
+                  value={activityForm.title}
+                  onChange={(e) => setActivityForm(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="e.g. Proposal sent"
+                  required
+                  data-testid="activity-title-input"
+                />
+              </div>
+            </>
+          )}
+          
+          {activityModal.type === 'meeting' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium mb-2">Meeting Title *</label>
+                <input
+                  className="elstar-input"
+                  value={activityForm.title}
+                  onChange={(e) => setActivityForm(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="e.g. Product demo"
+                  required
+                  data-testid="activity-title-input"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Meeting Date & Time</label>
+                <input
+                  type="datetime-local"
+                  className="elstar-input"
+                  value={activityForm.scheduled_at}
+                  onChange={(e) => setActivityForm(prev => ({ ...prev, scheduled_at: e.target.value }))}
+                  data-testid="activity-date-input"
+                />
+              </div>
+            </>
+          )}
+          
+          <div>
+            <label className="block text-sm font-medium mb-2">Notes</label>
+            <textarea
+              className="elstar-input min-h-[100px]"
+              value={activityForm.notes}
+              onChange={(e) => setActivityForm(prev => ({ ...prev, notes: e.target.value }))}
+              placeholder="Add any notes about this activity..."
+              data-testid="activity-notes-input"
+            />
+          </div>
+          
+          <div className="flex justify-end gap-2 pt-4 border-t border-border">
+            <button 
+              type="button" 
+              onClick={() => setActivityModal({ isOpen: false, type: null })} 
+              className="elstar-btn-ghost"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              disabled={saving}
+              className="elstar-btn-primary"
+              data-testid="submit-activity-btn"
+            >
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Log {LOG_ACTIVITY_TYPES.find(t => t.id === activityModal.type)?.label}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
