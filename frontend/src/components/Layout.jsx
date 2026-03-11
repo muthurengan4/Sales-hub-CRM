@@ -34,8 +34,8 @@ export default function Layout() {
 
   const getRoleBadge = (role) => {
     const colors = {
-      super_admin: 'bg-[#A0C4FF]/20 text-[#7EB3FF]',
-      org_admin: 'bg-[#A0C4FF]/20 text-[#A0C4FF]',
+      super_admin: 'bg-[#D4A017]/20 text-[#F5C77A]',
+      org_admin: 'bg-[#D4A017]/20 text-[#D4A017]',
       manager: 'bg-emerald-500/20 text-emerald-400',
       sales_rep: 'bg-[#C5B3FF]/20 text-[#C5B3FF]',
       viewer: 'bg-slate-500/20 text-slate-400'

@@ -14,7 +14,7 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
                 'July', 'August', 'September', 'October', 'November', 'December'];
 
 const EVENT_COLORS = [
-  { name: 'Blue', value: '#A0C4FF', class: 'bg-[#A0C4FF]' },
+  { name: 'Gold', value: '#D4A017', class: 'bg-[#D4A017]' },
   { name: 'Green', value: '#A8E6CF', class: 'bg-[#A8E6CF]' },
   { name: 'Purple', value: '#C5B3FF', class: 'bg-[#C5B3FF]' },
   { name: 'Orange', value: '#FFCFA8', class: 'bg-[#FFCFA8]' },
@@ -29,7 +29,7 @@ const initialEventForm = {
   start_time: '09:00',
   end_time: '10:00',
   location: '',
-  color: '#A0C4FF',
+  color: '#D4A017',
   all_day: false,
   attendees: []
 };
@@ -397,7 +397,7 @@ export default function CalendarPage() {
                             key={idx}
                             onClick={(e) => { e.stopPropagation(); openEventDetail(event); }}
                             className="text-xs p-1 rounded truncate cursor-pointer hover:opacity-80"
-                            style={{ backgroundColor: event.color || '#A0C4FF' }}
+                            style={{ backgroundColor: event.color || '#D4A017' }}
                           >
                             {event.title}
                           </div>
@@ -452,7 +452,7 @@ export default function CalendarPage() {
                             key={eIdx}
                             onClick={(e) => { e.stopPropagation(); openEventDetail(event); }}
                             className="text-xs p-1 rounded truncate cursor-pointer"
-                            style={{ backgroundColor: event.color || '#A0C4FF' }}
+                            style={{ backgroundColor: event.color || '#D4A017' }}
                           >
                             {event.title}
                           </div>
@@ -493,7 +493,7 @@ export default function CalendarPage() {
                           key={idx}
                           onClick={(e) => { e.stopPropagation(); openEventDetail(event); }}
                           className="p-2 rounded mb-1 cursor-pointer hover:opacity-80"
-                          style={{ backgroundColor: event.color || '#A0C4FF' }}
+                          style={{ backgroundColor: event.color || '#D4A017' }}
                         >
                           <div className="font-medium text-sm">{event.title}</div>
                           <div className="text-xs opacity-80">
@@ -626,7 +626,7 @@ export default function CalendarPage() {
             <div className="flex items-start gap-3">
               <div 
                 className="w-4 h-4 rounded mt-1"
-                style={{ backgroundColor: selectedEvent.color || '#A0C4FF' }}
+                style={{ backgroundColor: selectedEvent.color || '#D4A017' }}
               />
               <div className="flex-1">
                 <h3 className="text-lg font-semibold">{selectedEvent.title}</h3>

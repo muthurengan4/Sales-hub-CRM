@@ -191,15 +191,15 @@ export default function Dashboard() {
 
   // Stats configuration - Dynamic colors
   const stats = analytics ? [
-    { title: 'Total Leads', value: analytics.total_leads, icon: Users, change: '+12%', positive: true, color: '#A0C4FF' },
+    { title: 'Total Leads', value: analytics.total_leads, icon: Users, change: '+12%', positive: true, color: '#D4A017' },
     { title: 'Active Deals', value: analytics.total_deals, icon: Briefcase, change: '+8%', positive: true, color: '#A8E6CF' },
     { title: 'Pipeline Value', value: formatCurrency(analytics.total_pipeline_value), icon: DollarSign, change: '+15%', positive: true, color: '#C5B3FF' },
     { title: 'Won Revenue', value: formatCurrency(analytics.won_deals_value), icon: TrendingUp, change: '+23%', positive: true, color: '#22c55e' },
     { title: 'Conversion', value: `${analytics.conversion_rate}%`, icon: Percent, change: '+5%', positive: analytics.conversion_rate >= 20, color: analytics.conversion_rate >= 20 ? '#22c55e' : '#FFB8D1' }
   ] : [];
 
-  const pieColors = ['#A0C4FF', '#7EB3FF', '#A8E6CF', '#C5B3FF', '#FFB8D1', '#FFCFA8'];
-  const statusColors = ['#22c55e', '#A0C4FF', '#3b82f6', '#ef4444'];
+  const pieColors = ['#D4A017', '#F5C77A', '#A8E6CF', '#C5B3FF', '#FFB8D1', '#FFCFA8'];
+  const statusColors = ['#22c55e', '#D4A017', '#3b82f6', '#ef4444'];
 
   // Generate trend data for mini charts
   const generateTrendData = (base, variance = 0.2) => {
@@ -362,8 +362,8 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="space-y-4">
-            <AnimatedProgressBar value={analytics?.total_leads || 0} max={analytics?.total_leads || 1} color="#A0C4FF" label="Total Leads" />
-            <AnimatedProgressBar value={analytics?.leads_by_status?.contacted || 0} max={analytics?.total_leads || 1} color="#7EB3FF" label="Contacted" />
+            <AnimatedProgressBar value={analytics?.total_leads || 0} max={analytics?.total_leads || 1} color="#D4A017" label="Total Leads" />
+            <AnimatedProgressBar value={analytics?.leads_by_status?.contacted || 0} max={analytics?.total_leads || 1} color="#F5C77A" label="Contacted" />
             <AnimatedProgressBar value={analytics?.leads_by_status?.qualified || 0} max={analytics?.total_leads || 1} color="#A8E6CF" label="Qualified" />
             <AnimatedProgressBar value={analytics?.total_deals || 0} max={analytics?.total_leads || 1} color="#C5B3FF" label="Deals Created" />
             <AnimatedProgressBar value={analytics?.deals_by_stage?.closed_won || 0} max={analytics?.total_deals || 1} color="#22c55e" label="Won Deals" />

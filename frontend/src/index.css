@@ -6,64 +6,64 @@
 
 @layer base {
   :root {
-    /* Elstar Light Theme - White & Blue (#A0C4FF) */
+    /* Elstar Light Theme - White & Gold */
     --background: 0 0% 98%;
-    --foreground: 220 13% 13%;
+    --foreground: 30 10% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 220 13% 13%;
+    --card-foreground: 30 10% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 220 13% 13%;
-    --primary: 213 90% 81%; /* #A0C4FF */
-    --primary-foreground: 220 13% 13%;
-    --secondary: 213 30% 96%;
-    --secondary-foreground: 220 10% 40%;
-    --muted: 213 20% 96%;
-    --muted-foreground: 220 10% 45%;
-    --accent: 213 30% 96%;
-    --accent-foreground: 220 13% 13%;
+    --popover-foreground: 30 10% 10%;
+    --primary: 43 74% 52%; /* Gold #D4A017 */
+    --primary-foreground: 30 10% 10%;
+    --secondary: 40 20% 96%;
+    --secondary-foreground: 30 10% 40%;
+    --muted: 40 15% 96%;
+    --muted-foreground: 30 10% 45%;
+    --accent: 40 20% 96%;
+    --accent-foreground: 30 10% 10%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 213 20% 88%;
-    --input: 213 20% 88%;
-    --ring: 213 90% 81%;
+    --border: 40 15% 88%;
+    --input: 40 15% 88%;
+    --ring: 43 74% 52%;
     --radius: 0.5rem;
     
-    /* Theme specific colors - #A0C4FF */
+    /* Gold theme specific colors */
     --sidebar-bg: 0 0% 100%;
     --header-bg: 0 0% 100%;
     --success: 152 69% 45%;
     --warning: 38 92% 50%;
-    --info: 213 90% 81%;
-    --accent-blue: 213 90% 81%; /* #A0C4FF */
-    --accent-blue-dark: 213 80% 65%;
+    --info: 199 89% 48%;
+    --gold: 43 74% 52%;
+    --gold-dark: 43 74% 42%;
   }
 
   .dark {
-    /* Elstar Dark Theme - Dark & Blue */
-    --background: 222 20% 8%;
-    --foreground: 213 30% 90%;
-    --card: 222 20% 10%;
-    --card-foreground: 213 30% 90%;
-    --popover: 222 20% 10%;
-    --popover-foreground: 213 30% 90%;
-    --primary: 213 90% 81%; /* #A0C4FF */
-    --primary-foreground: 220 13% 13%;
-    --secondary: 222 15% 15%;
-    --secondary-foreground: 213 20% 65%;
-    --muted: 222 15% 15%;
-    --muted-foreground: 213 20% 60%;
-    --accent: 222 15% 15%;
-    --accent-foreground: 213 30% 90%;
+    /* Elstar Dark Theme - Dark & Gold */
+    --background: 30 12% 8%;
+    --foreground: 40 20% 90%;
+    --card: 30 12% 10%;
+    --card-foreground: 40 20% 90%;
+    --popover: 30 12% 8%;
+    --popover-foreground: 40 20% 90%;
+    --primary: 43 74% 52%; /* Gold #D4A017 */
+    --primary-foreground: 30 10% 10%;
+    --secondary: 30 12% 12%;
+    --secondary-foreground: 40 15% 65%;
+    --muted: 30 12% 12%;
+    --muted-foreground: 40 15% 60%;
+    --accent: 30 12% 12%;
+    --accent-foreground: 40 20% 90%;
     --destructive: 0 62% 30%;
     --destructive-foreground: 0 0% 100%;
-    --border: 222 15% 20%;
-    --input: 222 15% 20%;
-    --ring: 213 90% 81%;
+    --border: 30 10% 20%;
+    --input: 30 10% 20%;
+    --ring: 43 74% 52%;
     
-    --sidebar-bg: 222 20% 7%;
-    --header-bg: 222 20% 10%;
-    --accent-blue: 213 90% 81%; /* #A0C4FF */
-    --accent-blue-dark: 213 80% 65%;
+    --sidebar-bg: 30 12% 7%;
+    --header-bg: 30 12% 10%;
+    --gold: 43 74% 52%;
+    --gold-dark: 43 74% 42%;
   }
 }
 
@@ -269,13 +269,13 @@
   }
   
   .elstar-badge-success {
-    background-color: rgba(160, 196, 255, 0.15);
-    color: #A0C4FF;
+    background-color: rgba(212, 160, 23, 0.15);
+    color: hsl(var(--primary));
   }
   
   .elstar-badge-success:hover {
-    background-color: rgba(160, 196, 255, 0.25);
-    box-shadow: 0 0 10px -2px rgba(160, 196, 255, 0.4);
+    background-color: rgba(212, 160, 23, 0.25);
+    box-shadow: 0 0 10px -2px rgba(212, 160, 23, 0.4);
   }
   
   .elstar-badge-warning {
@@ -317,7 +317,7 @@
     max-width: 500px;
     max-height: calc(100vh - 2rem);
     z-index: 9999;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 30px -5px rgba(160, 196, 255, 0.2);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 30px -5px rgba(212, 160, 23, 0.2);
     animation: modalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
@@ -391,23 +391,23 @@
   }
 }
 
-/* Score colors - Using #A0C4FF for success/high */
-.score-high { color: #A0C4FF; }
+/* Score colors - Using Gold for success/high */
+.score-high { color: hsl(var(--primary)); }
 .score-medium { @apply text-amber-500; }
 .score-low { @apply text-red-500; }
 
-/* Accent blue color class */
-.text-accent-blue { color: #A0C4FF; }
-.bg-accent-blue { background-color: #A0C4FF; }
-.border-accent-blue { border-color: #A0C4FF; }
+/* Gold accent color classes */
+.text-accent-gold { color: hsl(var(--primary)); }
+.bg-accent-gold { background-color: hsl(var(--primary)); }
+.border-accent-gold { border-color: hsl(var(--primary)); }
 
-/* AI Gradient - Blue accent #A0C4FF */
+/* AI Gradient - Gold accent */
 .ai-gradient {
-  background: linear-gradient(135deg, #A0C4FF 0%, #7EB3FF 100%);
+  background: linear-gradient(135deg, #D4A017 0%, #F5C77A 100%);
 }
 
 .ai-text {
-  background: linear-gradient(135deg, #A0C4FF 0%, #7EB3FF 100%);
+  background: linear-gradient(135deg, #D4A017 0%, #F5C77A 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -742,8 +742,8 @@ div[style*="position: fixed"][style*="right: 16px"][style*="bottom: 16px"] {
 }
 
 /* Dynamic gradient backgrounds for dashboard */
-.gradient-blue {
-  background: linear-gradient(135deg, #A0C4FF 0%, #7EB3FF 100%);
+.gradient-gold {
+  background: linear-gradient(135deg, #D4A017 0%, #F5C77A 100%);
 }
 
 .gradient-green {
