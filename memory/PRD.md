@@ -5,36 +5,36 @@ Build an AI-powered CRM with Lead Management, Pipeline & Deals, Analytics Dashbo
 
 ## Latest Update (March 11, 2026)
 
-### UI/Navigation Changes
-- ✅ **Removed Worklist tab** from sidebar navigation
-- ✅ **Removed Clients tab** from sidebar navigation
-- ✅ **Color scheme reverted** from blue (#A0C4FF) back to Gold (#D4A017)
+### Add Lead Slide-In Panel (NEW)
+- ✅ **Slide-in panel from right** - Mac-style side scroll panel replaces modal
+- ✅ **CLINIC / COMPANY INFO section**: Company Name, Country dropdown, State/Location, City, Postcode, Company Size, Full Address, Website
+- ✅ **PERSON IN CHARGE (PIC) section**: PIC Name, Job Title  
+- ✅ **CONTACT DETAILS section**: Mobile Number, Office Number, Fax Number, Email
+- ✅ **Pipeline Status dropdown**: New/Contacted/No Answer/Interested/Follow Up/Booked/Won/Lost
+- ✅ **Click outside to close** - Overlay click slides panel back
 
-### Leads Page Redesign
-- ✅ **Updated table columns** in order: Company Name, POC Name, Mobile/Office, Email, Location, State, Country, Status, AI Score
-- ✅ **Clickable lead rows** - Navigate to lead detail page on click
+### Log Activity Buttons Fixed (Lead Detail Page)
+- ✅ **Task button** - Opens modal with Task Title, Due Date, Notes
+- ✅ **Call button** - Opens modal with Call Summary, Call Duration (5-60 min), Notes
+- ✅ **WhatsApp button** - Navigates to `/whatsapp?leadId={id}` with pre-selected contact
+- ✅ **Email button** - Opens modal with Email Subject, Notes
+- ✅ **Meeting button** - Opens modal with Meeting Title, Date/Time, Notes
 
-### New Lead Detail Page (`/leads/:id`)
-- ✅ **Header**: Back button, Lead name, "Detail View" subtitle, Edit and "Convert to Customer" buttons
-- ✅ **Left sidebar - Contact Info**: Company Name, Mobile, Office, Fax, Email, Website, Location, Country
-- ✅ **Left sidebar - Pipeline section**: Status badge, AI Score, Last Contact, Owner
-- ✅ **Middle section - Activity tabs**: Activity, Notes, Emails, Calls, Tasks, WhatsApp, Meetings
-- ✅ **Middle section - Log Activity**: Task, Call, WhatsApp, Email, Meeting buttons
-- ✅ **Middle section - Update Pipeline Status**: New, Qualified, Proposal, Negotiation, Sales Closed tabs with remark textarea
-- ✅ **Right sidebar**: Company section, Deals section with "+Add", AI Score display with progress bar
-- ✅ **Backend endpoints**: `/api/leads/{id}/activities` for GET and POST activity logging
+### Previous Updates (March 11, 2026)
 
-### Previous Session (March 10, 2026)
+**UI/Navigation Changes**
+- ✅ Removed Worklist tab from sidebar
+- ✅ Removed Clients tab from sidebar
+- ✅ Color scheme reverted to Gold (#D4A017)
 
-**Excel Import Enhancement**
-- ✅ Excel import working correctly
-- ✅ Enhanced column mapping for 40+ variations
-- ✅ Improved error messages
+**Leads Page Redesign**
+- ✅ Updated table columns: Company Name, POC Name, Mobile/Office, Email, Location, State, Country, Status, AI Score
+- ✅ Clickable lead rows navigate to detail page
 
-**Rebranding & Fixes**
-- ✅ Rebranded to "AISalesTask"
-- ✅ Fixed modal CSS issues
-- ✅ WhatsApp lead navigation
+**Lead Detail Page (`/leads/:id`)**
+- ✅ Full contact info, pipeline status, activity timeline
+- ✅ Log Activity buttons now functional
+- ✅ Backend endpoints for activities
 
 ## Code Architecture
 ```
@@ -42,19 +42,17 @@ Build an AI-powered CRM with Lead Management, Pipeline & Deals, Analytics Dashbo
 ├── backend/server.py           # FastAPI (~3700 lines)
 ├── frontend/src/
 │   ├── components/
+│   │   ├── SlideInPanel.jsx    # NEW: Mac-style slide-in panel from right
 │   │   ├── ActionDropdown.jsx  # React Portal (z-index: 9999)
 │   │   ├── Modal.jsx           # Fixed modal component
-│   │   └── Layout.jsx          # Sidebar navigation (no Worklist/Clients)
+│   │   └── Layout.jsx          # Sidebar navigation
 │   ├── pages/
-│   │   ├── LeadDetailPage.jsx  # NEW: Full lead detail view with activity logging
-│   │   ├── Leads.jsx           # Updated table columns, clickable rows
+│   │   ├── LeadDetailPage.jsx  # Lead detail with activity logging modals
+│   │   ├── Leads.jsx           # Uses SlideInPanel for Add/Edit Lead
 │   │   ├── CalendarPage.jsx    # Full calendar with event modal
 │   │   ├── WhatsAppMessages.jsx # Auto-selects lead from URL param
-│   │   ├── Login.jsx           # Gold theme
-│   │   └── Register.jsx        # Gold theme
+│   │   └── ...
 │   └── index.css               # Gold theme (#D4A017)
-└── frontend/public/
-    └── index.html              # "AISalesTask" title
 ```
 
 ## Key Features
