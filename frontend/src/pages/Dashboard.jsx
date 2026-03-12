@@ -189,17 +189,17 @@ export default function Dashboard() {
     );
   }
 
-  // Stats configuration - Dynamic colors
+  // Stats configuration - Soft pastel colors matching user's image
   const stats = analytics ? [
-    { title: 'Total Leads', value: analytics.total_leads, icon: Users, change: '+12%', positive: true, color: '#D4A017' },
-    { title: 'Active Deals', value: analytics.total_deals, icon: Briefcase, change: '+8%', positive: true, color: '#A8E6CF' },
-    { title: 'Pipeline Value', value: formatCurrency(analytics.total_pipeline_value), icon: DollarSign, change: '+15%', positive: true, color: '#C5B3FF' },
-    { title: 'Won Revenue', value: formatCurrency(analytics.won_deals_value), icon: TrendingUp, change: '+23%', positive: true, color: '#22c55e' },
-    { title: 'Conversion', value: `${analytics.conversion_rate}%`, icon: Percent, change: '+5%', positive: analytics.conversion_rate >= 20, color: analytics.conversion_rate >= 20 ? '#22c55e' : '#FFB8D1' }
+    { title: 'Total Leads', value: analytics.total_leads, icon: Users, change: '+12%', positive: true, iconBg: '#FEE4D6', iconColor: '#E67E22' },
+    { title: 'Active Deals', value: analytics.total_deals, icon: Briefcase, change: '+8%', positive: true, iconBg: '#D1F2EB', iconColor: '#27AE60' },
+    { title: 'Pipeline Value', value: formatCurrency(analytics.total_pipeline_value), icon: DollarSign, change: '+15%', positive: true, iconBg: '#D1F2EB', iconColor: '#27AE60' },
+    { title: 'Won Revenue', value: formatCurrency(analytics.won_deals_value), icon: TrendingUp, change: '+23%', positive: true, iconBg: '#D1F2EB', iconColor: '#27AE60' },
+    { title: 'Conversion', value: `${analytics.conversion_rate}%`, icon: Percent, change: analytics.conversion_rate >= 20 ? '+5%' : '-5%', positive: analytics.conversion_rate >= 20, iconBg: '#FEE4D6', iconColor: '#E67E22' }
   ] : [];
 
-  const pieColors = ['#D4A017', '#F5C77A', '#A8E6CF', '#C5B3FF', '#FFB8D1', '#FFCFA8'];
-  const statusColors = ['#22c55e', '#D4A017', '#3b82f6', '#ef4444'];
+  const pieColors = ['#D4A017', '#27AE60', '#3498DB', '#E67E22'];
+  const statusColors = ['#27AE60', '#D4A017', '#3498DB', '#E74C3C'];
 
   // Generate trend data for mini charts
   const generateTrendData = (base, variance = 0.2) => {
@@ -246,81 +246,76 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Multi-tenancy Organization Card */}
+      {/* Multi-tenancy Organization Card - Cleaner design */}
       {analytics?.organization_stats?.name && (
-        <div className="elstar-card p-4 border-l-4 border-l-primary">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 ai-gradient rounded-lg flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-white" />
+        <div className="bg-white dark:bg-card rounded-xl p-4 shadow-sm border border-border flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
+            <Building2 className="w-6 h-6 text-amber-600" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold">{analytics.organization_stats.name}</h3>
+            <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+              <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {analytics.organization_stats.member_count} members</span>
+              <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Since {analytics.organization_stats.created_at}</span>
             </div>
-            <div className="flex-1">
-              <h3 className="font-semibold">{analytics.organization_stats.name}</h3>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                {analytics.organization_stats.domain && (
-                  <span className="flex items-center gap-1"><Globe className="w-3 h-3" /> {analytics.organization_stats.domain}</span>
-                )}
-                <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {analytics.organization_stats.member_count} members</span>
-                <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Since {analytics.organization_stats.created_at}</span>
-              </div>
+          </div>
+          <div className="hidden md:flex items-center gap-3">
+            <div className="px-4 py-2 bg-amber-50 dark:bg-amber-500/10 rounded-lg text-center">
+              <p className="text-lg font-bold text-amber-600">{analytics.total_leads}</p>
+              <p className="text-xs text-muted-foreground">Leads</p>
             </div>
-            <div className="hidden md:flex items-center gap-2">
-              <div className="px-3 py-1.5 bg-primary/10 rounded-lg text-center">
-                <p className="text-lg font-bold text-primary">{analytics.total_leads}</p>
-                <p className="text-xs text-muted-foreground">Leads</p>
-              </div>
-              <div className="px-3 py-1.5 bg-emerald-500/10 rounded-lg text-center">
-                <p className="text-lg font-bold text-emerald-500">{analytics.total_deals}</p>
-                <p className="text-xs text-muted-foreground">Deals</p>
-              </div>
+            <div className="px-4 py-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg text-center">
+              <p className="text-lg font-bold text-emerald-600">{analytics.total_deals}</p>
+              <p className="text-xs text-muted-foreground">Deals</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* 5 Stats Tiles with Mini Charts */}
+      {/* 5 Stats Tiles with Mini Charts - Clean white design */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {stats.map((stat, index) => (
           <div 
             key={stat.title} 
-            className="elstar-stat-card animate-fade-in" 
+            className="bg-white dark:bg-card rounded-xl p-5 shadow-sm border border-border hover:shadow-md transition-shadow animate-fade-in" 
             style={{ animationDelay: `${index * 50}ms` }} 
             data-testid={`stat-${stat.title.toLowerCase().replace(' ', '-')}`}
           >
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${stat.color}20` }}>
-                <stat.icon className="w-5 h-5" style={{ color: stat.color }} />
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: stat.iconBg }}>
+                <stat.icon className="w-5 h-5" style={{ color: stat.iconColor }} />
               </div>
-              <div className={`flex items-center text-xs ${stat.positive ? 'text-emerald-500' : 'text-red-500'}`}>
+              <div className={`flex items-center text-xs font-medium ${stat.positive ? 'text-emerald-500' : 'text-red-500'}`}>
                 {stat.positive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                 {stat.change}
               </div>
             </div>
-            <div className="text-xl font-bold mb-1 stat-value">{stat.value}</div>
-            <span className="text-xs text-muted-foreground">{stat.title}</span>
-            <div className="mt-2 h-8 overflow-hidden">
-              <AreaChart data={generateTrendData(100)} color={stat.color} />
+            <div className="text-2xl font-bold mb-1">{stat.value}</div>
+            <span className="text-sm text-muted-foreground">{stat.title}</span>
+            <div className="mt-3 h-10 overflow-hidden">
+              <AreaChart data={generateTrendData(100)} color={stat.iconColor} />
             </div>
           </div>
         ))}
       </div>
 
-      {/* Main Charts Row */}
+      {/* Main Charts Row - Clean white cards */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Bar Chart - Revenue Trend */}
-        <div className="elstar-card p-5 lg:col-span-2">
+        <div className="bg-white dark:bg-card rounded-xl p-5 shadow-sm border border-border lg:col-span-2">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                <BarChart3 className="w-5 h-5 text-primary" />
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+                <BarChart3 className="w-5 h-5 text-amber-600" />
               </div>
               <div>
                 <h3 className="font-semibold">Revenue Trend</h3>
                 <p className="text-sm text-muted-foreground">Monthly performance overview</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-primary" /> Revenue</span>
-              <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-500" /> Target</span>
+            <div className="flex items-center gap-4 text-xs">
+              <span className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-amber-500" /> Revenue</span>
+              <span className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Target</span>
             </div>
           </div>
           <div className="h-64 flex items-end gap-4">
@@ -332,11 +327,11 @@ export default function Dashboard() {
                 <div key={i} className="flex-1 flex flex-col items-center group">
                   <div className="relative w-full flex gap-1 justify-center">
                     <div 
-                      className="w-5 bg-primary rounded-t transition-all duration-500 hover:bg-primary/80 cursor-pointer chart-bar" 
+                      className="w-6 bg-amber-500 rounded-t transition-all duration-500 hover:bg-amber-400 cursor-pointer" 
                       style={{ height: `${height}px` }}
                     />
                     <div 
-                      className="w-5 bg-emerald-500/30 rounded-t transition-all duration-500" 
+                      className="w-6 bg-emerald-400 rounded-t transition-all duration-500" 
                       style={{ height: `${targetHeight}px` }}
                     />
                     <div className="absolute -top-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-card border border-border px-2 py-1 rounded text-xs whitespace-nowrap shadow-lg z-10">
@@ -351,10 +346,10 @@ export default function Dashboard() {
         </div>
 
         {/* Conversion Funnel */}
-        <div className="elstar-card p-5">
+        <div className="bg-white dark:bg-card rounded-xl p-5 shadow-sm border border-border">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Target className="w-5 h-5 text-primary" />
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+              <Target className="w-5 h-5 text-emerald-600" />
             </div>
             <div>
               <h3 className="font-semibold">Sales Funnel</h3>
@@ -363,21 +358,21 @@ export default function Dashboard() {
           </div>
           <div className="space-y-4">
             <AnimatedProgressBar value={analytics?.total_leads || 0} max={analytics?.total_leads || 1} color="#D4A017" label="Total Leads" />
-            <AnimatedProgressBar value={analytics?.leads_by_status?.contacted || 0} max={analytics?.total_leads || 1} color="#F5C77A" label="Contacted" />
-            <AnimatedProgressBar value={analytics?.leads_by_status?.qualified || 0} max={analytics?.total_leads || 1} color="#A8E6CF" label="Qualified" />
-            <AnimatedProgressBar value={analytics?.total_deals || 0} max={analytics?.total_leads || 1} color="#C5B3FF" label="Deals Created" />
-            <AnimatedProgressBar value={analytics?.deals_by_stage?.closed_won || 0} max={analytics?.total_deals || 1} color="#22c55e" label="Won Deals" />
+            <AnimatedProgressBar value={analytics?.leads_by_status?.contacted || 0} max={analytics?.total_leads || 1} color="#E67E22" label="Contacted" />
+            <AnimatedProgressBar value={analytics?.leads_by_status?.qualified || 0} max={analytics?.total_leads || 1} color="#27AE60" label="Qualified" />
+            <AnimatedProgressBar value={analytics?.total_deals || 0} max={analytics?.total_leads || 1} color="#3498DB" label="Deals Created" />
+            <AnimatedProgressBar value={analytics?.deals_by_stage?.closed_won || 0} max={analytics?.total_deals || 1} color="#27AE60" label="Won Deals" />
           </div>
         </div>
       </div>
 
-      {/* Pie Charts Row */}
+      {/* Pie Charts Row - Clean white cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Lead Sources Donut */}
-        <div className="elstar-card p-5">
+        <div className="bg-white dark:bg-card rounded-xl p-5 shadow-sm border border-border">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-              <PieChartIcon className="w-5 h-5 text-primary" />
+            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+              <PieChartIcon className="w-5 h-5 text-amber-600" />
             </div>
             <div>
               <h3 className="font-semibold">Lead Sources</h3>
@@ -393,10 +388,10 @@ export default function Dashboard() {
         </div>
 
         {/* Lead Status Donut */}
-        <div className="elstar-card p-5">
+        <div className="bg-white dark:bg-card rounded-xl p-5 shadow-sm border border-border">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-              <Users className="w-5 h-5 text-emerald-500" />
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+              <Users className="w-5 h-5 text-emerald-600" />
             </div>
             <div>
               <h3 className="font-semibold">Lead Status Distribution</h3>
@@ -412,13 +407,13 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Pipeline and Deals Row */}
+      {/* Pipeline and Deals Row - Clean white cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Pipeline Stages */}
-        <div className="elstar-card p-5">
+        <div className="bg-white dark:bg-card rounded-xl p-5 shadow-sm border border-border">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-              <LineChartIcon className="w-5 h-5 text-primary" />
+            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+              <LineChartIcon className="w-5 h-5 text-blue-600" />
             </div>
             <div>
               <h3 className="font-semibold">Pipeline Stages</h3>
@@ -430,8 +425,8 @@ export default function Dashboard() {
               Object.entries(analytics.deals_by_stage).map(([stage, count], index) => {
                 const max = Math.max(...Object.values(analytics.deals_by_stage)) || 1;
                 const stageColors = {
-                  lead: '#94a3b8', qualified: '#f5c77a', demo: '#e8b85a', 
-                  proposal: '#d4a84a', negotiation: '#f97316', closed_won: '#22c55e', closed_lost: '#ef4444'
+                  lead: '#94a3b8', qualified: '#D4A017', demo: '#E67E22', 
+                  proposal: '#3498DB', negotiation: '#E74C3C', closed_won: '#27AE60', closed_lost: '#E74C3C'
                 };
                 return (
                   <div key={stage} className="group">
@@ -439,12 +434,12 @@ export default function Dashboard() {
                       <span className="capitalize text-muted-foreground group-hover:text-foreground transition-colors">{stage.replace('_', ' ')}</span>
                       <span className="font-medium">{count}</span>
                     </div>
-                    <div className="h-3 bg-secondary rounded-full overflow-hidden">
+                    <div className="h-3 bg-gray-100 dark:bg-secondary rounded-full overflow-hidden">
                       <div 
                         className="h-full rounded-full transition-all duration-700 ease-out" 
                         style={{ 
                           width: `${(count / max) * 100}%`,
-                          background: `linear-gradient(90deg, ${stageColors[stage] || '#f5c77a'}, ${stageColors[stage] || '#f5c77a'}cc)`,
+                          backgroundColor: stageColors[stage] || '#D4A017',
                           animationDelay: `${index * 100}ms`
                         }} 
                       />
@@ -463,10 +458,10 @@ export default function Dashboard() {
         </div>
 
         {/* Geographic Distribution */}
-        <div className="elstar-card p-5">
+        <div className="bg-white dark:bg-card rounded-xl p-5 shadow-sm border border-border">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-              <MapPin className="w-5 h-5 text-primary" />
+            <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center">
+              <MapPin className="w-5 h-5 text-orange-600" />
             </div>
             <div>
               <h3 className="font-semibold">Top Locations</h3>
@@ -476,17 +471,17 @@ export default function Dashboard() {
           <div className="space-y-3">
             {/* Simulated location data based on leads */}
             {['Kuala Lumpur', 'Selangor', 'Penang', 'Johor', 'Perak'].map((location, index) => (
-              <div key={location} className="flex items-center justify-between p-2 rounded-lg hover:bg-secondary/50 transition-colors">
+              <div key={location} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-secondary/50 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
+                  <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-xs font-medium text-amber-700">
                     {index + 1}
                   </div>
                   <span className="font-medium text-sm">{location}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-20 h-2 bg-secondary rounded-full overflow-hidden">
+                  <div className="w-20 h-2 bg-gray-100 dark:bg-secondary rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-primary rounded-full" 
+                      className="h-full bg-amber-500 rounded-full" 
                       style={{ width: `${100 - index * 15}%` }}
                     />
                   </div>
@@ -498,13 +493,13 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Activity Feed and Team Performance Row */}
+      {/* Activity Feed and Team Performance Row - Clean white cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Recent Activities */}
-        <div className="elstar-card p-5">
+        <div className="bg-white dark:bg-card rounded-xl p-5 shadow-sm border border-border">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Activity className="w-5 h-5 text-primary" />
+            <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+              <Activity className="w-5 h-5 text-purple-600" />
             </div>
             <div>
               <h3 className="font-semibold">Recent Activities</h3>
@@ -514,14 +509,14 @@ export default function Dashboard() {
           <div className="space-y-3">
             {analytics?.recent_activities?.length > 0 ? (
               analytics.recent_activities.map((activity, index) => (
-                <div key={index} className="flex items-start gap-3 p-3 bg-secondary/30 rounded-lg hover:bg-secondary/50 transition-colors activity-item">
+                <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-secondary/30 rounded-lg hover:bg-gray-100 dark:hover:bg-secondary/50 transition-colors">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    activity.type === 'lead_created' ? 'bg-primary/10' : 'bg-emerald-500/10'
+                    activity.type === 'lead_created' ? 'bg-amber-100' : 'bg-emerald-100'
                   }`}>
                     {activity.icon === 'user' ? (
-                      <UserPlus className={`w-4 h-4 ${activity.type === 'lead_created' ? 'text-primary' : 'text-emerald-500'}`} />
+                      <UserPlus className={`w-4 h-4 ${activity.type === 'lead_created' ? 'text-amber-600' : 'text-emerald-600'}`} />
                     ) : (
-                      <Briefcase className="w-4 h-4 text-emerald-500" />
+                      <Briefcase className="w-4 h-4 text-emerald-600" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -546,10 +541,10 @@ export default function Dashboard() {
 
         {/* Team Performance */}
         {hasPermission('view_team_analytics') && (
-          <div className="elstar-card p-5">
+          <div className="bg-white dark:bg-card rounded-xl p-5 shadow-sm border border-border">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <Award className="w-5 h-5 text-emerald-500" />
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+                <Award className="w-5 h-5 text-emerald-600" />
               </div>
               <div>
                 <h3 className="font-semibold">Team Leaderboard</h3>
@@ -559,15 +554,15 @@ export default function Dashboard() {
             {analytics?.team_performance?.length > 0 ? (
               <div className="space-y-3">
                 {analytics.team_performance.map((member, index) => (
-                  <div key={member.user_id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50 transition-colors">
+                  <div key={member.user_id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-secondary/50 transition-colors">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                      index === 0 ? 'bg-primary text-primary-foreground' : 
-                      index === 1 ? 'bg-secondary text-foreground' : 
-                      'bg-secondary/50 text-muted-foreground'
+                      index === 0 ? 'bg-amber-500 text-white' : 
+                      index === 1 ? 'bg-gray-300 text-gray-700' : 
+                      'bg-gray-100 text-muted-foreground'
                     }`}>
                       {index + 1}
                     </div>
-                    <div className="elstar-avatar w-8 h-8 text-xs">
+                    <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-medium text-xs">
                       {member.name?.charAt(0)?.toUpperCase()}
                     </div>
                     <div className="flex-1">
@@ -576,11 +571,11 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center gap-4 text-sm">
                       <div className="text-center">
-                        <p className="font-bold text-primary">{member.leads}</p>
+                        <p className="font-bold text-amber-600">{member.leads}</p>
                         <p className="text-xs text-muted-foreground">Leads</p>
                       </div>
                       <div className="text-center">
-                        <p className="font-bold text-emerald-500">{member.won_deals}</p>
+                        <p className="font-bold text-emerald-600">{member.won_deals}</p>
                         <p className="text-xs text-muted-foreground">Won</p>
                       </div>
                     </div>
@@ -598,10 +593,10 @@ export default function Dashboard() {
 
         {/* AI Insights (shown if no team permission) */}
         {!hasPermission('view_team_analytics') && (
-          <div className="elstar-card p-5 border-primary/20">
+          <div className="bg-white dark:bg-card rounded-xl p-5 shadow-sm border border-border border-amber-200 dark:border-primary/20">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 ai-gradient rounded-lg flex items-center justify-center animate-glow">
-                <Sparkles className="w-4 h-4 text-white" />
+              <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-white" />
               </div>
               <div>
                 <h3 className="font-semibold ai-text">AI Insights</h3>
