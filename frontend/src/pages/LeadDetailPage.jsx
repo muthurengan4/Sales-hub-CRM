@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
 import { toast } from 'sonner';
 import Modal from '../components/Modal';
+import SlideInPanel from '../components/SlideInPanel';
 import { 
   ArrowLeft, Edit, UserCheck, Phone, Mail, MessageCircle, Calendar,
   Building2, MapPin, Globe, Sparkles, Clock, CheckSquare, Send,
@@ -109,12 +110,17 @@ export default function LeadDetailPage() {
 
   const fetchDeals = async () => {
     try {
-      const response = await fetch(`${API}/api/deals?lead_id=${id}`, {
+      // Fetch all deals and filter by linked_company_ids containing this lead's id
+      const response = await fetch(`${API}/api/deals`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (response.ok) {
         const data = await response.json();
-        setDeals(data.items || []);
+        // Filter deals that have this lead in linked_company_ids
+        const linkedDeals = (data || []).filter(deal => 
+          deal.linked_company_ids?.includes(id)
+        );
+        setDeals(linkedDeals);
       }
     } catch (error) {
       console.error('Failed to fetch deals');
@@ -141,7 +147,7 @@ export default function LeadDetailPage() {
     
     setSendingMessage(true);
     try {
-      const response = await fetch(`${API}/api/whatsapp/messages`, {
+      const response = await fetch(`${API}/api/whatsapp/send`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -149,28 +155,19 @@ export default function LeadDetailPage() {
         },
         body: JSON.stringify({
           contact_id: id,
-          content: newMessage,
-          direction: 'outgoing'
+          message: newMessage,
+          phone: lead?.phone
         })
       });
       
       if (response.ok) {
         setNewMessage('');
+        toast.success('Message sent');
         fetchWhatsAppMessages();
-        // Log activity
-        await fetch(`${API}/api/leads/${id}/activities`, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}` 
-          },
-          body: JSON.stringify({
-            type: 'whatsapp',
-            description: 'WhatsApp message sent',
-            notes: newMessage
-          })
-        });
         fetchActivities();
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.detail || 'Failed to send message');
       }
     } catch (error) {
       toast.error('Failed to send message');
@@ -313,8 +310,92 @@ export default function LeadDetailPage() {
     }
   };
 
-  const handleConvertToCustomer = () => {
-    navigate(`/leads?convert=${id}`);
+  // Edit modal states
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({});
+
+  const handleConvertToCustomer = async () => {
+    setSaving(true);
+    try {
+      // Create customer from lead data
+      const customerData = {
+        first_name: lead.pic_name || lead.name,
+        last_name: '',
+        company: lead.company || lead.name,
+        email: lead.email,
+        phone: lead.phone,
+        address: lead.address,
+        city: lead.city,
+        state: lead.state,
+        postcode: lead.postcode,
+        country: lead.country,
+        source: 'converted_lead',
+        notes: `Converted from lead: ${lead.name}`
+      };
+      
+      const response = await fetch(`${API}/api/customers`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify(customerData)
+      });
+      
+      if (response.ok) {
+        // Update lead status to converted
+        await fetch(`${API}/api/leads/${id}`, {
+          method: 'PUT',
+          headers: { 
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}` 
+          },
+          body: JSON.stringify({ ...lead, converted_to_client: true })
+        });
+        
+        toast.success('Lead converted to customer');
+        navigate('/customers');
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.detail || 'Failed to convert lead');
+      }
+    } catch (error) {
+      toast.error('Failed to convert lead');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openEditForm = () => {
+    setEditForm({ ...lead });
+    setIsEditOpen(true);
+  };
+
+  const handleEditSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const response = await fetch(`${API}/api/leads/${id}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify(editForm)
+      });
+      
+      if (response.ok) {
+        toast.success('Lead updated successfully');
+        setIsEditOpen(false);
+        fetchLead();
+      } else {
+        toast.error('Failed to update lead');
+      }
+    } catch (error) {
+      toast.error('Failed to update lead');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const formatDate = (dateStr) => {
@@ -396,12 +477,14 @@ export default function LeadDetailPage() {
           </button>
           <div>
             <h1 className="text-xl font-bold">{lead.pic_name || lead.name}</h1>
-            <p className="text-xs text-muted-foreground">at {lead.company || '-'}</p>
+            {lead.company && (
+              <p className="text-xs text-muted-foreground">at {lead.company}</p>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => navigate(`/leads?edit=${id}`)}
+            onClick={openEditForm}
             className="elstar-btn-ghost flex items-center gap-2"
             data-testid="edit-lead-btn"
           >
@@ -410,10 +493,11 @@ export default function LeadDetailPage() {
           </button>
           <button 
             onClick={handleConvertToCustomer}
+            disabled={saving}
             className="elstar-btn-primary flex items-center gap-2"
             data-testid="convert-customer-btn"
           >
-            <UserCheck className="w-4 h-4" />
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
             Convert to Customer
           </button>
         </div>
@@ -881,6 +965,121 @@ export default function LeadDetailPage() {
           </button>
         </div>
       </Modal>
+
+      {/* Edit Lead Slide-in Panel */}
+      <SlideInPanel isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} title="Edit Lead">
+        <form onSubmit={handleEditSave} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Company Name</label>
+            <input
+              className="elstar-input w-full"
+              value={editForm.name || editForm.company || ''}
+              onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value, company: e.target.value }))}
+              placeholder="Company name"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">PIC Name</label>
+            <input
+              className="elstar-input w-full"
+              value={editForm.pic_name || ''}
+              onChange={(e) => setEditForm(prev => ({ ...prev, pic_name: e.target.value }))}
+              placeholder="Person in charge"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Job Title</label>
+            <input
+              className="elstar-input w-full"
+              value={editForm.title || ''}
+              onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
+              placeholder="Job title"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Mobile</label>
+              <input
+                className="elstar-input w-full"
+                value={editForm.phone || ''}
+                onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder="Mobile number"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Office</label>
+              <input
+                className="elstar-input w-full"
+                value={editForm.office_number || ''}
+                onChange={(e) => setEditForm(prev => ({ ...prev, office_number: e.target.value }))}
+                placeholder="Office number"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Email</label>
+            <input
+              type="email"
+              className="elstar-input w-full"
+              value={editForm.email || ''}
+              onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+              placeholder="Email address"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Website</label>
+            <input
+              className="elstar-input w-full"
+              value={editForm.website || ''}
+              onChange={(e) => setEditForm(prev => ({ ...prev, website: e.target.value }))}
+              placeholder="Website URL"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">City</label>
+              <input
+                className="elstar-input w-full"
+                value={editForm.city || ''}
+                onChange={(e) => setEditForm(prev => ({ ...prev, city: e.target.value }))}
+                placeholder="City"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">State</label>
+              <input
+                className="elstar-input w-full"
+                value={editForm.state || ''}
+                onChange={(e) => setEditForm(prev => ({ ...prev, state: e.target.value }))}
+                placeholder="State"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Country</label>
+            <select
+              className="elstar-select w-full"
+              value={editForm.country || 'Malaysia'}
+              onChange={(e) => setEditForm(prev => ({ ...prev, country: e.target.value }))}
+            >
+              <option value="Malaysia">Malaysia</option>
+              <option value="Singapore">Singapore</option>
+              <option value="Indonesia">Indonesia</option>
+              <option value="Thailand">Thailand</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div className="flex gap-3 mt-6 pt-4 border-t border-border">
+            <button type="submit" disabled={saving} className="elstar-btn-primary flex-1">
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Save Changes
+            </button>
+            <button type="button" onClick={() => setIsEditOpen(false)} className="elstar-btn-ghost">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </SlideInPanel>
     </div>
   );
 }
