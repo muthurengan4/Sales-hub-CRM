@@ -893,7 +893,7 @@ export default function Leads() {
                               </button>
                               {!lead.converted_to_client && (
                                 <button onClick={() => { openConvertDialog(lead); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-primary">
-                                  <UserCheck className="w-4 h-4" /> Convert to Client
+                                  <UserCheck className="w-4 h-4" /> Convert to Customer
                                 </button>
                               )}
                               <button onClick={() => { handleDelete(lead.id); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500">
@@ -986,7 +986,7 @@ export default function Leads() {
         </div>
       </Modal>
 
-      {/* Convert to Client Modal */}
+      {/* Convert to Customer Modal */}
       <Modal isOpen={isConvertOpen} onClose={() => setIsConvertOpen(false)} title="Convert Lead to Client">
         <form onSubmit={handleConvertSubmit}>
           <div className="space-y-4">
@@ -1059,7 +1059,7 @@ export default function Leads() {
             <button type="submit" disabled={formLoading} className="elstar-btn-primary" data-testid="convert-lead-btn">
               {formLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               <UserCheck className="w-4 h-4 mr-2" />
-              Convert to Client
+              Convert to Customer
             </button>
           </div>
         </form>
