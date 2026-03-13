@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
 import { toast } from 'sonner';
@@ -6,7 +6,7 @@ import Modal from '../components/Modal';
 import { 
   ArrowLeft, Edit, UserCheck, Phone, Mail, MessageCircle, Calendar,
   Building2, MapPin, Globe, Sparkles, Clock, CheckSquare, Send,
-  PhoneCall, Video, FileText, Plus, Loader2, X
+  PhoneCall, Video, FileText, Plus, Loader2, X, User, Activity
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -19,8 +19,6 @@ const PIPELINE_STAGES = [
   { id: 'closed', label: 'Sales Closed' }
 ];
 
-const ACTIVITY_TABS = ['Activity', 'Notes', 'Emails', 'Calls', 'Tasks', 'WhatsApp', 'Meetings'];
-
 const LOG_ACTIVITY_TYPES = [
   { id: 'task', label: 'Task', icon: CheckSquare, color: 'text-blue-500' },
   { id: 'call', label: 'Call', icon: PhoneCall, color: 'text-green-500' },
@@ -32,11 +30,11 @@ const LOG_ACTIVITY_TYPES = [
 export default function LeadDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const chatEndRef = useRef(null);
   
   const [lead, setLead] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('Activity');
   const [pipelineStatus, setPipelineStatus] = useState('new');
   const [remark, setRemark] = useState('');
   const [activities, setActivities] = useState([]);
@@ -53,11 +51,27 @@ export default function LeadDetailPage() {
     duration: '30'
   });
 
+  // WhatsApp Chat states
+  const [showWhatsAppChat, setShowWhatsAppChat] = useState(false);
+  const [whatsappMessages, setWhatsappMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
+
   useEffect(() => {
     fetchLead();
     fetchActivities();
     fetchDeals();
   }, [id]);
+
+  useEffect(() => {
+    if (showWhatsAppChat) {
+      fetchWhatsAppMessages();
+    }
+  }, [showWhatsAppChat]);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [whatsappMessages]);
 
   const fetchLead = async () => {
     try {
@@ -107,6 +121,64 @@ export default function LeadDetailPage() {
     }
   };
 
+  const fetchWhatsAppMessages = async () => {
+    try {
+      const response = await fetch(`${API}/api/whatsapp/messages/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setWhatsappMessages(data.messages || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch WhatsApp messages');
+    }
+  };
+
+  const handleSendWhatsAppMessage = async (e) => {
+    e.preventDefault();
+    if (!newMessage.trim()) return;
+    
+    setSendingMessage(true);
+    try {
+      const response = await fetch(`${API}/api/whatsapp/messages`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify({
+          contact_id: id,
+          content: newMessage,
+          direction: 'outgoing'
+        })
+      });
+      
+      if (response.ok) {
+        setNewMessage('');
+        fetchWhatsAppMessages();
+        // Log activity
+        await fetch(`${API}/api/leads/${id}/activities`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}` 
+          },
+          body: JSON.stringify({
+            type: 'whatsapp',
+            description: 'WhatsApp message sent',
+            notes: newMessage
+          })
+        });
+        fetchActivities();
+      }
+    } catch (error) {
+      toast.error('Failed to send message');
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
   const handleUpdateStatus = async () => {
     setSaving(true);
     try {
@@ -141,6 +213,42 @@ export default function LeadDetailPage() {
           });
         }
         
+        // Auto-create deal when status is changed to qualified, proposal, negotiation, or closed
+        if (['qualified', 'proposal', 'negotiation', 'closed'].includes(pipelineStatus)) {
+          const existingDeal = deals.find(d => d.linked_company_ids?.includes(id));
+          if (!existingDeal) {
+            const dealResponse = await fetch(`${API}/api/deals`, {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}` 
+              },
+              body: JSON.stringify({
+                title: `${lead.company || lead.name} Deal`,
+                value: 0,
+                stage: pipelineStatus === 'closed' ? 'sales_closed' : pipelineStatus,
+                linked_company_ids: [id],
+                expected_close_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+              })
+            });
+            if (dealResponse.ok) {
+              toast.success('Deal automatically created');
+              fetchDeals();
+            }
+          } else {
+            // Update existing deal stage
+            await fetch(`${API}/api/deals/${existingDeal.id}`, {
+              method: 'PUT',
+              headers: { 
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}` 
+              },
+              body: JSON.stringify({ stage: pipelineStatus === 'closed' ? 'sales_closed' : pipelineStatus })
+            });
+            fetchDeals();
+          }
+        }
+        
         toast.success('Pipeline status updated');
         setRemark('');
         fetchLead();
@@ -154,13 +262,11 @@ export default function LeadDetailPage() {
   };
 
   const handleLogActivity = (type) => {
-    // For WhatsApp, navigate to WhatsApp page
     if (type === 'whatsapp') {
-      navigate(`/whatsapp?leadId=${id}`);
+      setShowWhatsAppChat(true);
       return;
     }
     
-    // For other types, open the modal
     setActivityForm({ 
       title: '', 
       description: '', 
@@ -223,24 +329,6 @@ export default function LeadDetailPage() {
     return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
   };
 
-  const groupActivitiesByDate = (activities) => {
-    const groups = {};
-    const today = new Date().toDateString();
-    
-    activities.forEach(activity => {
-      const actDate = new Date(activity.created_at);
-      const dateKey = actDate.toDateString();
-      const displayDate = dateKey === today ? 'TODAY' : formatDate(activity.created_at).toUpperCase();
-      
-      if (!groups[displayDate]) {
-        groups[displayDate] = [];
-      }
-      groups[displayDate].push(activity);
-    });
-    
-    return groups;
-  };
-
   const getActivityIcon = (type) => {
     switch(type) {
       case 'status_update': return { icon: '●', color: 'text-amber-500' };
@@ -248,6 +336,8 @@ export default function LeadDetailPage() {
       case 'call': return { icon: '●', color: 'text-blue-400' };
       case 'ai_call': return { icon: '●', color: 'text-blue-400' };
       case 'whatsapp': return { icon: '●', color: 'text-green-500' };
+      case 'task': return { icon: '●', color: 'text-purple-500' };
+      case 'meeting': return { icon: '●', color: 'text-orange-500' };
       case 'import': return { icon: '◐', color: 'text-gray-400' };
       default: return { icon: '●', color: 'text-gray-400' };
     }
@@ -269,7 +359,27 @@ export default function LeadDetailPage() {
     );
   }
 
+  // Group activities by date
+  const groupActivitiesByDate = (activities) => {
+    const groups = {};
+    const today = new Date().toDateString();
+    
+    activities.forEach(activity => {
+      const actDate = new Date(activity.created_at);
+      const dateKey = actDate.toDateString();
+      const displayDate = dateKey === today ? 'TODAY' : formatDate(activity.created_at).toUpperCase();
+      
+      if (!groups[displayDate]) {
+        groups[displayDate] = [];
+      }
+      groups[displayDate].push(activity);
+    });
+    
+    return groups;
+  };
+
   const groupedActivities = groupActivitiesByDate(activities);
+  const aiCallsCount = activities.filter(a => a.type === 'ai_call' || a.type === 'call').length;
 
   return (
     <div className="space-y-0" data-testid="lead-detail-page">
@@ -285,8 +395,8 @@ export default function LeadDetailPage() {
             Back
           </button>
           <div>
-            <h1 className="text-xl font-bold uppercase">{lead.company || lead.name}</h1>
-            <p className="text-xs text-muted-foreground">Detail View</p>
+            <h1 className="text-xl font-bold">{lead.pic_name || lead.name}</h1>
+            <p className="text-xs text-muted-foreground">at {lead.company || '-'}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -311,134 +421,84 @@ export default function LeadDetailPage() {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-12 gap-6">
-        {/* Left Sidebar - Contact Info */}
-        <div className="col-span-12 lg:col-span-3 space-y-6">
-          {/* Lead Profile Card */}
-          <div className="text-center">
-            <div className="w-16 h-16 mx-auto rounded-full bg-primary flex items-center justify-center text-2xl font-bold text-primary-foreground mb-3">
-              {(lead.pic_name || lead.name)?.charAt(0)?.toUpperCase() || '?'}
-            </div>
-            <h2 className="font-semibold text-lg">{lead.pic_name || 'Unknown'}</h2>
-            <p className="text-sm text-muted-foreground">{lead.title || 'Person in Charge'}</p>
-            <span className="inline-block mt-2 px-3 py-1 text-xs font-medium rounded-full bg-amber-500/20 text-amber-500">
-              {PIPELINE_STAGES.find(s => s.id === (lead.pipeline_status || lead.status))?.label || 'New'}
-            </span>
-          </div>
-
-          {/* Quick Action Buttons */}
-          <div className="flex justify-center gap-4">
-            <button className="flex flex-col items-center gap-1 p-3 rounded-lg hover:bg-secondary transition-colors" data-testid="call-btn">
-              <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center">
-                <Phone className="w-4 h-4" />
+        {/* Left Sidebar - Contact Info (matching Image 4 layout) */}
+        <div className="col-span-12 lg:col-span-3 space-y-4">
+          {/* Contact Information Card */}
+          <div className="bg-white dark:bg-card rounded-xl p-4 shadow-sm border border-border">
+            <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider mb-4">Contact Information</h3>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+                  <Mail className="w-4 h-4 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Email</p>
+                  <p className="text-sm font-medium">{lead.email || '-'}</p>
+                </div>
               </div>
-              <span className="text-xs">Call</span>
-            </button>
-            <button className="flex flex-col items-center gap-1 p-3 rounded-lg hover:bg-secondary transition-colors" data-testid="email-btn">
-              <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center">
-                <Mail className="w-4 h-4" />
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <Phone className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Phone</p>
+                  <p className="text-sm font-medium">{lead.phone || lead.office_number || '-'}</p>
+                </div>
               </div>
-              <span className="text-xs">Email</span>
-            </button>
-            <button 
-              onClick={() => navigate(`/whatsapp?leadId=${id}`)}
-              className="flex flex-col items-center gap-1 p-3 rounded-lg hover:bg-secondary transition-colors" 
-              data-testid="whatsapp-btn"
-            >
-              <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center">
-                <MessageCircle className="w-4 h-4" />
-              </div>
-              <span className="text-xs">WA</span>
-            </button>
-          </div>
-
-          {/* Contact Info Section */}
-          <div className="space-y-4">
-            <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider">Contact Info</h3>
-            
-            <div className="space-y-3 text-sm">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase">Company Name</p>
-                <p className="font-medium">{lead.company || lead.name || '-'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground uppercase">Mobile</p>
-                <p className="font-medium">{lead.phone || '-'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground uppercase">Office</p>
-                <p className="font-medium">{lead.office_number || '-'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground uppercase">Fax</p>
-                <p className="font-medium">{lead.fax_number || '-'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground uppercase">Email</p>
-                <p className="font-medium">{lead.email || '-'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground uppercase">Website</p>
-                <p className="font-medium">{lead.website || '-'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground uppercase">Location</p>
-                <p className="font-medium">{lead.city ? `${lead.city}${lead.state ? `, ${lead.state}` : ''}` : '-'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground uppercase">Country</p>
-                <p className="font-medium">{lead.country || 'Malaysia'}</p>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                  <MapPin className="w-4 h-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Location</p>
+                  <p className="text-sm font-medium">{lead.city || lead.state || lead.country || '-'}</p>
+                </div>
               </div>
             </div>
+          </div>
 
-            {/* Pipeline Section */}
-            <div className="pt-4 border-t border-border">
-              <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider mb-3">Pipeline</h3>
-              <div className="space-y-3 text-sm">
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase">Status</p>
-                  <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded bg-amber-500/20 text-amber-500">
-                    {PIPELINE_STAGES.find(s => s.id === (lead.pipeline_status || lead.status))?.label || 'New'}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase">AI Score</p>
-                  <p className="font-bold text-amber-500">* {lead.ai_score || 0}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase">Last Contact</p>
-                  <p className="font-medium">{formatDate(lead.updated_at)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase">Owner</p>
-                  <p className="font-medium">{lead.owner_name || '-'}</p>
-                </div>
+          {/* Activity Summary Card (matching Image 4) */}
+          <div className="bg-white dark:bg-card rounded-xl p-4 shadow-sm border border-border">
+            <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider mb-4">Activity Summary</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-gray-50 dark:bg-secondary rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-amber-600">{activities.length}</p>
+                <p className="text-xs text-muted-foreground">Activities</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-secondary rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-blue-600">{aiCallsCount}</p>
+                <p className="text-xs text-muted-foreground">AI Calls</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-secondary rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-emerald-600">{deals.length}</p>
+                <p className="text-xs text-muted-foreground">Deals</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-secondary rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-purple-600">{lead.ai_score || 0}</p>
+                <p className="text-xs text-muted-foreground">AI Score</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Ownership Card */}
+          <div className="bg-white dark:bg-card rounded-xl p-4 shadow-sm border border-border">
+            <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider mb-4">Ownership</h3>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center text-white font-bold">
+                {(lead.owner_name || user?.name || 'U')?.charAt(0)?.toUpperCase()}
+              </div>
+              <div>
+                <p className="font-medium text-sm">{lead.owner_name || user?.name || 'Unassigned'}</p>
+                <p className="text-xs text-muted-foreground">Owner</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Middle Section - Activity & Pipeline Update */}
-        <div className="col-span-12 lg:col-span-6 space-y-6">
-          {/* Tabs */}
-          <div className="flex gap-6 border-b border-border">
-            {ACTIVITY_TABS.map(tab => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`pb-3 text-sm font-medium transition-colors ${
-                  activeTab === tab 
-                    ? 'text-amber-500 border-b-2 border-amber-500' 
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-                data-testid={`tab-${tab.toLowerCase()}`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-
+        <div className="col-span-12 lg:col-span-6 space-y-4">
           {/* Log Activity Section */}
-          <div className="elstar-card p-4">
+          <div className="bg-white dark:bg-card rounded-xl p-4 shadow-sm border border-border">
             <p className="text-sm text-muted-foreground mb-3">Log Activity</p>
             <div className="flex gap-2 flex-wrap">
               {LOG_ACTIVITY_TYPES.map(type => (
@@ -456,7 +516,7 @@ export default function LeadDetailPage() {
           </div>
 
           {/* Update Pipeline Status Section */}
-          <div className="elstar-card p-4 space-y-4">
+          <div className="bg-white dark:bg-card rounded-xl p-4 shadow-sm border border-border space-y-4">
             <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider">Update Pipeline Status</h3>
             
             <div className="flex gap-2 flex-wrap">
@@ -497,69 +557,139 @@ export default function LeadDetailPage() {
             </div>
           </div>
 
-          {/* Activity Timeline */}
-          <div className="space-y-6">
-            {Object.keys(groupedActivities).length > 0 ? (
-              Object.entries(groupedActivities).map(([date, dateActivities]) => (
-                <div key={date}>
-                  <p className="text-xs text-muted-foreground mb-4">{date} — {formatDate(dateActivities[0]?.created_at)}</p>
-                  <div className="space-y-4">
-                    {dateActivities.map((activity, idx) => {
-                      const { icon, color } = getActivityIcon(activity.type);
-                      return (
-                        <div key={activity.id || idx} className="flex gap-3">
-                          <span className={`text-lg ${color}`}>{icon}</span>
-                          <div className="flex-1">
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <p className="font-medium text-sm">{activity.description}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {activity.user_name || 'System'} · {formatDate(activity.created_at)} · {formatTime(activity.created_at)}
-                                </p>
-                              </div>
-                              <span className="text-xs text-muted-foreground">{formatTime(activity.created_at)}</span>
-                            </div>
-                            {activity.notes && (
-                              <div className={`mt-2 p-3 rounded-lg text-sm ${
-                                activity.type === 'whatsapp' 
-                                  ? 'bg-green-900/30 text-green-100' 
-                                  : 'bg-secondary'
-                              }`}>
-                                {activity.notes}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+          {/* WhatsApp Chat Interface (Embedded) */}
+          {showWhatsAppChat && (
+            <div className="bg-white dark:bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 bg-green-600 text-white">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                    {(lead.pic_name || lead.name)?.charAt(0)?.toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">{lead.pic_name || lead.name}</p>
+                    <p className="text-xs text-white/70">{lead.phone || 'No phone'}</p>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No activities recorded yet</p>
+                <button onClick={() => setShowWhatsAppChat(false)} className="p-1 hover:bg-white/10 rounded">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-            )}
+              
+              {/* Chat Messages */}
+              <div className="h-64 overflow-y-auto p-4 space-y-3 bg-gray-100 dark:bg-secondary/30">
+                {whatsappMessages.length > 0 ? (
+                  whatsappMessages.map((msg, idx) => (
+                    <div key={idx} className={`flex ${msg.direction === 'outgoing' ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[70%] p-3 rounded-lg text-sm ${
+                        msg.direction === 'outgoing' 
+                          ? 'bg-green-500 text-white rounded-br-none' 
+                          : 'bg-white dark:bg-card rounded-bl-none'
+                      }`}>
+                        <p>{msg.content}</p>
+                        <p className={`text-xs mt-1 ${msg.direction === 'outgoing' ? 'text-white/70' : 'text-muted-foreground'}`}>
+                          {formatTime(msg.created_at)}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <MessageCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No messages yet</p>
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+              
+              {/* Message Input */}
+              <form onSubmit={handleSendWhatsAppMessage} className="flex gap-2 p-3 border-t border-border">
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="Type a message..."
+                  className="flex-1 elstar-input"
+                  data-testid="whatsapp-message-input"
+                />
+                <button 
+                  type="submit" 
+                  disabled={sendingMessage || !newMessage.trim()}
+                  className="elstar-btn-primary px-4"
+                  data-testid="send-whatsapp-btn"
+                >
+                  {sendingMessage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* Activity Timeline */}
+          <div className="bg-white dark:bg-card rounded-xl p-4 shadow-sm border border-border">
+            <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider mb-4">Activity Timeline</h3>
+            <div className="space-y-4 max-h-[400px] overflow-y-auto">
+              {Object.keys(groupedActivities).length > 0 ? (
+                Object.entries(groupedActivities).map(([date, dateActivities]) => (
+                  <div key={date}>
+                    <p className="text-xs text-muted-foreground mb-3">{date}</p>
+                    <div className="space-y-3">
+                      {dateActivities.map((activity, idx) => {
+                        const { icon, color } = getActivityIcon(activity.type);
+                        return (
+                          <div key={activity.id || idx} className="flex gap-3">
+                            <span className={`text-lg ${color}`}>{icon}</span>
+                            <div className="flex-1">
+                              <p className="font-medium text-sm">{activity.description}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {activity.user_name || 'System'} · {formatTime(activity.created_at)}
+                              </p>
+                              {activity.notes && (
+                                <div className={`mt-2 p-2 rounded-lg text-xs ${
+                                  activity.type === 'whatsapp' 
+                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-100' 
+                                    : 'bg-gray-100 dark:bg-secondary'
+                                }`}>
+                                  {activity.notes}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No activities recorded yet</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Right Sidebar - Company & Deals */}
-        <div className="col-span-12 lg:col-span-3 space-y-6">
+        <div className="col-span-12 lg:col-span-3 space-y-4">
           {/* Company Section */}
-          <div className="elstar-card p-4">
+          <div className="bg-white dark:bg-card rounded-xl p-4 shadow-sm border border-border">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider">Company</h3>
-              <button className="text-xs text-amber-500 hover:underline">+ Add</button>
             </div>
             <div className="space-y-2">
-              <p className="font-semibold">{lead.company || lead.name}</p>
-              <p className="text-sm text-muted-foreground">{lead.office_number || '-'}</p>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold">
+                  {(lead.company || lead.name)?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">{lead.company || lead.name}</p>
+                  <p className="text-xs text-muted-foreground">{lead.office_number || '-'}</p>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Deals Section */}
-          <div className="elstar-card p-4">
+          {/* Deals Section - Shows deals auto-created from status updates */}
+          <div className="bg-white dark:bg-card rounded-xl p-4 shadow-sm border border-border">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider">Deals</h3>
               <button 
@@ -572,38 +702,41 @@ export default function LeadDetailPage() {
             {deals.length > 0 ? (
               <div className="space-y-4">
                 {deals.map(deal => (
-                  <div key={deal.id} className="space-y-2">
+                  <div key={deal.id} className="p-3 bg-gray-50 dark:bg-secondary rounded-lg space-y-2">
                     <p className="font-semibold text-sm">{deal.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      RM {deal.value?.toLocaleString()} · Close: {formatDate(deal.expected_close_date)}
+                      RM {(deal.value || 0).toLocaleString()}
                     </p>
                     <div className="space-y-1">
                       <p className="text-xs text-muted-foreground">Stage</p>
-                      <p className="text-xs font-medium text-amber-500">{deal.stage}</p>
-                      <div className="h-1 bg-secondary rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-amber-500"
-                          style={{ width: `${(PIPELINE_STAGES.findIndex(s => s.id === deal.stage) + 1) * 20}%` }}
-                        />
-                      </div>
+                      <span className="inline-block px-2 py-0.5 text-xs font-medium rounded bg-amber-500/20 text-amber-600">
+                        {PIPELINE_STAGES.find(s => s.id === deal.stage || s.id === deal.stage?.replace('sales_', ''))?.label || deal.stage}
+                      </span>
                     </div>
+                    {deal.expected_close_date && (
+                      <p className="text-xs text-muted-foreground">
+                        Close: {formatDate(deal.expected_close_date)}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No deals linked</p>
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No deals yet. Update status to create a deal automatically.
+              </p>
             )}
           </div>
 
           {/* AI Score Section */}
-          <div className="elstar-card p-4">
+          <div className="bg-white dark:bg-card rounded-xl p-4 shadow-sm border border-border">
             <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider mb-4">AI Score</h3>
             <div className="text-center">
-              <p className="text-5xl font-bold text-amber-500">{lead.ai_score || 0}</p>
+              <p className="text-4xl font-bold text-amber-500">{lead.ai_score || 0}</p>
               <p className="text-xs text-muted-foreground mt-2">Lead Health Score</p>
-              <div className="mt-3 h-1 bg-secondary rounded-full overflow-hidden">
+              <div className="mt-3 h-2 bg-gray-100 dark:bg-secondary rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-amber-500"
+                  className="h-full bg-amber-500 rounded-full"
                   style={{ width: `${lead.ai_score || 0}%` }}
                 />
               </div>
@@ -612,76 +745,76 @@ export default function LeadDetailPage() {
         </div>
       </div>
 
-      {/* Activity Log Modal */}
+      {/* Activity Log Modal - Fixed with proper styling */}
       <Modal 
         isOpen={activityModal.isOpen} 
         onClose={() => setActivityModal({ isOpen: false, type: null })} 
         title={`Log ${LOG_ACTIVITY_TYPES.find(t => t.id === activityModal.type)?.label || 'Activity'}`}
       >
-        <form onSubmit={handleSubmitActivity} className="space-y-4">
-          {activityModal.type === 'task' && (
-            <>
-              <div>
-                <label className="block text-sm font-medium mb-2">Task Title *</label>
-                <input
-                  className="elstar-input"
-                  value={activityForm.title}
-                  onChange={(e) => setActivityForm(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="e.g. Follow up call"
-                  required
-                  data-testid="activity-title-input"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Due Date</label>
-                <input
-                  type="datetime-local"
-                  className="elstar-input"
-                  value={activityForm.scheduled_at}
-                  onChange={(e) => setActivityForm(prev => ({ ...prev, scheduled_at: e.target.value }))}
-                  data-testid="activity-date-input"
-                />
-              </div>
-            </>
-          )}
-          
-          {activityModal.type === 'call' && (
-            <>
-              <div>
-                <label className="block text-sm font-medium mb-2">Call Summary *</label>
-                <input
-                  className="elstar-input"
-                  value={activityForm.title}
-                  onChange={(e) => setActivityForm(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="e.g. Discussed pricing"
-                  required
-                  data-testid="activity-title-input"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Call Duration (minutes)</label>
-                <select
-                  className="elstar-select"
-                  value={activityForm.duration}
-                  onChange={(e) => setActivityForm(prev => ({ ...prev, duration: e.target.value }))}
-                  data-testid="activity-duration-select"
-                >
-                  <option value="5">5 minutes</option>
-                  <option value="15">15 minutes</option>
-                  <option value="30">30 minutes</option>
-                  <option value="45">45 minutes</option>
-                  <option value="60">1 hour</option>
-                </select>
-              </div>
-            </>
-          )}
-          
-          {activityModal.type === 'email' && (
-            <>
+        <div className="elstar-modal-body">
+          <form onSubmit={handleSubmitActivity} className="space-y-4">
+            {activityModal.type === 'task' && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Task Title *</label>
+                  <input
+                    className="elstar-input w-full"
+                    value={activityForm.title}
+                    onChange={(e) => setActivityForm(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="e.g. Follow up call"
+                    required
+                    data-testid="activity-title-input"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Due Date</label>
+                  <input
+                    type="datetime-local"
+                    className="elstar-input w-full"
+                    value={activityForm.scheduled_at}
+                    onChange={(e) => setActivityForm(prev => ({ ...prev, scheduled_at: e.target.value }))}
+                    data-testid="activity-date-input"
+                  />
+                </div>
+              </>
+            )}
+            
+            {activityModal.type === 'call' && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Call Summary *</label>
+                  <input
+                    className="elstar-input w-full"
+                    value={activityForm.title}
+                    onChange={(e) => setActivityForm(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="e.g. Discussed pricing"
+                    required
+                    data-testid="activity-title-input"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Call Duration</label>
+                  <select
+                    className="elstar-select w-full"
+                    value={activityForm.duration}
+                    onChange={(e) => setActivityForm(prev => ({ ...prev, duration: e.target.value }))}
+                    data-testid="activity-duration-select"
+                  >
+                    <option value="5">5 minutes</option>
+                    <option value="15">15 minutes</option>
+                    <option value="30">30 minutes</option>
+                    <option value="45">45 minutes</option>
+                    <option value="60">1 hour</option>
+                  </select>
+                </div>
+              </>
+            )}
+            
+            {activityModal.type === 'email' && (
               <div>
                 <label className="block text-sm font-medium mb-2">Email Subject *</label>
                 <input
-                  className="elstar-input"
+                  className="elstar-input w-full"
                   value={activityForm.title}
                   onChange={(e) => setActivityForm(prev => ({ ...prev, title: e.target.value }))}
                   placeholder="e.g. Proposal sent"
@@ -689,65 +822,64 @@ export default function LeadDetailPage() {
                   data-testid="activity-title-input"
                 />
               </div>
-            </>
-          )}
-          
-          {activityModal.type === 'meeting' && (
-            <>
-              <div>
-                <label className="block text-sm font-medium mb-2">Meeting Title *</label>
-                <input
-                  className="elstar-input"
-                  value={activityForm.title}
-                  onChange={(e) => setActivityForm(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="e.g. Product demo"
-                  required
-                  data-testid="activity-title-input"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Meeting Date & Time</label>
-                <input
-                  type="datetime-local"
-                  className="elstar-input"
-                  value={activityForm.scheduled_at}
-                  onChange={(e) => setActivityForm(prev => ({ ...prev, scheduled_at: e.target.value }))}
-                  data-testid="activity-date-input"
-                />
-              </div>
-            </>
-          )}
-          
-          <div>
-            <label className="block text-sm font-medium mb-2">Notes</label>
-            <textarea
-              className="elstar-input min-h-[100px]"
-              value={activityForm.notes}
-              onChange={(e) => setActivityForm(prev => ({ ...prev, notes: e.target.value }))}
-              placeholder="Add any notes about this activity..."
-              data-testid="activity-notes-input"
-            />
-          </div>
-          
-          <div className="flex justify-end gap-2 pt-4 border-t border-border">
-            <button 
-              type="button" 
-              onClick={() => setActivityModal({ isOpen: false, type: null })} 
-              className="elstar-btn-ghost"
-            >
-              Cancel
-            </button>
-            <button 
-              type="submit" 
-              disabled={saving}
-              className="elstar-btn-primary"
-              data-testid="submit-activity-btn"
-            >
-              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Log {LOG_ACTIVITY_TYPES.find(t => t.id === activityModal.type)?.label}
-            </button>
-          </div>
-        </form>
+            )}
+            
+            {activityModal.type === 'meeting' && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Meeting Title *</label>
+                  <input
+                    className="elstar-input w-full"
+                    value={activityForm.title}
+                    onChange={(e) => setActivityForm(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="e.g. Product demo"
+                    required
+                    data-testid="activity-title-input"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Meeting Date & Time</label>
+                  <input
+                    type="datetime-local"
+                    className="elstar-input w-full"
+                    value={activityForm.scheduled_at}
+                    onChange={(e) => setActivityForm(prev => ({ ...prev, scheduled_at: e.target.value }))}
+                    data-testid="activity-date-input"
+                  />
+                </div>
+              </>
+            )}
+            
+            <div>
+              <label className="block text-sm font-medium mb-2">Notes</label>
+              <textarea
+                className="elstar-input min-h-[100px] w-full"
+                value={activityForm.notes}
+                onChange={(e) => setActivityForm(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="Add any notes about this activity..."
+                data-testid="activity-notes-input"
+              />
+            </div>
+          </form>
+        </div>
+        <div className="elstar-modal-footer">
+          <button 
+            type="button" 
+            onClick={() => setActivityModal({ isOpen: false, type: null })} 
+            className="elstar-btn-ghost"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={handleSubmitActivity}
+            disabled={saving}
+            className="elstar-btn-primary"
+            data-testid="submit-activity-btn"
+          >
+            {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            Log {LOG_ACTIVITY_TYPES.find(t => t.id === activityModal.type)?.label}
+          </button>
+        </div>
       </Modal>
     </div>
   );
