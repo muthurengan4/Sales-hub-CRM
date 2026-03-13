@@ -796,7 +796,7 @@ export default function Leads() {
                       />
                     </th>
                     <th>Company Name</th>
-                    <th className="hidden sm:table-cell">POC Name</th>
+                    <th className="hidden sm:table-cell">PIC Name</th>
                     <th className="hidden md:table-cell">Mobile / Office</th>
                     <th className="hidden lg:table-cell">Email</th>
                     <th className="hidden lg:table-cell">Location</th>
