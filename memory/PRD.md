@@ -3,7 +3,22 @@
 ## Original Problem Statement
 Build an AI-powered CRM with Lead Management, Pipeline & Deals, Analytics Dashboard, and AI features.
 
-## Latest Update (March 11, 2026)
+## Latest Update (March 13, 2026)
+
+### Tasks Page Redesign (NEW)
+- ✅ **Slide-in panel for Add/Edit Task** - Opens from right side (matches screenshot design)
+- ✅ **Simplified table columns**: NO., COMPANY NAME, DEAL, STATUS, PIC NAME
+- ✅ **Tasks sync with Pipeline Deals** - Deal dropdown links tasks to pipeline deals
+- ✅ **Auto-fill PIC Name** - When selecting a company, PIC Name auto-fills from lead data
+- ✅ **Form fields**: Company Name*, Deal*, Status*, PIC Name (auto-filled), Sales Person*, Payment*
+- ✅ **Status badges**: Shows Lead/Customer with colored badges
+- ✅ **Deal names in primary color** - Linked deals displayed in gold/amber color
+- ✅ **Action dropdown**: Edit, Sync to Calendar, Delete options
+- ✅ **Deals filter dropdown** - Filter tasks by specific deals
+
+## Previous Updates
+
+### Update (March 11, 2026)
 
 ### Pipeline Page Enhancements (NEW)
 - ✅ **Pipeline stages updated**: Lead, Qualified, Proposal, Negotiation, Sales Closed (5 stages)
