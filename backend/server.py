@@ -1904,6 +1904,37 @@ async def create_deal(deal_data: DealCreate, user: dict = Depends(get_current_us
     deal_doc['ai_health_score'] = await calculate_deal_health(deal_doc)
     
     await db.deals.insert_one(deal_doc)
+    
+    # Auto-create task for each linked company when deal is created
+    linked_company_ids = deal_data.linked_company_ids or []
+    if deal_data.lead_id and deal_data.lead_id not in linked_company_ids:
+        linked_company_ids.append(deal_data.lead_id)
+    
+    for lead_id in linked_company_ids:
+        lead = await db.leads.find_one({'id': lead_id}, {'_id': 0, 'name': 1, 'company': 1, 'pic_name': 1})
+        if lead:
+            task_id = str(uuid.uuid4())
+            task_doc = {
+                'id': task_id,
+                'title': lead.get('company') or lead.get('name') or deal_data.title,
+                'description': f'Follow up task for deal: {deal_data.title}',
+                'lead_id': lead_id,
+                'deal_id': deal_id,
+                'assigned_to': user['id'],
+                'due_date': None,
+                'payment_status': 'unpaid',
+                'payment_amount': None,
+                'paid_amount': 0,
+                'status': 'pending',
+                'priority': 'medium',
+                'calendar_event_id': None,
+                'organization_id': user['organization_id'],
+                'created_by': user['id'],
+                'created_at': now,
+                'updated_at': now
+            }
+            await db.tasks.insert_one(task_doc)
+    
     deal_doc.pop('_id', None)
     deal_doc['owner_name'] = user['name']
     deal_doc['assigned_to_name'] = user['name']
