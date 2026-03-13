@@ -5,6 +5,18 @@ Build an AI-powered CRM with Lead Management, Pipeline & Deals, Analytics Dashbo
 
 ## Latest Update (March 13, 2026)
 
+### Customers Page Redesign (NEW - March 13, 2026)
+- ✅ **Table redesign**: Columns - COMPANY NAME, PIC/DOCTOR, ROLE, MOBILE, EMAIL, STATUS
+- ✅ **Colored avatars**: 7 colors cycling (amber, emerald, purple, blue, pink, cyan, orange)
+- ✅ **Company name column**: Avatar + name + "Preview" button + industry/location below
+- ✅ **Role badges**: Owner (red), PIC (blue), Doctor (green), Manager (purple), Staff (gray)
+- ✅ **Preview slide-in panel**: Opens on "Preview" button click
+  - Green header with avatar, name, title, email link
+  - ABOUT THIS CONTACT section with all fields
+  - DEALS section with linked deals and "+ Add Deal" button
+  - COMMENTS section with Add remark input (MOCKED - not persisted)
+  - "Open Full Profile" and "Cancel" buttons in footer
+
 ### Tasks Page Redesign (NEW)
 - ✅ **Slide-in panel for Add/Edit Task** - Opens from right side (matches screenshot design)
 - ✅ **Simplified table columns**: NO., COMPANY NAME, DEAL, STATUS, PIC NAME
