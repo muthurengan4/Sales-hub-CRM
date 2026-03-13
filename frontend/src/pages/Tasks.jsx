@@ -1,67 +1,55 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../App';
 import { toast } from 'sonner';
-import Modal from '../components/Modal';
+import SlideInPanel from '../components/SlideInPanel';
 import Pagination from '../components/Pagination';
 import ActionDropdown from '../components/ActionDropdown';
 import { 
-  Plus, Search, Loader2, Calendar, Clock, User, DollarSign,
-  Trash2, Edit, CheckCircle, AlertCircle, 
-  Filter, RefreshCw, CalendarPlus
+  Plus, Search, Loader2, 
+  Trash2, Edit, CheckCircle, 
+  CalendarPlus
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
+const statusConfig = {
+  lead: { label: 'Lead', class: 'bg-blue-500/20 text-blue-400' },
+  customer: { label: 'Customer', class: 'bg-green-500/20 text-green-400' },
+  pending: { label: 'Pending', class: 'bg-amber-500/20 text-amber-400' },
+  in_progress: { label: 'In Progress', class: 'bg-blue-500/20 text-blue-400' },
+  completed: { label: 'Completed', class: 'bg-green-500/20 text-green-400' }
+};
+
 const paymentStatusConfig = {
-  paid: { label: 'Paid', class: 'elstar-badge-success' },
-  partially_paid: { label: 'Partially Paid', class: 'elstar-badge-warning' },
-  unpaid: { label: 'Unpaid', class: 'elstar-badge-danger' }
-};
-
-const taskStatusConfig = {
-  pending: { label: 'Pending', class: 'elstar-badge-info' },
-  in_progress: { label: 'In Progress', class: 'elstar-badge-warning' },
-  completed: { label: 'Completed', class: 'elstar-badge-success' }
-};
-
-const priorityConfig = {
-  low: { label: 'Low', class: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400' },
-  medium: { label: 'Medium', class: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' },
-  high: { label: 'High', class: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' }
+  paid: { label: 'Paid', class: 'bg-green-500/20 text-green-400' },
+  partially_paid: { label: 'Partially Paid', class: 'bg-amber-500/20 text-amber-400' },
+  unpaid: { label: 'Unpaid', class: 'bg-red-500/20 text-red-400' }
 };
 
 const initialFormData = {
   title: '',
-  description: '',
   lead_id: '',
-  client_id: '',
   deal_id: '',
+  status: '',
+  pic_name: '',
   assigned_to: '',
-  due_date: '',
-  payment_status: 'unpaid',
-  payment_amount: '',
-  paid_amount: '',
-  priority: 'medium',
-  status: 'pending'
+  payment_status: ''
 };
 
 export default function Tasks() {
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
-  const [showFilters, setShowFilters] = useState(false);
   
   // Data for dropdowns
   const [leads, setLeads] = useState([]);
-  const [clients, setClients] = useState([]);
   const [deals, setDeals] = useState([]);
   const [users, setUsers] = useState([]);
-  const [orgSettings, setOrgSettings] = useState({ currency_symbol: '$' });
   const [search, setSearch] = useState('');
   
   // Pagination
@@ -70,19 +58,13 @@ export default function Tasks() {
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   
-  // Filters
-  const [filters, setFilters] = useState({
-    status: '',
-    payment_status: '',
-    assigned_to: '',
-    deal_id: ''
-  });
+  // Filter
+  const [dealFilter, setDealFilter] = useState('');
 
   useEffect(() => {
     fetchTasks();
     fetchDropdownData();
-    fetchOrgSettings();
-  }, [currentPage, pageSize, filters]);
+  }, [currentPage, pageSize, dealFilter]);
 
   const fetchTasks = async () => {
     try {
@@ -90,10 +72,7 @@ export default function Tasks() {
       const params = new URLSearchParams();
       params.append('page', currentPage);
       params.append('limit', pageSize);
-      if (filters.status) params.append('status', filters.status);
-      if (filters.payment_status) params.append('payment_status', filters.payment_status);
-      if (filters.assigned_to) params.append('assigned_to', filters.assigned_to);
-      if (filters.deal_id) params.append('deal_id', filters.deal_id);
+      if (dealFilter) params.append('deal_id', dealFilter);
       if (search) params.append('search', search);
       
       const response = await fetch(`${API}/api/tasks?${params.toString()}`, {
@@ -115,22 +94,13 @@ export default function Tasks() {
 
   const fetchDropdownData = async () => {
     try {
-      // Fetch leads
+      // Fetch leads (companies)
       const leadsRes = await fetch(`${API}/api/leads?limit=100`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (leadsRes.ok) {
         const data = await leadsRes.json();
         setLeads(data.items || []);
-      }
-      
-      // Fetch clients
-      const clientsRes = await fetch(`${API}/api/clients?limit=100`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (clientsRes.ok) {
-        const data = await clientsRes.json();
-        setClients(data.items || []);
       }
       
       // Fetch deals
@@ -142,7 +112,7 @@ export default function Tasks() {
         setDeals(data || []);
       }
       
-      // Fetch users
+      // Fetch users (sales persons)
       const usersRes = await fetch(`${API}/api/users?limit=100`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -155,49 +125,55 @@ export default function Tasks() {
     }
   };
 
-  const fetchOrgSettings = async () => {
-    try {
-      const response = await fetch(`${API}/api/organization-settings`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setOrgSettings(data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch org settings:', error);
-    }
+  // When company is selected, auto-fill PIC Name
+  const handleCompanyChange = (leadId) => {
+    const selectedLead = leads.find(l => l.id === leadId);
+    setFormData(prev => ({
+      ...prev,
+      lead_id: leadId,
+      pic_name: selectedLead ? (selectedLead.pic_name || selectedLead.name || '') : '',
+      title: selectedLead ? (selectedLead.company || selectedLead.name || '') : prev.title
+    }));
   };
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!formData.title) {
-      toast.error('Title is required');
+    if (!formData.lead_id) {
+      toast.error('Please select a company');
       return;
     }
     
     setFormLoading(true);
     try {
+      const selectedLead = leads.find(l => l.id === formData.lead_id);
+      const payload = {
+        title: selectedLead?.company || selectedLead?.name || 'New Task',
+        description: '',
+        lead_id: formData.lead_id,
+        deal_id: formData.deal_id || null,
+        assigned_to: formData.assigned_to || null,
+        status: formData.status || 'pending',
+        payment_status: formData.payment_status || 'unpaid',
+        priority: 'medium'
+      };
+      
       const response = await fetch(`${API}/api/tasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({
-          ...formData,
-          payment_amount: formData.payment_amount ? parseFloat(formData.payment_amount) : null,
-          paid_amount: formData.paid_amount ? parseFloat(formData.paid_amount) : 0
-        })
+        body: JSON.stringify(payload)
       });
       
       if (response.ok) {
         toast.success('Task created successfully');
-        setIsCreateOpen(false);
+        setIsPanelOpen(false);
         setFormData(initialFormData);
         fetchTasks();
       } else {
-        toast.error('Failed to create task');
+        const err = await response.json();
+        toast.error(err.detail || 'Failed to create task');
       }
     } catch (error) {
       toast.error('Failed to create task');
@@ -212,23 +188,28 @@ export default function Tasks() {
     
     setFormLoading(true);
     try {
+      const selectedLead = leads.find(l => l.id === formData.lead_id);
+      const payload = {
+        title: selectedLead?.company || selectedLead?.name || formData.title,
+        lead_id: formData.lead_id,
+        deal_id: formData.deal_id || null,
+        assigned_to: formData.assigned_to || null,
+        status: formData.status || 'pending',
+        payment_status: formData.payment_status || 'unpaid'
+      };
+      
       const response = await fetch(`${API}/api/tasks/${selectedTask.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({
-          ...formData,
-          payment_amount: formData.payment_amount ? parseFloat(formData.payment_amount) : null,
-          paid_amount: formData.paid_amount ? parseFloat(formData.paid_amount) : 0
-        })
+        body: JSON.stringify(payload)
       });
       
       if (response.ok) {
         toast.success('Task updated successfully');
-        setIsEditOpen(false);
-        setSelectedTask(null);
+        closePanel();
         fetchTasks();
       } else {
         toast.error('Failed to update task');
@@ -241,7 +222,7 @@ export default function Tasks() {
   };
 
   const handleDelete = async (taskId) => {
-    if (!confirm('Are you sure you want to delete this task?')) return;
+    if (!window.confirm('Are you sure you want to delete this task?')) return;
     
     try {
       const response = await fetch(`${API}/api/tasks/${taskId}`, {
@@ -280,43 +261,52 @@ export default function Tasks() {
     if (closeDropdown) closeDropdown();
   };
 
-  const openEditDialog = (task, closeDropdown) => {
+  const openCreatePanel = () => {
+    setFormData(initialFormData);
+    setSelectedTask(null);
+    setIsEditing(false);
+    setIsPanelOpen(true);
+  };
+
+  const openEditPanel = (task, closeDropdown) => {
     setSelectedTask(task);
     setFormData({
       title: task.title || '',
-      description: task.description || '',
       lead_id: task.lead_id || '',
-      client_id: task.client_id || '',
+      deal_id: task.deal_id || '',
+      status: task.status || 'pending',
+      pic_name: task.pic_name || task.lead_name || '',
       assigned_to: task.assigned_to || '',
-      due_date: task.due_date ? task.due_date.split('T')[0] : '',
-      payment_status: task.payment_status || 'unpaid',
-      payment_amount: task.payment_amount || '',
-      paid_amount: task.paid_amount || '',
-      priority: task.priority || 'medium',
-      status: task.status || 'pending'
+      payment_status: task.payment_status || 'unpaid'
     });
-    setIsEditOpen(true);
+    setIsEditing(true);
+    setIsPanelOpen(true);
     if (closeDropdown) closeDropdown();
   };
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
+  const closePanel = () => {
+    setIsPanelOpen(false);
+    setSelectedTask(null);
+    setIsEditing(false);
+    setFormData(initialFormData);
   };
 
-  const formatCurrency = (amount) => {
-    if (!amount) return '-';
-    return `${orgSettings.currency_symbol}${parseFloat(amount).toLocaleString()}`;
+  const getStatusDisplay = (task) => {
+    // Check if task is linked to a lead or customer
+    if (task.client_id) {
+      return { label: 'Customer', class: 'bg-green-500/20 text-green-400' };
+    }
+    if (task.lead_id) {
+      return { label: 'Lead', class: 'bg-blue-500/20 text-blue-400' };
+    }
+    return statusConfig[task.status] || { label: task.status, class: 'bg-gray-500/20 text-gray-400' };
   };
 
-  // Stats
-  const totalPayable = tasks.reduce((sum, t) => sum + (t.payment_amount || 0), 0);
-  const totalPaid = tasks.reduce((sum, t) => sum + (t.paid_amount || 0), 0);
-  const pendingTasks = tasks.filter(t => t.status === 'pending').length;
+  const handleSearch = (e) => {
+    e.preventDefault();
+    setCurrentPage(1);
+    fetchTasks();
+  };
 
   return (
     <div className="space-y-6" data-testid="tasks-page">
@@ -326,127 +316,44 @@ export default function Tasks() {
           <h1 className="text-2xl font-bold">Tasks</h1>
           <p className="text-muted-foreground mt-1">Your daily work list - all follow-ups and visits</p>
         </div>
+      </div>
+
+      {/* Filters Row */}
+      <div className="flex flex-wrap items-center gap-4">
+        <form onSubmit={handleSearch} className="relative flex-1 min-w-[200px] max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search tasks..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full bg-card border border-border rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-primary"
+            data-testid="search-tasks-input"
+          />
+        </form>
+        <select
+          value={dealFilter}
+          onChange={(e) => { setDealFilter(e.target.value); setCurrentPage(1); }}
+          className="bg-card border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
+          data-testid="deals-filter"
+        >
+          <option value="">All Deals</option>
+          {deals.map(deal => (
+            <option key={deal.id} value={deal.id}>{deal.title}</option>
+          ))}
+        </select>
         <button 
-          onClick={() => { setFormData(initialFormData); setIsCreateOpen(true); }} 
-          className="elstar-btn-primary"
+          onClick={openCreatePanel} 
+          className="ml-auto bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
           data-testid="create-task-btn"
         >
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="w-4 h-4" />
           + Add Task
         </button>
       </div>
 
-      {/* Filters Row - PDF style */}
-      <div className="elstar-card p-4">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search tasks..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-              className="elstar-input pl-10"
-              data-testid="search-tasks-input"
-            />
-          </div>
-          <select
-            value={filters.deal_id}
-            onChange={(e) => { setFilters(prev => ({ ...prev, deal_id: e.target.value })); setCurrentPage(1); }}
-            className="elstar-select w-40"
-            data-testid="deals-filter"
-          >
-            <option value="">All Deals</option>
-            {deals.map(deal => (
-              <option key={deal.id} value={deal.id}>{deal.title}</option>
-            ))}
-          </select>
-          <select
-            value={filters.status}
-            onChange={(e) => { setFilters(prev => ({ ...prev, status: e.target.value })); setCurrentPage(1); }}
-            className="elstar-select w-40"
-            data-testid="status-filter"
-          >
-            <option value="">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
-          </select>
-          <select
-            value={filters.assigned_to}
-            onChange={(e) => { setFilters(prev => ({ ...prev, assigned_to: e.target.value })); setCurrentPage(1); }}
-            className="elstar-select w-44"
-            data-testid="salesperson-filter"
-          >
-            <option value="">All Sales Person</option>
-            {users.map(u => (
-              <option key={u.id} value={u.id}>{u.name}</option>
-            ))}
-          </select>
-          <select
-            value={filters.payment_status}
-            onChange={(e) => { setFilters(prev => ({ ...prev, payment_status: e.target.value })); setCurrentPage(1); }}
-            className="elstar-select w-40"
-            data-testid="payment-filter"
-          >
-            <option value="">All Payment</option>
-            <option value="paid">Paid</option>
-            <option value="partially_paid">Partially Paid</option>
-            <option value="unpaid">Unpaid</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="elstar-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Tasks</p>
-              <p className="text-2xl font-bold">{totalItems}</p>
-            </div>
-          </div>
-        </div>
-        <div className="elstar-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(160, 196, 255, 0.15)' }}>
-              <Clock className="w-5 h-5 text-accent-blue" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Pending</p>
-              <p className="text-2xl font-bold">{pendingTasks}</p>
-            </div>
-          </div>
-        </div>
-        <div className="elstar-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-              <DollarSign className="w-5 h-5 text-amber-500" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Payable</p>
-              <p className="text-2xl font-bold">{formatCurrency(totalPayable)}</p>
-            </div>
-          </div>
-        </div>
-        <div className="elstar-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(160, 196, 255, 0.15)' }}>
-              <DollarSign className="w-5 h-5 text-accent-blue" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Paid</p>
-              <p className="text-2xl font-bold text-accent-blue">{formatCurrency(totalPaid)}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Tasks Table */}
-      <div className="elstar-card overflow-hidden">
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -459,88 +366,72 @@ export default function Tasks() {
             <p className="font-medium">No tasks yet</p>
             <p className="text-sm text-muted-foreground mt-2">Create your first task to get started</p>
             <button 
-              onClick={() => { setFormData(initialFormData); setIsCreateOpen(true); }}
-              className="elstar-btn-primary mt-4"
+              onClick={openCreatePanel}
+              className="mt-4 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
             >
-              <Plus className="w-4 h-4 mr-2" /> New Task
+              <Plus className="w-4 h-4" /> New Task
             </button>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="elstar-table">
+              <table className="w-full">
                 <thead>
-                  <tr>
-                    <th className="w-14">NO.</th>
-                    <th>COMPANY NAME</th>
-                    <th className="hidden md:table-cell">DEAL</th>
-                    <th>STATUS</th>
-                    <th className="hidden sm:table-cell">PIC NAME</th>
-                    <th className="hidden lg:table-cell">SALES PERSON</th>
-                    <th className="hidden xl:table-cell">REG TIME</th>
-                    <th>PAYMENT</th>
+                  <tr className="border-b border-border">
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-16">NO.</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">COMPANY NAME</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">DEAL</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">STATUS</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">PIC NAME</th>
                     <th className="w-12"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {tasks.map((task, index) => (
-                    <tr key={task.id} data-testid={`task-row-${task.id}`}>
-                      <td className="text-center font-medium text-muted-foreground">
-                        {(currentPage - 1) * pageSize + index + 1}
-                      </td>
-                      <td>
-                        <p className="font-medium">{task.company_name || task.lead_name || task.client_name || task.title}</p>
-                        {task.title !== task.company_name && task.title !== task.lead_name && (
-                          <p className="text-xs text-muted-foreground">{task.title}</p>
-                        )}
-                      </td>
-                      <td className="hidden md:table-cell">
-                        {task.deal_name ? (
-                          <span className="text-sm">{task.deal_name}</span>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </td>
-                      <td>
-                        <span className={`elstar-badge ${taskStatusConfig[task.status]?.class}`}>
-                          {taskStatusConfig[task.status]?.label}
-                        </span>
-                      </td>
-                      <td className="hidden sm:table-cell">
-                        <span className="text-sm">{task.pic_name || task.lead_name || '-'}</span>
-                      </td>
-                      <td className="hidden lg:table-cell">
-                        {task.assigned_to_name || <span className="text-muted-foreground">Unassigned</span>}
-                      </td>
-                      <td className="hidden xl:table-cell">
-                        <div className="text-xs text-muted-foreground">
-                          {formatDate(task.reg_time || task.created_at)}
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`elstar-badge ${paymentStatusConfig[task.payment_status]?.class}`}>
-                          {paymentStatusConfig[task.payment_status]?.label}
-                        </span>
-                      </td>
-                      <td>
-                        <ActionDropdown testId={`task-actions-${task.id}`}>
-                          {(closeDropdown) => (
-                            <>
-                              <button onClick={() => openEditDialog(task, closeDropdown)} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
-                                <Edit className="w-4 h-4" /> Edit
-                              </button>
-                              <button onClick={() => syncToCalendar(task.id, closeDropdown)} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
-                                <CalendarPlus className="w-4 h-4" /> Sync to Calendar
-                              </button>
-                              <button onClick={() => { handleDelete(task.id); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500">
-                                <Trash2 className="w-4 h-4" /> Delete
-                              </button>
-                            </>
+                  {tasks.map((task, index) => {
+                    const statusDisplay = getStatusDisplay(task);
+                    return (
+                      <tr key={task.id} className="border-b border-border hover:bg-secondary/30 transition-colors" data-testid={`task-row-${task.id}`}>
+                        <td className="px-4 py-4 text-sm text-muted-foreground">
+                          {String((currentPage - 1) * pageSize + index + 1).padStart(4, '0')}
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className="font-medium">{task.company_name || task.title}</span>
+                        </td>
+                        <td className="px-4 py-4">
+                          {task.deal_name ? (
+                            <span className="text-primary font-medium">{task.deal_name}</span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
                           )}
-                        </ActionDropdown>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${statusDisplay.class}`}>
+                            {statusDisplay.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-sm">
+                          {task.pic_name || task.lead_name || '-'}
+                        </td>
+                        <td className="px-4 py-2">
+                          <ActionDropdown testId={`task-actions-${task.id}`}>
+                            {(closeDropdown) => (
+                              <>
+                                <button onClick={() => openEditPanel(task, closeDropdown)} className="w-full text-left px-3 py-2 text-sm hover:bg-secondary flex items-center gap-2 rounded">
+                                  <Edit className="w-4 h-4" /> Edit
+                                </button>
+                                <button onClick={() => syncToCalendar(task.id, closeDropdown)} className="w-full text-left px-3 py-2 text-sm hover:bg-secondary flex items-center gap-2 rounded">
+                                  <CalendarPlus className="w-4 h-4" /> Sync to Calendar
+                                </button>
+                                <button onClick={() => { handleDelete(task.id); closeDropdown(); }} className="w-full text-left px-3 py-2 text-sm hover:bg-secondary flex items-center gap-2 rounded text-red-500">
+                                  <Trash2 className="w-4 h-4" /> Delete
+                                </button>
+                              </>
+                            )}
+                          </ActionDropdown>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -556,217 +447,132 @@ export default function Tasks() {
         )}
       </div>
 
-      {/* Create/Edit Modal */}
-      <Modal 
-        isOpen={isCreateOpen || isEditOpen} 
-        onClose={() => { setIsCreateOpen(false); setIsEditOpen(false); setSelectedTask(null); }} 
-        title={isEditOpen ? 'Edit Task' : 'Create Task'}
-        size="lg"
+      {/* Add/Edit Task Slide-In Panel */}
+      <SlideInPanel
+        isOpen={isPanelOpen}
+        onClose={closePanel}
+        title="Add New Task"
+        width="w-[400px]"
       >
-        <form onSubmit={isEditOpen ? handleUpdate : handleCreate}>
-          <div className="elstar-modal-body space-y-4 max-h-[60vh] overflow-y-auto">
-            <div>
-              <label className="elstar-label">Title *</label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                className="elstar-input"
-                placeholder="Task title"
-                data-testid="task-title-input"
-              />
-            </div>
-            
-            <div>
-              <label className="elstar-label">Description</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                className="elstar-input min-h-[80px]"
-                placeholder="Task description"
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="elstar-label">Company Name *</label>
-                <select
-                  value={formData.lead_id}
-                  onChange={(e) => setFormData(prev => ({ ...prev, lead_id: e.target.value }))}
-                  className="elstar-select"
-                  data-testid="task-company-select"
-                >
-                  <option value="">Select company...</option>
-                  {leads.map(lead => (
-                    <option key={lead.id} value={lead.id}>{lead.company || lead.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="elstar-label">Deal *</label>
-                <select
-                  value={formData.deal_id}
-                  onChange={(e) => setFormData(prev => ({ ...prev, deal_id: e.target.value }))}
-                  className="elstar-select"
-                  data-testid="task-deal-select"
-                >
-                  <option value="">Select deal...</option>
-                  {deals.map(deal => (
-                    <option key={deal.id} value={deal.id}>{deal.title}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="elstar-label">Status *</label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
-                  className="elstar-select"
-                  data-testid="task-status-select"
-                >
-                  <option value="pending">Pending</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="completed">Completed</option>
-                </select>
-              </div>
-              <div>
-                <label className="elstar-label">Sales Person *</label>
-                <select
-                  value={formData.assigned_to}
-                  onChange={(e) => setFormData(prev => ({ ...prev, assigned_to: e.target.value }))}
-                  className="elstar-select"
-                  data-testid="task-assigned-select"
-                >
-                  <option value="">Select sales person...</option>
-                  {users.map(u => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            
-            <div>
-              <label className="elstar-label">Payment Status *</label>
-              <select
-                value={formData.payment_status}
-                onChange={(e) => setFormData(prev => ({ ...prev, payment_status: e.target.value }))}
-                className="elstar-select"
-                data-testid="task-payment-select"
-              >
-                <option value="unpaid">Unpaid</option>
-                <option value="partially_paid">Partially Paid</option>
-                <option value="paid">Paid</option>
-              </select>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="elstar-label">Assigned To</label>
-                <select
-                  value={formData.assigned_to}
-                  onChange={(e) => setFormData(prev => ({ ...prev, assigned_to: e.target.value }))}
-                  className="elstar-select"
-                >
-                  <option value="">Select assignee</option>
-                  {users.map(u => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="elstar-label">Due Date</label>
-                <input
-                  type="date"
-                  value={formData.due_date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, due_date: e.target.value }))}
-                  className="elstar-input"
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="elstar-label">Priority</label>
-                <select
-                  value={formData.priority}
-                  onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value }))}
-                  className="elstar-select"
-                >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
-              </div>
-              {isEditOpen && (
-                <div>
-                  <label className="elstar-label">Status</label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
-                    className="elstar-select"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                  </select>
-                </div>
-              )}
-            </div>
-            
-            <div className="border-t border-border pt-4">
-              <h4 className="font-medium mb-3 flex items-center gap-2">
-                <DollarSign className="w-4 h-4" /> Payment Details
-              </h4>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="elstar-label">Total Amount ({orgSettings.currency_symbol})</label>
-                  <input
-                    type="number"
-                    value={formData.payment_amount}
-                    onChange={(e) => setFormData(prev => ({ ...prev, payment_amount: e.target.value }))}
-                    className="elstar-input"
-                    placeholder="0.00"
-                  />
-                </div>
-                <div>
-                  <label className="elstar-label">Paid Amount ({orgSettings.currency_symbol})</label>
-                  <input
-                    type="number"
-                    value={formData.paid_amount}
-                    onChange={(e) => setFormData(prev => ({ ...prev, paid_amount: e.target.value }))}
-                    className="elstar-input"
-                    placeholder="0.00"
-                  />
-                </div>
-                <div>
-                  <label className="elstar-label">Payment Status</label>
-                  <select
-                    value={formData.payment_status}
-                    onChange={(e) => setFormData(prev => ({ ...prev, payment_status: e.target.value }))}
-                    className="elstar-select"
-                  >
-                    <option value="unpaid">Unpaid</option>
-                    <option value="partially_paid">Partially Paid</option>
-                    <option value="paid">Paid</option>
-                  </select>
-                </div>
-              </div>
-            </div>
+        <form onSubmit={isEditing ? handleUpdate : handleCreate} className="space-y-5">
+          <div className="mb-6">
+            <h3 className="text-primary font-semibold text-sm uppercase tracking-wider">TASK DETAILS</h3>
           </div>
-          <div className="elstar-modal-footer">
-            <button type="button" onClick={() => { setIsCreateOpen(false); setIsEditOpen(false); }} className="elstar-btn-ghost">
-              Cancel
+
+          {/* Company Name */}
+          <div>
+            <label className="block text-sm text-muted-foreground mb-2">Company Name *</label>
+            <select
+              value={formData.lead_id}
+              onChange={(e) => handleCompanyChange(e.target.value)}
+              className="w-full bg-card border border-primary/50 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary"
+              data-testid="task-company-select"
+            >
+              <option value="">Select company...</option>
+              {leads.map(lead => (
+                <option key={lead.id} value={lead.id}>{lead.company || lead.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Deal */}
+          <div>
+            <label className="block text-sm text-muted-foreground mb-2">Deal *</label>
+            <select
+              value={formData.deal_id}
+              onChange={(e) => setFormData(prev => ({ ...prev, deal_id: e.target.value }))}
+              className="w-full bg-card border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary"
+              data-testid="task-deal-select"
+            >
+              <option value="">Select deal...</option>
+              {deals.map(deal => (
+                <option key={deal.id} value={deal.id}>{deal.title}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Status */}
+          <div>
+            <label className="block text-sm text-muted-foreground mb-2">Status *</label>
+            <select
+              value={formData.status}
+              onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
+              className="w-full bg-card border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary"
+              data-testid="task-status-select"
+            >
+              <option value="">Select status...</option>
+              <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+
+          {/* PIC Name (Auto-filled) */}
+          <div>
+            <label className="block text-sm text-muted-foreground mb-2">PIC Name</label>
+            <input
+              type="text"
+              value={formData.pic_name}
+              readOnly
+              placeholder="Auto-filled from company"
+              className="w-full bg-secondary/50 border border-border rounded-lg px-3 py-2.5 text-sm text-muted-foreground cursor-not-allowed"
+              data-testid="task-pic-input"
+            />
+          </div>
+
+          {/* Sales Person */}
+          <div>
+            <label className="block text-sm text-muted-foreground mb-2">Sales Person *</label>
+            <select
+              value={formData.assigned_to}
+              onChange={(e) => setFormData(prev => ({ ...prev, assigned_to: e.target.value }))}
+              className="w-full bg-card border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary"
+              data-testid="task-salesperson-select"
+            >
+              <option value="">Select sales person...</option>
+              {users.map(u => (
+                <option key={u.id} value={u.id}>{u.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Payment */}
+          <div>
+            <label className="block text-sm text-muted-foreground mb-2">Payment *</label>
+            <select
+              value={formData.payment_status}
+              onChange={(e) => setFormData(prev => ({ ...prev, payment_status: e.target.value }))}
+              className="w-full bg-card border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary"
+              data-testid="task-payment-select"
+            >
+              <option value="">Select payment status...</option>
+              <option value="unpaid">Unpaid</option>
+              <option value="partially_paid">Partially Paid</option>
+              <option value="paid">Paid</option>
+            </select>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-4">
+            <button
+              type="submit"
+              disabled={formLoading}
+              className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+              data-testid="submit-task-btn"
+            >
+              {formLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isEditing ? 'Update Task' : 'Create Task'}
             </button>
-            <button type="submit" disabled={formLoading} className="elstar-btn-primary">
-              {formLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {isEditOpen ? 'Update Task' : 'Create Task'}
+            <button
+              type="button"
+              onClick={closePanel}
+              className="px-6 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Cancel
             </button>
           </div>
         </form>
-      </Modal>
+      </SlideInPanel>
     </div>
   );
 }
