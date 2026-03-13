@@ -663,15 +663,15 @@ export default function LeadDetailPage() {
               <div className="h-64 overflow-y-auto p-4 space-y-3 bg-gray-100 dark:bg-secondary/30">
                 {whatsappMessages.length > 0 ? (
                   whatsappMessages.map((msg, idx) => (
-                    <div key={idx} className={`flex ${msg.direction === 'outgoing' ? 'justify-end' : 'justify-start'}`}>
+                    <div key={idx} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[70%] p-3 rounded-lg text-sm ${
-                        msg.direction === 'outgoing' 
+                        msg.sender === 'me' 
                           ? 'bg-green-500 text-white rounded-br-none' 
                           : 'bg-white dark:bg-card rounded-bl-none'
                       }`}>
-                        <p>{msg.content}</p>
-                        <p className={`text-xs mt-1 ${msg.direction === 'outgoing' ? 'text-white/70' : 'text-muted-foreground'}`}>
-                          {formatTime(msg.created_at)}
+                        <p>{msg.text || msg.content || msg.message}</p>
+                        <p className={`text-xs mt-1 ${msg.sender === 'me' ? 'text-white/70' : 'text-muted-foreground'}`}>
+                          {formatTime(msg.timestamp || msg.created_at)}
                         </p>
                       </div>
                     </div>
