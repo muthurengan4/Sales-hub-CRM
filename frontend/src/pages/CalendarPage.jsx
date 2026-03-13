@@ -511,103 +511,105 @@ export default function CalendarPage() {
       </div>
 
       {/* Create Event Modal */}
-      <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create Event">
-        <form onSubmit={handleCreateEvent} className="space-y-4">
-          <div>
-            <label className="elstar-label">Event Title *</label>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-              className="elstar-input"
-              placeholder="Meeting with client"
-              data-testid="event-title-input"
-            />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
+      <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create Event" size="lg">
+        <form onSubmit={handleCreateEvent}>
+          <div className="elstar-modal-body space-y-4">
             <div>
-              <label className="elstar-label">Date *</label>
+              <label className="elstar-label">Event Title *</label>
               <input
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                 className="elstar-input"
-                data-testid="event-date-input"
+                placeholder="Meeting with client"
+                data-testid="event-title-input"
               />
             </div>
-            <div>
-              <label className="elstar-label">Color</label>
-              <div className="flex gap-2 mt-2">
-                {EVENT_COLORS.map(color => (
-                  <button
-                    key={color.value}
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, color: color.value }))}
-                    className={`w-6 h-6 rounded-full ${color.class} ${formData.color === color.value ? 'ring-2 ring-offset-2 ring-primary' : ''}`}
-                    title={color.name}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2 mb-4">
-            <input
-              type="checkbox"
-              id="all-day"
-              checked={formData.all_day}
-              onChange={(e) => setFormData(prev => ({ ...prev, all_day: e.target.checked }))}
-              className="w-4 h-4 rounded"
-            />
-            <label htmlFor="all-day" className="text-sm">All day event</label>
-          </div>
-          
-          {!formData.all_day && (
+            
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="elstar-label">Start Time</label>
+                <label className="elstar-label">Date *</label>
                 <input
-                  type="time"
-                  value={formData.start_time}
-                  onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
                   className="elstar-input"
+                  data-testid="event-date-input"
                 />
               </div>
               <div>
-                <label className="elstar-label">End Time</label>
-                <input
-                  type="time"
-                  value={formData.end_time}
-                  onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
-                  className="elstar-input"
-                />
+                <label className="elstar-label">Color</label>
+                <div className="flex gap-2 mt-2">
+                  {EVENT_COLORS.map(color => (
+                    <button
+                      key={color.value}
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, color: color.value }))}
+                      className={`w-8 h-8 rounded-full ${color.class} transition-all ${formData.color === color.value ? 'ring-2 ring-offset-2 ring-offset-card ring-foreground scale-110' : 'hover:scale-105'}`}
+                      title={color.name}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
-          )}
-          
-          <div>
-            <label className="elstar-label">Location</label>
-            <input
-              type="text"
-              value={formData.location}
-              onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-              className="elstar-input"
-              placeholder="Office / Zoom link"
-            />
+            
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="all-day"
+                checked={formData.all_day}
+                onChange={(e) => setFormData(prev => ({ ...prev, all_day: e.target.checked }))}
+                className="w-4 h-4 rounded border-border"
+              />
+              <label htmlFor="all-day" className="text-sm">All day event</label>
+            </div>
+            
+            {!formData.all_day && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="elstar-label">Start Time</label>
+                  <input
+                    type="time"
+                    value={formData.start_time}
+                    onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
+                    className="elstar-input"
+                  />
+                </div>
+                <div>
+                  <label className="elstar-label">End Time</label>
+                  <input
+                    type="time"
+                    value={formData.end_time}
+                    onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
+                    className="elstar-input"
+                  />
+                </div>
+              </div>
+            )}
+            
+            <div>
+              <label className="elstar-label">Location</label>
+              <input
+                type="text"
+                value={formData.location}
+                onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                className="elstar-input"
+                placeholder="Office / Zoom link"
+              />
+            </div>
+            
+            <div>
+              <label className="elstar-label">Description</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                className="elstar-input min-h-[100px]"
+                placeholder="Event details..."
+              />
+            </div>
           </div>
           
-          <div>
-            <label className="elstar-label">Description</label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              className="elstar-input min-h-[80px]"
-              placeholder="Event details..."
-            />
-          </div>
-          
-          <div className="flex justify-end gap-2 pt-4">
+          <div className="elstar-modal-footer">
             <button type="button" onClick={() => setIsCreateOpen(false)} className="elstar-btn-ghost">
               Cancel
             </button>
@@ -622,44 +624,46 @@ export default function CalendarPage() {
       {/* Event Detail Modal */}
       <Modal isOpen={isEventDetailOpen} onClose={() => setIsEventDetailOpen(false)} title="Event Details">
         {selectedEvent && (
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <div 
-                className="w-4 h-4 rounded mt-1"
-                style={{ backgroundColor: selectedEvent.color || '#D4A017' }}
-              />
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold">{selectedEvent.title}</h3>
-                <p className="text-muted-foreground text-sm">
-                  {new Date(selectedEvent.date).toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  })}
-                </p>
+          <>
+            <div className="elstar-modal-body space-y-4">
+              <div className="flex items-start gap-3">
+                <div 
+                  className="w-4 h-4 rounded mt-1"
+                  style={{ backgroundColor: selectedEvent.color || '#D4A017' }}
+                />
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold">{selectedEvent.title}</h3>
+                  <p className="text-muted-foreground text-sm">
+                    {new Date(selectedEvent.date).toLocaleDateString('en-US', { 
+                      weekday: 'long', 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </p>
+                </div>
               </div>
+              
+              {!selectedEvent.all_day && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Clock className="w-4 h-4" />
+                  {formatTime(selectedEvent.start_time)} - {formatTime(selectedEvent.end_time)}
+                </div>
+              )}
+              
+              {selectedEvent.location && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MapPin className="w-4 h-4" />
+                  {selectedEvent.location}
+                </div>
+              )}
+              
+              {selectedEvent.description && (
+                <p className="text-sm">{selectedEvent.description}</p>
+              )}
             </div>
             
-            {!selectedEvent.all_day && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="w-4 h-4" />
-                {formatTime(selectedEvent.start_time)} - {formatTime(selectedEvent.end_time)}
-              </div>
-            )}
-            
-            {selectedEvent.location && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <MapPin className="w-4 h-4" />
-                {selectedEvent.location}
-              </div>
-            )}
-            
-            {selectedEvent.description && (
-              <p className="text-sm">{selectedEvent.description}</p>
-            )}
-            
-            <div className="flex justify-end gap-2 pt-4 border-t">
+            <div className="elstar-modal-footer">
               <button 
                 onClick={() => handleDeleteEvent(selectedEvent.id)}
                 className="elstar-btn-ghost text-destructive"
@@ -673,7 +677,7 @@ export default function CalendarPage() {
                 Close
               </button>
             </div>
-          </div>
+          </>
         )}
       </Modal>
     </div>
