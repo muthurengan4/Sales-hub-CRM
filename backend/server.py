@@ -13,6 +13,8 @@ import bcrypt
 import jwt
 from enum import Enum
 import io
+from twilio.rest import Client as TwilioClient
+from twilio.base.exceptions import TwilioRestException
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -660,6 +662,11 @@ class OrganizationSettingsUpdate(BaseModel):
     google_calendar_client_id: Optional[str] = None
     google_calendar_client_secret: Optional[str] = None
     google_calendar_enabled: Optional[bool] = None
+    # Twilio WhatsApp Integration
+    twilio_account_sid: Optional[str] = None
+    twilio_auth_token: Optional[str] = None
+    twilio_whatsapp_number: Optional[str] = None  # e.g., whatsapp:+14155238886
+    twilio_enabled: Optional[bool] = None
 
 class OrganizationSettingsResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -668,6 +675,10 @@ class OrganizationSettingsResponse(BaseModel):
     currency_symbol: str = "$"
     google_calendar_enabled: bool = False
     google_calendar_connected: bool = False
+    # Twilio WhatsApp Integration
+    twilio_enabled: bool = False
+    twilio_connected: bool = False
+    twilio_whatsapp_number: Optional[str] = None
 
 # ============= AUTH HELPERS =============
 
@@ -3335,12 +3346,15 @@ async def get_organization_settings(user: dict = Depends(get_current_user)):
             "currency": "USD",
             "currency_symbol": "$",
             "google_calendar_enabled": False,
-            "google_calendar_connected": False
+            "google_calendar_connected": False,
+            "twilio_enabled": False,
+            "twilio_connected": False,
+            "twilio_whatsapp_number": None
         }
     
     settings = await db.organization_settings.find_one(
         {'organization_id': user['organization_id']},
-        {'_id': 0, 'google_calendar_client_secret': 0}  # Don't return secrets
+        {'_id': 0, 'google_calendar_client_secret': 0, 'twilio_auth_token': 0}  # Don't return secrets
     )
     
     if not settings:
@@ -3349,7 +3363,10 @@ async def get_organization_settings(user: dict = Depends(get_current_user)):
             "currency": "USD",
             "currency_symbol": "$",
             "google_calendar_enabled": False,
-            "google_calendar_connected": False
+            "google_calendar_connected": False,
+            "twilio_enabled": False,
+            "twilio_connected": False,
+            "twilio_whatsapp_number": None
         }
     
     # Check if Google Calendar credentials are configured
@@ -3363,6 +3380,15 @@ async def get_organization_settings(user: dict = Depends(get_current_user)):
         full_settings.get('google_calendar_client_secret') and
         full_settings.get('google_calendar_access_token')
     )
+    
+    # Check if Twilio credentials are configured
+    settings['twilio_connected'] = bool(
+        full_settings.get('twilio_account_sid') and 
+        full_settings.get('twilio_auth_token') and
+        full_settings.get('twilio_whatsapp_number')
+    )
+    settings['twilio_enabled'] = full_settings.get('twilio_enabled', False)
+    settings['twilio_whatsapp_number'] = full_settings.get('twilio_whatsapp_number')
     
     return settings
 
@@ -3387,6 +3413,40 @@ async def update_organization_settings(settings: OrganizationSettingsUpdate, use
     )
     
     return {"message": "Organization settings updated successfully"}
+
+@api_router.post("/twilio/test-connection")
+async def test_twilio_connection(user: dict = Depends(get_current_user)):
+    """Test Twilio WhatsApp connection with saved credentials"""
+    check_permission(user, Permission.MANAGE_ORGANIZATION)
+    
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="Please create or join an organization first")
+    
+    settings = await db.organization_settings.find_one(
+        {'organization_id': user['organization_id']},
+        {'_id': 0}
+    )
+    
+    if not settings or not settings.get('twilio_account_sid') or not settings.get('twilio_auth_token'):
+        raise HTTPException(status_code=400, detail="Twilio credentials not configured. Please save your Account SID and Auth Token first.")
+    
+    try:
+        twilio_client = TwilioClient(settings['twilio_account_sid'], settings['twilio_auth_token'])
+        # Verify credentials by fetching account info
+        account = twilio_client.api.accounts(settings['twilio_account_sid']).fetch()
+        
+        return {
+            "success": True,
+            "message": "Twilio connection successful!",
+            "account_name": account.friendly_name,
+            "account_status": account.status
+        }
+    except TwilioRestException as e:
+        logger.error(f"Twilio connection test failed: {e.msg}")
+        raise HTTPException(status_code=400, detail=f"Twilio connection failed: {e.msg}")
+    except Exception as e:
+        logger.error(f"Twilio connection test error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to connect to Twilio")
 
 @api_router.get("/currencies")
 async def get_available_currencies():
@@ -3695,12 +3755,54 @@ async def get_whatsapp_messages(contact_id: str, user: dict = Depends(get_curren
 
 @api_router.post("/whatsapp/send")
 async def send_whatsapp_message(message_data: WhatsAppMessageSend, user: dict = Depends(get_current_user)):
-    """Send a WhatsApp message (stores locally, integration coming soon)"""
+    """Send a WhatsApp message via Twilio (if configured) or store locally"""
     if not user.get('organization_id'):
         raise HTTPException(status_code=400, detail="Please create or join an organization first. Go to Organization settings to get started.")
     
     message_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
+    
+    # Check if Twilio is configured for this organization
+    settings = await db.organization_settings.find_one(
+        {'organization_id': user['organization_id']},
+        {'_id': 0}
+    )
+    
+    twilio_message_sid = None
+    twilio_status = None
+    status = 'sent'  # Default for local storage
+    
+    if settings and settings.get('twilio_enabled') and settings.get('twilio_account_sid') and settings.get('twilio_auth_token') and settings.get('twilio_whatsapp_number'):
+        try:
+            # Send via Twilio
+            twilio_client = TwilioClient(settings['twilio_account_sid'], settings['twilio_auth_token'])
+            
+            # Format phone number for WhatsApp
+            to_number = message_data.phone
+            if not to_number.startswith('whatsapp:'):
+                to_number = f"whatsapp:{to_number}" if to_number.startswith('+') else f"whatsapp:+{to_number}"
+            
+            from_number = settings['twilio_whatsapp_number']
+            if not from_number.startswith('whatsapp:'):
+                from_number = f"whatsapp:{from_number}"
+            
+            message = twilio_client.messages.create(
+                body=message_data.message,
+                from_=from_number,
+                to=to_number
+            )
+            
+            twilio_message_sid = message.sid
+            twilio_status = message.status
+            status = 'delivered' if message.status in ['delivered', 'sent', 'queued'] else message.status
+            logger.info(f"WhatsApp message sent via Twilio: SID={message.sid}, Status={message.status}")
+            
+        except TwilioRestException as e:
+            logger.error(f"Twilio API error: {e.msg}")
+            raise HTTPException(status_code=400, detail=f"Failed to send WhatsApp message: {e.msg}")
+        except Exception as e:
+            logger.error(f"Error sending WhatsApp via Twilio: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to send WhatsApp message")
     
     message_doc = {
         'id': message_id,
@@ -3709,7 +3811,9 @@ async def send_whatsapp_message(message_data: WhatsAppMessageSend, user: dict = 
         'text': message_data.message,
         'sender': 'me',
         'timestamp': now,
-        'status': 'sent',
+        'status': status,
+        'twilio_message_sid': twilio_message_sid,
+        'twilio_status': twilio_status,
         'organization_id': user['organization_id'],
         'sent_by': user['id']
     }
@@ -3731,7 +3835,7 @@ async def send_whatsapp_message(message_data: WhatsAppMessageSend, user: dict = 
         'created_at': now
     })
     
-    return {"success": True, "message": message_doc}
+    return {"success": True, "message": message_doc, "twilio_sid": twilio_message_sid}
 
 # ============= ROOT ROUTE =============
 

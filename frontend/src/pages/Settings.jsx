@@ -3,7 +3,8 @@ import { useAuth, useTheme } from '../App';
 import { toast } from 'sonner';
 import { 
   Moon, Sun, User, Shield, Sparkles, Check, DollarSign, 
-  Calendar, Save, Loader2, ExternalLink, Key, Globe, RefreshCw
+  Calendar, Save, Loader2, ExternalLink, Key, Globe, RefreshCw,
+  MessageCircle, Phone
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -14,6 +15,7 @@ export default function Settings() {
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testingTwilio, setTestingTwilio] = useState(false);
   const [currencies, setCurrencies] = useState([]);
   const [orgSettings, setOrgSettings] = useState({
     currency: 'USD',
@@ -21,7 +23,13 @@ export default function Settings() {
     google_calendar_client_id: '',
     google_calendar_client_secret: '',
     google_calendar_enabled: false,
-    google_calendar_connected: false
+    google_calendar_connected: false,
+    // Twilio WhatsApp
+    twilio_account_sid: '',
+    twilio_auth_token: '',
+    twilio_whatsapp_number: '',
+    twilio_enabled: false,
+    twilio_connected: false
   });
 
   useEffect(() => {
@@ -93,7 +101,12 @@ export default function Settings() {
           currency_symbol: orgSettings.currency_symbol,
           google_calendar_client_id: orgSettings.google_calendar_client_id || null,
           google_calendar_client_secret: orgSettings.google_calendar_client_secret || null,
-          google_calendar_enabled: orgSettings.google_calendar_enabled
+          google_calendar_enabled: orgSettings.google_calendar_enabled,
+          // Twilio settings
+          twilio_account_sid: orgSettings.twilio_account_sid || null,
+          twilio_auth_token: orgSettings.twilio_auth_token || null,
+          twilio_whatsapp_number: orgSettings.twilio_whatsapp_number || null,
+          twilio_enabled: orgSettings.twilio_enabled
         })
       });
 
@@ -107,6 +120,29 @@ export default function Settings() {
       toast.error('Failed to save settings');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const testTwilioConnection = async () => {
+    setTestingTwilio(true);
+    try {
+      const response = await fetch(`${API}/api/twilio/test-connection`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(`Twilio connected! Account: ${data.account_name}`);
+        fetchSettings();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Failed to connect to Twilio');
+      }
+    } catch (error) {
+      toast.error('Failed to test Twilio connection');
+    } finally {
+      setTestingTwilio(false);
     }
   };
 
@@ -347,6 +383,137 @@ export default function Settings() {
         </div>
       )}
 
+      {/* Twilio WhatsApp Integration - Admin Only */}
+      {isAdmin && user?.organization_id && (
+        <div className="elstar-card p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+              <MessageCircle className="w-5 h-5 text-green-500" />
+            </div>
+            <div>
+              <h2 className="font-semibold">Twilio WhatsApp Integration</h2>
+              <p className="text-sm text-muted-foreground">Connect Twilio to send WhatsApp messages from this panel</p>
+            </div>
+            {orgSettings.twilio_connected && (
+              <span className="ml-auto elstar-badge elstar-badge-success">Connected</span>
+            )}
+          </div>
+          
+          <div className="space-y-4">
+            {/* Twilio Credentials */}
+            <div className="p-4 rounded-lg bg-secondary/30 border border-border">
+              <div className="flex items-center gap-2 mb-3">
+                <Key className="w-4 h-4 text-muted-foreground" />
+                <p className="font-medium text-sm">Twilio API Credentials</p>
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium mb-1">Account SID</label>
+                  <input
+                    type="text"
+                    value={orgSettings.twilio_account_sid || ''}
+                    onChange={(e) => setOrgSettings(prev => ({ ...prev, twilio_account_sid: e.target.value }))}
+                    placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                    className="elstar-input text-sm"
+                    data-testid="twilio-account-sid"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1">Auth Token</label>
+                  <input
+                    type="password"
+                    value={orgSettings.twilio_auth_token || ''}
+                    onChange={(e) => setOrgSettings(prev => ({ ...prev, twilio_auth_token: e.target.value }))}
+                    placeholder="Your Twilio Auth Token"
+                    className="elstar-input text-sm"
+                    data-testid="twilio-auth-token"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1">WhatsApp Number</label>
+                  <input
+                    type="text"
+                    value={orgSettings.twilio_whatsapp_number || ''}
+                    onChange={(e) => setOrgSettings(prev => ({ ...prev, twilio_whatsapp_number: e.target.value }))}
+                    placeholder="+14155238886 (Twilio Sandbox) or your business number"
+                    className="elstar-input text-sm"
+                    data-testid="twilio-whatsapp-number"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    For sandbox testing, use: +14155238886
+                  </p>
+                </div>
+              </div>
+              
+              <div className="mt-3 p-3 rounded bg-green-500/10 border border-green-500/20">
+                <p className="text-xs text-green-600 dark:text-green-400">
+                  <strong>Setup Instructions:</strong>
+                  <br />1. Sign up at{' '}
+                  <a href="https://www.twilio.com/try-twilio" target="_blank" rel="noopener noreferrer" className="underline">
+                    twilio.com
+                  </a>
+                  <br />2. Go to Console → Account SID & Auth Token
+                  <br />3. For WhatsApp Sandbox: Messaging → Try it out → Send a WhatsApp message
+                  <br />4. Send the join code from WhatsApp Sandbox to enable testing
+                </p>
+              </div>
+            </div>
+
+            {/* Enable/Connect Toggle */}
+            <div className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="twilio-enabled"
+                  checked={orgSettings.twilio_enabled || false}
+                  onChange={(e) => setOrgSettings(prev => ({ ...prev, twilio_enabled: e.target.checked }))}
+                  className="w-4 h-4 rounded border-border"
+                  data-testid="twilio-enabled-checkbox"
+                />
+                <div>
+                  <label htmlFor="twilio-enabled" className="font-medium cursor-pointer">Enable Twilio WhatsApp</label>
+                  <p className="text-sm text-muted-foreground">
+                    {orgSettings.twilio_connected 
+                      ? 'WhatsApp messaging is active' 
+                      : 'Save credentials and test connection'}
+                  </p>
+                </div>
+              </div>
+              
+              {orgSettings.twilio_account_sid && orgSettings.twilio_auth_token ? (
+                <button 
+                  onClick={testTwilioConnection}
+                  disabled={testingTwilio}
+                  className="elstar-btn-primary text-sm"
+                  data-testid="test-twilio-btn"
+                >
+                  {testingTwilio ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                  Test Connection
+                </button>
+              ) : (
+                <span className="text-xs text-muted-foreground">Enter credentials first</span>
+              )}
+            </div>
+            
+            {/* Current Status */}
+            {orgSettings.twilio_whatsapp_number && (
+              <div className="p-4 rounded-lg bg-secondary/50">
+                <div className="flex items-center gap-3">
+                  <Phone className="w-5 h-5 text-green-500" />
+                  <div>
+                    <p className="font-medium">WhatsApp Number: {orgSettings.twilio_whatsapp_number}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Messages will be sent from this number
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* AI Features Card */}
       <div className="elstar-card p-6 border-primary/20">
         <div className="flex items-center gap-3 mb-4">
@@ -364,7 +531,7 @@ export default function Settings() {
             { name: 'Lead Scoring', desc: 'AI analyzes leads and provides scores from 0-100' },
             { name: 'Deal Health Monitoring', desc: 'Track deal progress and identify risks' },
             { name: 'AI Calling', desc: 'Automated AI voice calls (Placeholder - Integration required)', status: 'Placeholder' },
-            { name: 'AI WhatsApp', desc: 'Automated WhatsApp messages (Placeholder - Integration required)', status: 'Placeholder' }
+            { name: 'AI WhatsApp', desc: orgSettings.twilio_connected ? 'Twilio WhatsApp messaging enabled' : 'Connect Twilio in settings above to enable', status: orgSettings.twilio_connected ? 'Active' : 'Placeholder' }
           ].map((feature) => (
             <div key={feature.name} className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: 'rgba(160, 196, 255, 0.08)', border: '1px solid rgba(160, 196, 255, 0.2)' }}>
               <div className="flex items-center gap-3">

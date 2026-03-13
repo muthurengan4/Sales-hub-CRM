@@ -5,6 +5,18 @@ Build an AI-powered CRM with Lead Management, Pipeline & Deals, Analytics Dashbo
 
 ## Latest Update (March 13, 2026)
 
+### Twilio WhatsApp Integration (NEW - March 13, 2026)
+- ✅ **Backend integration** - Twilio SDK installed and configured
+- ✅ **Settings page section** - New "Twilio WhatsApp Integration" card in Settings
+  - Account SID input
+  - Auth Token input (masked)
+  - WhatsApp Number input
+  - Setup instructions with links to Twilio console
+  - Enable/Test Connection button
+- ✅ **WhatsApp send endpoint updated** - `/api/whatsapp/send` now uses Twilio when configured
+- ✅ **Test connection endpoint** - `/api/twilio/test-connection` to verify credentials
+- ✅ **AI Features status** - Shows "Active" for WhatsApp when Twilio is connected
+
 ### Customers Page Redesign (NEW - March 13, 2026)
 - ✅ **Table redesign**: Columns - COMPANY NAME, PIC/DOCTOR, ROLE, MOBILE, EMAIL, STATUS
 - ✅ **Colored avatars**: 7 colors cycling (amber, emerald, purple, blue, pink, cyan, orange)
