@@ -592,29 +592,6 @@ export default function LeadDetailPage() {
             </div>
           </div>
 
-          {/* Activity Summary Card (matching Image 4) */}
-          <div className="bg-white dark:bg-card rounded-xl p-4 shadow-sm border border-border">
-            <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider mb-4">Activity Summary</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-gray-50 dark:bg-secondary rounded-lg p-3 text-center">
-                <p className="text-2xl font-bold text-amber-600">{activities.length}</p>
-                <p className="text-xs text-muted-foreground">Activities</p>
-              </div>
-              <div className="bg-gray-50 dark:bg-secondary rounded-lg p-3 text-center">
-                <p className="text-2xl font-bold text-blue-600">{aiCallsCount}</p>
-                <p className="text-xs text-muted-foreground">AI Calls</p>
-              </div>
-              <div className="bg-gray-50 dark:bg-secondary rounded-lg p-3 text-center">
-                <p className="text-2xl font-bold text-emerald-600">{deals.length}</p>
-                <p className="text-xs text-muted-foreground">Deals</p>
-              </div>
-              <div className="bg-gray-50 dark:bg-secondary rounded-lg p-3 text-center">
-                <p className="text-2xl font-bold text-purple-600">{lead.ai_score || 0}</p>
-                <p className="text-xs text-muted-foreground">AI Score</p>
-              </div>
-            </div>
-          </div>
-
           {/* Ownership Card */}
           <div className="bg-white dark:bg-card rounded-xl p-4 shadow-sm border border-border">
             <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider mb-4">Ownership</h3>
