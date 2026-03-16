@@ -585,7 +585,10 @@ export default function Leads() {
       toast.error('Please select leads first');
       return;
     }
-    toast.info(`AI Calling feature coming soon for ${selectedLeads.size} leads`);
+    // Open the modal for batch calling
+    setSelectedLeadForCall(null);
+    setAiCallDealId('');
+    setAiCallModal(true);
   };
 
   const handleStartAIWhatsapp = () => {
@@ -1209,6 +1212,104 @@ export default function Leads() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* AI Call Modal */}
+      <Modal 
+        isOpen={aiCallModal} 
+        onClose={() => { setAiCallModal(false); setSelectedLeadForCall(null); }} 
+        title={selectedLeadForCall ? "Start AI Calling" : `Start AI Calling (${selectedLeads.size} leads)`}
+      >
+        <div className="space-y-4">
+          {/* Selected Lead Info (for single lead call) */}
+          {selectedLeadForCall && (
+            <div className="p-4 bg-secondary/50 rounded-lg">
+              <p className="font-medium">{selectedLeadForCall.name || selectedLeadForCall.company}</p>
+              <p className="text-sm text-muted-foreground">{selectedLeadForCall.phone}</p>
+            </div>
+          )}
+
+          {/* Batch Info (for multiple leads) */}
+          {!selectedLeadForCall && selectedLeads.size > 0 && (
+            <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
+              <p className="font-medium text-primary">{selectedLeads.size} leads selected</p>
+              <p className="text-sm text-muted-foreground">AI will call each lead sequentially</p>
+            </div>
+          )}
+
+          {/* AI Agent Selection */}
+          <div>
+            <label className="block text-sm font-medium mb-2">AI Agent</label>
+            <div className="space-y-2 max-h-[200px] overflow-y-auto">
+              {aiAgents.map((agent, index) => (
+                <button
+                  key={agent.id}
+                  type="button"
+                  onClick={() => setSelectedAgent(agent)}
+                  className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                    selectedAgent?.id === agent.id 
+                      ? 'border-primary bg-primary/10' 
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
+                    ['bg-pink-500', 'bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500'][index % 5]
+                  }`}>
+                    {agent.name.charAt(0)}
+                  </div>
+                  <div className="text-left flex-1">
+                    <p className="font-medium">{agent.name}</p>
+                    <p className="text-xs text-muted-foreground">{agent.description || 'AI Voice Agent'}</p>
+                  </div>
+                  {selectedAgent?.id === agent.id && (
+                    <Check className="w-5 h-5 text-primary" />
+                  )}
+                </button>
+              ))}
+            </div>
+            {aiAgents.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-4">
+                No agents configured. Add agents in Settings → AI Calling Agents
+              </p>
+            )}
+          </div>
+
+          {/* Deal Selection */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Select Deal to Discuss <span className="text-red-500">*</span></label>
+            <select
+              value={aiCallDealId}
+              onChange={(e) => setAiCallDealId(e.target.value)}
+              className="elstar-select w-full"
+              data-testid="ai-call-deal-select"
+            >
+              <option value="">Choose a deal...</option>
+              {deals.map(deal => (
+                <option key={deal.id} value={deal.id}>
+                  {deal.title} - RM {(deal.value || 0).toLocaleString()}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 mt-6">
+          <button 
+            onClick={() => { setAiCallModal(false); setSelectedLeadForCall(null); }} 
+            className="elstar-btn-ghost"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={handleStartAiCall} 
+            disabled={aiCallLoading || !aiCallDealId}
+            className="elstar-btn-primary flex items-center gap-2"
+            data-testid="initiate-ai-call-btn"
+          >
+            {aiCallLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <PhoneCall className="w-4 h-4" />}
+            {selectedLeadForCall ? 'Start Call' : `Start Calling ${selectedLeads.size} Leads`}
+          </button>
+        </div>
       </Modal>
     </div>
   );
