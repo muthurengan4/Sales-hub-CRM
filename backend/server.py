@@ -2706,6 +2706,74 @@ async def get_contact_profile(contact_id: str, user: dict = Depends(get_current_
         }
     }
 
+@api_router.get("/profile/customer/{customer_id}")
+async def get_customer_profile(customer_id: str, user: dict = Depends(get_current_user)):
+    """Get comprehensive customer profile with all related data"""
+    check_permission(user, Permission.VIEW_CONTACTS)
+    
+    customer = await db.customers.find_one(
+        {'id': customer_id, 'organization_id': user.get('organization_id')},
+        {'_id': 0}
+    )
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    # Add name field for consistency
+    customer['name'] = f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip() or customer.get('company', 'Customer')
+    
+    # Get owner info
+    if customer.get('owner_id'):
+        owner = await db.users.find_one({'id': customer['owner_id']}, {'_id': 0, 'name': 1, 'email': 1})
+        customer['owner_name'] = owner['name'] if owner else 'Unassigned'
+        customer['owner_email'] = owner['email'] if owner else None
+    else:
+        customer['owner_name'] = 'Unassigned'
+        customer['owner_email'] = None
+    
+    # Get activities/timeline
+    activities = await db.activities.find(
+        {'entity_id': customer_id, 'organization_id': user['organization_id']},
+        {'_id': 0}
+    ).sort('created_at', -1).to_list(50)
+    
+    for activity in activities:
+        if activity.get('user_id'):
+            act_owner = await db.users.find_one({'id': activity['user_id']}, {'_id': 0, 'name': 1})
+            activity['owner_name'] = act_owner['name'] if act_owner else activity.get('user_name', 'System')
+        else:
+            activity['owner_name'] = activity.get('user_name', 'System')
+    
+    # Get AI calls
+    ai_calls = await db.ai_calls.find(
+        {'customer_id': customer_id, 'organization_id': user['organization_id']},
+        {'_id': 0}
+    ).sort('created_at', -1).to_list(20)
+    
+    # Get related deals
+    deals = await db.deals.find(
+        {'organization_id': user['organization_id']},
+        {'_id': 0}
+    ).to_list(100)
+    
+    # Filter deals that have this customer's lead_id linked
+    customer_deals = []
+    if customer.get('lead_id'):
+        customer_deals = [d for d in deals if customer['lead_id'] in (d.get('linked_company_ids') or [])]
+    
+    return {
+        "profile": customer,
+        "activities": activities,
+        "ai_calls": ai_calls,
+        "deals": customer_deals,
+        "leads": [],
+        "stats": {
+            "total_activities": len(activities),
+            "total_calls": len(ai_calls),
+            "total_deals": len(customer_deals),
+            "total_leads": 0
+        }
+    }
+
 # ============= ADVANCED FILTER OPTIONS =============
 
 @api_router.get("/filter-options")

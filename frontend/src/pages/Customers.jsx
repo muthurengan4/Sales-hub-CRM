@@ -552,14 +552,10 @@ export default function Customers() {
             <div className="border-t border-border px-6 py-4 flex items-center gap-3">
               <button
                 onClick={() => {
-                  // Navigate to lead detail page if lead_id exists, otherwise stay on customer view
-                  if (selectedCustomer.lead_id) {
-                    navigate(`/leads/${selectedCustomer.lead_id}`);
-                  } else {
-                    // For customers without a lead_id, navigate to customers list
-                    toast.info('This customer was not converted from a lead');
-                    setIsPreviewOpen(false);
-                  }
+                  setIsPreviewOpen(false);
+                  setSelectedCustomer(null);
+                  // Navigate to the customer profile page
+                  navigate(`/profile/customer/${selectedCustomer.id}`);
                 }}
                 className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 rounded-lg text-sm font-medium transition-colors"
               >

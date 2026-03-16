@@ -128,10 +128,14 @@ export default function CustomerProfile() {
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold">{profile.name || `${profile.first_name} ${profile.last_name}`}</h1>
-          <p className="text-muted-foreground">{profile.title || profile.job_title} at {profile.company}</p>
+          <h1 className="text-2xl font-bold">
+            {profile.name || [profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.company || 'Customer'}
+          </h1>
+          <p className="text-muted-foreground">
+            {profile.title || profile.job_title || 'Contact'} at {profile.company || 'Company'}
+          </p>
         </div>
-        {type === 'lead' && profile.ai_score && (
+        {(type === 'lead' || type === 'customer') && profile.ai_score && (
           <div className="ml-auto flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10">
             <Sparkles className="w-5 h-5 text-primary" />
             <span className="font-bold text-primary">{profile.ai_score}</span>
