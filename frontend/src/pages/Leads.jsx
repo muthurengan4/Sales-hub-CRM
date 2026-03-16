@@ -9,7 +9,7 @@ import ActionDropdown from '../components/ActionDropdown';
 import { 
   Plus, Search, Loader2, Sparkles, Mail, Phone, Building2, 
   Trash2, Edit, RefreshCw, Upload, FileSpreadsheet, Eye, UserCheck, 
-  DollarSign, PhoneCall, MessageCircle, Globe, MapPin
+  DollarSign, PhoneCall, MessageCircle, Globe, MapPin, Check
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -322,6 +322,22 @@ export default function Leads() {
   const [selectedLeads, setSelectedLeads] = useState(new Set());
   const [selectAll, setSelectAll] = useState(false);
   
+  // AI Calling states
+  const [aiCallModal, setAiCallModal] = useState(false);
+  const [aiCallDealId, setAiCallDealId] = useState('');
+  const [aiCallLoading, setAiCallLoading] = useState(false);
+  const [aiAgents, setAiAgents] = useState([]);
+  const [selectedAgent, setSelectedAgent] = useState(null);
+  const [deals, setDeals] = useState([]);
+  const [selectedLeadForCall, setSelectedLeadForCall] = useState(null);
+  
+  // Default agents if none configured
+  const DEFAULT_AGENTS = [
+    { id: 'sarah', name: 'Sarah', agent_id: 'default', description: 'Professional sales assistant' },
+    { id: 'michael', name: 'Michael', agent_id: 'default', description: 'Technical product expert' },
+    { id: 'emma', name: 'Emma', agent_id: 'default', description: 'Customer support specialist' }
+  ];
+  
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -343,7 +359,137 @@ export default function Leads() {
 
   useEffect(() => {
     fetchStates();
+    fetchAiAgents();
+    fetchDeals();
   }, []);
+
+  const fetchAiAgents = async () => {
+    try {
+      const response = await fetch(`${API}/api/ai-agents`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const agents = data.agents || [];
+        const agentsToUse = agents.length > 0 ? agents : DEFAULT_AGENTS;
+        setAiAgents(agentsToUse);
+        setSelectedAgent(agentsToUse[0]);
+      } else {
+        setAiAgents(DEFAULT_AGENTS);
+        setSelectedAgent(DEFAULT_AGENTS[0]);
+      }
+    } catch (error) {
+      setAiAgents(DEFAULT_AGENTS);
+      setSelectedAgent(DEFAULT_AGENTS[0]);
+    }
+  };
+
+  const fetchDeals = async () => {
+    try {
+      const response = await fetch(`${API}/api/deals`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setDeals(data || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch deals');
+    }
+  };
+
+  const openAiCallModal = (lead = null) => {
+    setSelectedLeadForCall(lead);
+    setAiCallDealId('');
+    setAiCallModal(true);
+  };
+
+  const handleStartAiCall = async () => {
+    if (!aiCallDealId) {
+      toast.error('Please select a deal');
+      return;
+    }
+    
+    if (!selectedAgent) {
+      toast.error('Please select an AI agent');
+      return;
+    }
+    
+    setAiCallLoading(true);
+    try {
+      // If single lead call
+      if (selectedLeadForCall) {
+        const response = await fetch(`${API}/api/ai-calls/initiate`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}` 
+          },
+          body: JSON.stringify({
+            lead_id: selectedLeadForCall.id,
+            deal_id: aiCallDealId,
+            agent_name: selectedAgent.name,
+            phone: selectedLeadForCall.phone
+          })
+        });
+        
+        if (response.ok) {
+          toast.success(`AI Call initiated to ${selectedLeadForCall.name || selectedLeadForCall.company}`);
+        } else {
+          const error = await response.json();
+          toast.error(error.detail || 'Failed to initiate AI call');
+        }
+      } else {
+        // Batch call for selected leads
+        const selectedLeadIds = Array.from(selectedLeads);
+        let successCount = 0;
+        let failCount = 0;
+        
+        for (const leadId of selectedLeadIds) {
+          const lead = leads.find(l => l.id === leadId);
+          if (lead && lead.phone) {
+            try {
+              const response = await fetch(`${API}/api/ai-calls/initiate`, {
+                method: 'POST',
+                headers: { 
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}` 
+                },
+                body: JSON.stringify({
+                  lead_id: leadId,
+                  deal_id: aiCallDealId,
+                  agent_name: selectedAgent.name,
+                  phone: lead.phone
+                })
+              });
+              
+              if (response.ok) {
+                successCount++;
+              } else {
+                failCount++;
+              }
+            } catch {
+              failCount++;
+            }
+          } else {
+            failCount++;
+          }
+        }
+        
+        toast.success(`Batch AI Call: ${successCount} initiated, ${failCount} failed`);
+        setSelectedLeads(new Set());
+        setSelectAll(false);
+      }
+      
+      setAiCallModal(false);
+      setSelectedLeadForCall(null);
+      setAiCallDealId('');
+    } catch (error) {
+      toast.error('Failed to initiate AI call');
+    } finally {
+      setAiCallLoading(false);
+    }
+  };
 
   const fetchStates = async () => {
     try {

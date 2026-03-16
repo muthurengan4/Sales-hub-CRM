@@ -69,13 +69,16 @@ export default function LeadDetailPage() {
   const [callDetailsModal, setCallDetailsModal] = useState({ isOpen: false, call: null });
   const [aiCalls, setAiCalls] = useState([]);
 
-  // AI Agent names
-  const AI_AGENTS = [
-    { id: 'sarah', name: 'Sarah', description: 'Professional sales assistant' },
-    { id: 'michael', name: 'Michael', description: 'Technical product expert' },
-    { id: 'emma', name: 'Emma', description: 'Customer support specialist' }
+  // AI Agents - fetched from settings
+  const [aiAgents, setAiAgents] = useState([]);
+  const [selectedAgent, setSelectedAgent] = useState(null);
+
+  // Default agents if none configured
+  const DEFAULT_AGENTS = [
+    { id: 'sarah', name: 'Sarah', agent_id: 'default', description: 'Professional sales assistant' },
+    { id: 'michael', name: 'Michael', agent_id: 'default', description: 'Technical product expert' },
+    { id: 'emma', name: 'Emma', agent_id: 'default', description: 'Customer support specialist' }
   ];
-  const [selectedAgent, setSelectedAgent] = useState(AI_AGENTS[0]);
 
   useEffect(() => {
     fetchLead();
@@ -83,6 +86,7 @@ export default function LeadDetailPage() {
     fetchDeals();
     fetchAllDeals();
     fetchAiCalls();
+    fetchAiAgents();
   }, [id]);
 
   useEffect(() => {
@@ -191,6 +195,29 @@ export default function LeadDetailPage() {
       }
     } catch (error) {
       console.error('Failed to fetch AI calls');
+    }
+  };
+
+  const fetchAiAgents = async () => {
+    try {
+      const response = await fetch(`${API}/api/ai-agents`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const agents = data.agents || [];
+        // Use configured agents or fall back to defaults
+        const agentsToUse = agents.length > 0 ? agents : DEFAULT_AGENTS;
+        setAiAgents(agentsToUse);
+        setSelectedAgent(agentsToUse[0]);
+      } else {
+        setAiAgents(DEFAULT_AGENTS);
+        setSelectedAgent(DEFAULT_AGENTS[0]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch AI agents');
+      setAiAgents(DEFAULT_AGENTS);
+      setSelectedAgent(DEFAULT_AGENTS[0]);
     }
   };
 
@@ -1330,33 +1357,38 @@ export default function LeadDetailPage() {
           {/* AI Agent Selection */}
           <div>
             <label className="block text-sm font-medium mb-2">AI Agent</label>
-            <div className="space-y-2">
-              {AI_AGENTS.map(agent => (
+            <div className="space-y-2 max-h-[200px] overflow-y-auto">
+              {aiAgents.map((agent, index) => (
                 <button
                   key={agent.id}
                   type="button"
                   onClick={() => setSelectedAgent(agent)}
                   className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all ${
-                    selectedAgent.id === agent.id 
+                    selectedAgent?.id === agent.id 
                       ? 'border-primary bg-primary/10' 
                       : 'border-border hover:border-primary/50'
                   }`}
                 >
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
-                    agent.id === 'sarah' ? 'bg-pink-500' : agent.id === 'michael' ? 'bg-blue-500' : 'bg-purple-500'
+                    ['bg-pink-500', 'bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500'][index % 5]
                   }`}>
                     {agent.name.charAt(0)}
                   </div>
-                  <div className="text-left">
+                  <div className="text-left flex-1">
                     <p className="font-medium">{agent.name}</p>
                     <p className="text-xs text-muted-foreground">{agent.description}</p>
                   </div>
-                  {selectedAgent.id === agent.id && (
-                    <Check className="w-5 h-5 text-primary ml-auto" />
+                  {selectedAgent?.id === agent.id && (
+                    <Check className="w-5 h-5 text-primary" />
                   )}
                 </button>
               ))}
             </div>
+            {aiAgents.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-4">
+                No agents configured. Add agents in Settings → AI Calling Agents
+              </p>
+            )}
           </div>
 
           {/* Deal Selection */}

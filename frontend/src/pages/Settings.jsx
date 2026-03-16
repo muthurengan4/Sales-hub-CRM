@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { 
   Moon, Sun, User, Shield, Sparkles, Check, DollarSign, 
   Calendar, Save, Loader2, ExternalLink, Key, Globe, RefreshCw,
-  MessageCircle, Phone
+  MessageCircle, Phone, Plus, Trash2, Bot
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -31,6 +31,10 @@ export default function Settings() {
     twilio_enabled: false,
     twilio_connected: false
   });
+  
+  // ElevenLabs AI Agents
+  const [aiAgents, setAiAgents] = useState([]);
+  const [newAgent, setNewAgent] = useState({ name: '', agent_id: '', description: '' });
 
   useEffect(() => {
     if (user?.organization_id) {
@@ -57,10 +61,67 @@ export default function Settings() {
         const data = await response.json();
         setOrgSettings(prev => ({ ...prev, ...data }));
       }
+      
+      // Fetch AI agents
+      const agentsRes = await fetch(`${API}/api/ai-agents`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (agentsRes.ok) {
+        const agentsData = await agentsRes.json();
+        setAiAgents(agentsData.agents || []);
+      }
     } catch (error) {
       console.error('Failed to fetch settings:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const addAiAgent = async () => {
+    if (!newAgent.name || !newAgent.agent_id) {
+      toast.error('Agent name and ID are required');
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${API}/api/ai-agents`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(newAgent)
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setAiAgents(prev => [...prev, data.agent]);
+        setNewAgent({ name: '', agent_id: '', description: '' });
+        toast.success('AI Agent added successfully');
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Failed to add agent');
+      }
+    } catch (error) {
+      toast.error('Failed to add agent');
+    }
+  };
+
+  const deleteAiAgent = async (agentId) => {
+    if (!window.confirm('Delete this AI agent?')) return;
+    
+    try {
+      const response = await fetch(`${API}/api/ai-agents/${agentId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        setAiAgents(prev => prev.filter(a => a.id !== agentId));
+        toast.success('AI Agent removed');
+      }
+    } catch (error) {
+      toast.error('Failed to remove agent');
     }
   };
 
@@ -510,6 +571,123 @@ export default function Settings() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ElevenLabs AI Agents Configuration - Admin Only */}
+      {isAdmin && user?.organization_id && (
+        <div className="elstar-card p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+              <Bot className="w-5 h-5 text-blue-500" />
+            </div>
+            <div>
+              <h2 className="font-semibold">AI Calling Agents (ElevenLabs)</h2>
+              <p className="text-sm text-muted-foreground">Configure AI voice agents for automated calling</p>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            {/* Add New Agent Form */}
+            <div className="p-4 rounded-lg bg-secondary/30 border border-border">
+              <h3 className="font-medium text-sm mb-3">Add New Agent</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium mb-1">Agent Name *</label>
+                  <input
+                    type="text"
+                    value={newAgent.name}
+                    onChange={(e) => setNewAgent(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g., Sarah"
+                    className="elstar-input text-sm"
+                    data-testid="new-agent-name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1">ElevenLabs Agent ID *</label>
+                  <input
+                    type="text"
+                    value={newAgent.agent_id}
+                    onChange={(e) => setNewAgent(prev => ({ ...prev, agent_id: e.target.value }))}
+                    placeholder="e.g., abc123xyz..."
+                    className="elstar-input text-sm"
+                    data-testid="new-agent-id"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1">Description</label>
+                  <input
+                    type="text"
+                    value={newAgent.description}
+                    onChange={(e) => setNewAgent(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="e.g., Sales assistant"
+                    className="elstar-input text-sm"
+                  />
+                </div>
+              </div>
+              <button
+                onClick={addAiAgent}
+                className="mt-3 elstar-btn-primary text-sm flex items-center gap-2"
+                data-testid="add-agent-btn"
+              >
+                <Plus className="w-4 h-4" /> Add Agent
+              </button>
+            </div>
+
+            {/* Configured Agents List */}
+            <div>
+              <h3 className="font-medium text-sm mb-3">Configured Agents ({aiAgents.length})</h3>
+              {aiAgents.length > 0 ? (
+                <div className="space-y-2">
+                  {aiAgents.map((agent, index) => (
+                    <div key={agent.id || index} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 border border-border">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
+                          ['bg-pink-500', 'bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500'][index % 5]
+                        }`}>
+                          {agent.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-medium">{agent.name}</p>
+                          <p className="text-xs text-muted-foreground">{agent.description || 'AI Voice Agent'}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <code className="text-xs bg-secondary px-2 py-1 rounded">{agent.agent_id?.substring(0, 12)}...</code>
+                        <button
+                          onClick={() => deleteAiAgent(agent.id)}
+                          className="p-2 text-muted-foreground hover:text-destructive transition-colors"
+                          title="Remove agent"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground border-2 border-dashed border-border rounded-lg">
+                  <Bot className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No AI agents configured yet</p>
+                  <p className="text-xs mt-1">Add your ElevenLabs agent IDs above</p>
+                </div>
+              )}
+            </div>
+
+            {/* Setup Instructions */}
+            <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+              <p className="text-sm text-blue-600 dark:text-blue-400">
+                <strong>Setup Instructions:</strong>
+                <br />1. Sign up at{' '}
+                <a href="https://elevenlabs.io" target="_blank" rel="noopener noreferrer" className="underline">
+                  elevenlabs.io
+                </a>
+                <br />2. Create a Conversational AI Agent
+                <br />3. Copy the Agent ID from the agent settings
+                <br />4. Paste the Agent ID above and give it a name
+              </p>
+            </div>
           </div>
         </div>
       )}

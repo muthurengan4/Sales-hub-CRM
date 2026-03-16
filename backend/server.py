@@ -2587,6 +2587,67 @@ async def initiate_ai_call(call_data: AiCallInitiate, user: dict = Depends(get_c
     call_doc.pop('_id', None)
     return {"success": True, "call": call_doc, "message": f"AI call initiated with {call_data.agent_name}"}
 
+# ============= AI AGENTS MANAGEMENT =============
+
+class AiAgentCreate(BaseModel):
+    name: str
+    agent_id: str  # ElevenLabs Agent ID
+    description: Optional[str] = None
+
+@api_router.get("/ai-agents")
+async def get_ai_agents(user: dict = Depends(get_current_user)):
+    """Get all AI agents configured for the organization"""
+    if not user.get('organization_id'):
+        return {"agents": []}
+    
+    agents = await db.ai_agents.find(
+        {'organization_id': user['organization_id']},
+        {'_id': 0}
+    ).to_list(50)
+    
+    return {"agents": agents}
+
+@api_router.post("/ai-agents")
+async def create_ai_agent(agent_data: AiAgentCreate, user: dict = Depends(get_current_user)):
+    """Create a new AI agent configuration"""
+    check_permission(user, Permission.MANAGE_ORGANIZATION)
+    
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="Please create or join an organization first")
+    
+    agent_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    agent_doc = {
+        'id': agent_id,
+        'name': agent_data.name,
+        'agent_id': agent_data.agent_id,  # ElevenLabs Agent ID
+        'description': agent_data.description or 'AI Voice Agent',
+        'organization_id': user['organization_id'],
+        'created_by': user['id'],
+        'created_at': now
+    }
+    
+    await db.ai_agents.insert_one(agent_doc)
+    agent_doc.pop('_id', None)
+    
+    return {"success": True, "agent": agent_doc}
+
+@api_router.delete("/ai-agents/{agent_id}")
+async def delete_ai_agent(agent_id: str, user: dict = Depends(get_current_user)):
+    """Delete an AI agent configuration"""
+    check_permission(user, Permission.MANAGE_ORGANIZATION)
+    
+    result = await db.ai_agents.delete_one({
+        'id': agent_id,
+        'organization_id': user.get('organization_id')
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
+    return {"success": True}
+
 # ============= WORKLIST DASHBOARD ROUTES =============
 
 @api_router.get("/worklist")
