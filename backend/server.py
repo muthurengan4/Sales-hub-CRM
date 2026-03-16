@@ -2501,6 +2501,92 @@ async def get_ai_call(call_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Call not found")
     return call
 
+@api_router.get("/ai-calls/lead/{lead_id}")
+async def get_lead_ai_calls(lead_id: str, user: dict = Depends(get_current_user)):
+    """Get all AI calls for a specific lead"""
+    if not user.get('organization_id'):
+        return {"calls": []}
+    
+    calls = await db.ai_calls.find(
+        {'lead_id': lead_id, 'organization_id': user['organization_id']},
+        {'_id': 0}
+    ).sort('created_at', -1).to_list(50)
+    
+    return {"calls": calls}
+
+class AiCallInitiate(BaseModel):
+    lead_id: str
+    deal_id: str
+    agent_name: str
+    phone: Optional[str] = None
+
+@api_router.post("/ai-calls/initiate")
+async def initiate_ai_call(call_data: AiCallInitiate, user: dict = Depends(get_current_user)):
+    """Initiate an AI call to a lead (mock implementation - actual Twilio/Bland.ai integration pending)"""
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="Please create or join an organization first")
+    
+    # Get lead details
+    lead = await db.leads.find_one({'id': call_data.lead_id}, {'_id': 0})
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    # Get deal details
+    deal = await db.deals.find_one({'id': call_data.deal_id}, {'_id': 0})
+    if not deal:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    
+    call_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Create AI call record (mock - actual AI call would be initiated here)
+    call_doc = {
+        'id': call_id,
+        'lead_id': call_data.lead_id,
+        'deal_id': call_data.deal_id,
+        'agent_name': call_data.agent_name,
+        'phone': call_data.phone or lead.get('phone'),
+        'lead_name': lead.get('name') or lead.get('company'),
+        'deal_title': deal.get('title'),
+        'status': 'initiated',  # initiated, ringing, in_progress, completed, failed
+        'direction': 'outbound',
+        'source': 'AI Call',
+        'duration': None,
+        'summary': f'AI call initiated to discuss {deal.get("title")}. Agent: {call_data.agent_name}',
+        'recording_url': None,
+        'transcript': None,
+        'organization_id': user['organization_id'],
+        'initiated_by': user['id'],
+        'created_at': now,
+        'updated_at': now
+    }
+    
+    await db.ai_calls.insert_one(call_doc)
+    
+    # Log activity
+    await db.activities.insert_one({
+        'id': str(uuid.uuid4()),
+        'organization_id': user['organization_id'],
+        'entity_type': 'lead',
+        'entity_id': call_data.lead_id,
+        'action': 'ai_call',
+        'type': 'ai_call',
+        'title': f'AI Call - {call_data.agent_name}',
+        'description': f'AI call initiated to {lead.get("name") or lead.get("company")} to discuss {deal.get("title")}',
+        'user_id': user['id'],
+        'user_name': user['name'],
+        'call_id': call_id,
+        'metadata': {
+            'agent_name': call_data.agent_name,
+            'deal_title': deal.get('title'),
+            'phone': call_data.phone or lead.get('phone')
+        },
+        'created_at': now
+    })
+    
+    call_doc.pop('_id', None)
+    return {"success": True, "call": call_doc, "message": f"AI call initiated with {call_data.agent_name}"}
+
 # ============= WORKLIST DASHBOARD ROUTES =============
 
 @api_router.get("/worklist")

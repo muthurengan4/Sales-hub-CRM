@@ -7,7 +7,7 @@ import SlideInPanel from '../components/SlideInPanel';
 import { 
   ArrowLeft, Edit, UserCheck, Phone, Mail, MessageCircle, Calendar,
   Building2, MapPin, Globe, Sparkles, Clock, CheckSquare, Send,
-  PhoneCall, Video, FileText, Plus, Loader2, X, User, Activity
+  PhoneCall, Video, FileText, Plus, Loader2, X, User, Activity, Check
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -62,11 +62,27 @@ export default function LeadDetailPage() {
   const [newMessage, setNewMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
 
+  // AI Calling states
+  const [aiCallModal, setAiCallModal] = useState(false);
+  const [aiCallDealId, setAiCallDealId] = useState('');
+  const [aiCallLoading, setAiCallLoading] = useState(false);
+  const [callDetailsModal, setCallDetailsModal] = useState({ isOpen: false, call: null });
+  const [aiCalls, setAiCalls] = useState([]);
+
+  // AI Agent names
+  const AI_AGENTS = [
+    { id: 'sarah', name: 'Sarah', description: 'Professional sales assistant' },
+    { id: 'michael', name: 'Michael', description: 'Technical product expert' },
+    { id: 'emma', name: 'Emma', description: 'Customer support specialist' }
+  ];
+  const [selectedAgent, setSelectedAgent] = useState(AI_AGENTS[0]);
+
   useEffect(() => {
     fetchLead();
     fetchActivities();
     fetchDeals();
     fetchAllDeals();
+    fetchAiCalls();
   }, [id]);
 
   useEffect(() => {
@@ -161,6 +177,60 @@ export default function LeadDetailPage() {
       }
     } catch (error) {
       console.error('Failed to fetch WhatsApp messages');
+    }
+  };
+
+  const fetchAiCalls = async () => {
+    try {
+      const response = await fetch(`${API}/api/ai-calls/lead/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAiCalls(data.calls || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch AI calls');
+    }
+  };
+
+  const handleStartAiCall = async () => {
+    if (!aiCallDealId) {
+      toast.error('Please select a deal');
+      return;
+    }
+    
+    setAiCallLoading(true);
+    try {
+      const response = await fetch(`${API}/api/ai-calls/initiate`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify({
+          lead_id: id,
+          deal_id: aiCallDealId,
+          agent_name: selectedAgent.name,
+          phone: lead?.phone
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(`AI Call initiated with ${selectedAgent.name}`);
+        setAiCallModal(false);
+        setAiCallDealId('');
+        fetchAiCalls();
+        fetchActivities();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Failed to initiate AI call');
+      }
+    } catch (error) {
+      toast.error('Failed to initiate AI call');
+    } finally {
+      setAiCallLoading(false);
     }
   };
 
@@ -525,6 +595,14 @@ export default function LeadDetailPage() {
             <Edit className="w-4 h-4" />
             Edit
           </button>
+          <button 
+            onClick={() => setAiCallModal(true)}
+            className="elstar-btn-ghost flex items-center gap-2 text-blue-500 border-blue-500 hover:bg-blue-500/10"
+            data-testid="start-ai-call-btn"
+          >
+            <PhoneCall className="w-4 h-4" />
+            Start AI Calling
+          </button>
           {isCustomer ? (
             <span className="px-4 py-2 rounded-lg bg-green-500/20 text-green-500 font-medium flex items-center gap-2">
               <UserCheck className="w-4 h-4" />
@@ -847,11 +925,37 @@ export default function LeadDetailPage() {
                     <div className="space-y-3">
                       {dateActivities.map((activity, idx) => {
                         const { icon, color } = getActivityIcon(activity.type);
+                        const isAiCall = activity.type === 'ai_call' || activity.action === 'ai_call';
                         return (
-                          <div key={activity.id || idx} className="flex gap-3">
+                          <div 
+                            key={activity.id || idx} 
+                            className={`flex gap-3 ${isAiCall ? 'cursor-pointer hover:bg-secondary/50 p-2 -m-2 rounded-lg transition-colors' : ''}`}
+                            onClick={() => {
+                              if (isAiCall && activity.call_id) {
+                                // Find the call details and open modal
+                                const call = aiCalls.find(c => c.id === activity.call_id) || {
+                                  id: activity.call_id,
+                                  agent_name: activity.metadata?.agent_name || 'AI Agent',
+                                  created_at: activity.created_at,
+                                  direction: 'outbound',
+                                  source: 'AI Call',
+                                  summary: activity.description,
+                                  deal_title: activity.metadata?.deal_title
+                                };
+                                setCallDetailsModal({ isOpen: true, call });
+                              }
+                            }}
+                          >
                             <span className={`text-lg ${color}`}>{icon}</span>
                             <div className="flex-1">
-                              <p className="font-medium text-sm">{activity.description}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-sm">{activity.description}</p>
+                                {isAiCall && (
+                                  <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-500">
+                                    AI Call
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-xs text-muted-foreground">
                                 {activity.user_name || 'System'} · {formatTime(activity.created_at)}
                               </p>
@@ -859,10 +963,15 @@ export default function LeadDetailPage() {
                                 <div className={`mt-2 p-2 rounded-lg text-xs ${
                                   activity.type === 'whatsapp' 
                                     ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-100' 
+                                    : isAiCall
+                                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-100'
                                     : 'bg-gray-100 dark:bg-secondary'
                                 }`}>
                                   {activity.notes}
                                 </div>
+                              )}
+                              {isAiCall && (
+                                <p className="text-xs text-primary mt-1">Click to view call details →</p>
                               )}
                             </div>
                           </div>
@@ -1210,6 +1319,164 @@ export default function LeadDetailPage() {
           </div>
         </form>
       </SlideInPanel>
+
+      {/* AI Call Modal */}
+      <Modal
+        isOpen={aiCallModal}
+        onClose={() => setAiCallModal(false)}
+        title="Start AI Calling"
+      >
+        <div className="elstar-modal-body space-y-4">
+          {/* AI Agent Selection */}
+          <div>
+            <label className="block text-sm font-medium mb-2">AI Agent</label>
+            <div className="space-y-2">
+              {AI_AGENTS.map(agent => (
+                <button
+                  key={agent.id}
+                  type="button"
+                  onClick={() => setSelectedAgent(agent)}
+                  className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                    selectedAgent.id === agent.id 
+                      ? 'border-primary bg-primary/10' 
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
+                    agent.id === 'sarah' ? 'bg-pink-500' : agent.id === 'michael' ? 'bg-blue-500' : 'bg-purple-500'
+                  }`}>
+                    {agent.name.charAt(0)}
+                  </div>
+                  <div className="text-left">
+                    <p className="font-medium">{agent.name}</p>
+                    <p className="text-xs text-muted-foreground">{agent.description}</p>
+                  </div>
+                  {selectedAgent.id === agent.id && (
+                    <Check className="w-5 h-5 text-primary ml-auto" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Deal Selection */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Select Deal to Discuss <span className="text-red-500">*</span></label>
+            <select
+              value={aiCallDealId}
+              onChange={(e) => setAiCallDealId(e.target.value)}
+              className="elstar-select w-full"
+              data-testid="ai-call-deal-select"
+            >
+              <option value="">Choose a deal...</option>
+              {allDeals.map(deal => (
+                <option key={deal.id} value={deal.id}>
+                  {deal.title} - RM {(deal.value || 0).toLocaleString()}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Lead Phone */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Phone Number</label>
+            <input
+              type="text"
+              value={lead?.phone || ''}
+              className="elstar-input w-full bg-secondary/50"
+              readOnly
+            />
+            <p className="text-xs text-muted-foreground mt-1">The AI will call this number</p>
+          </div>
+        </div>
+
+        <div className="elstar-modal-footer">
+          <button onClick={() => setAiCallModal(false)} className="elstar-btn-ghost">
+            Cancel
+          </button>
+          <button 
+            onClick={handleStartAiCall} 
+            disabled={aiCallLoading || !aiCallDealId}
+            className="elstar-btn-primary flex items-center gap-2"
+            data-testid="initiate-ai-call-btn"
+          >
+            {aiCallLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <PhoneCall className="w-4 h-4" />}
+            Start Call
+          </button>
+        </div>
+      </Modal>
+
+      {/* Call Details Modal */}
+      <Modal
+        isOpen={callDetailsModal.isOpen}
+        onClose={() => setCallDetailsModal({ isOpen: false, call: null })}
+        title="Call Details"
+        size="lg"
+      >
+        {callDetailsModal.call && (
+          <>
+            <div className="elstar-modal-body space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Agent Name</p>
+                  <p className="font-medium">{callDetailsModal.call.agent_name || 'AI Agent'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Source</p>
+                  <p className="font-medium">{callDetailsModal.call.source || 'AI Call'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Date</p>
+                  <p className="font-medium">{formatDate(callDetailsModal.call.created_at)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Time</p>
+                  <p className="font-medium">{formatTime(callDetailsModal.call.created_at)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Direction</p>
+                  <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
+                    callDetailsModal.call.direction === 'outbound' ? 'bg-blue-500/20 text-blue-500' : 'bg-green-500/20 text-green-500'
+                  }`}>
+                    {callDetailsModal.call.direction === 'outbound' ? 'Outbound' : 'Inbound'}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Duration</p>
+                  <p className="font-medium">{callDetailsModal.call.duration || '0:00'}</p>
+                </div>
+              </div>
+
+              {/* Summary */}
+              <div>
+                <p className="text-xs text-muted-foreground mb-2">Summary</p>
+                <div className="p-3 rounded-lg bg-secondary/50 border border-border">
+                  <p className="text-sm">{callDetailsModal.call.summary || 'No summary available'}</p>
+                </div>
+              </div>
+
+              {/* Recording */}
+              {callDetailsModal.call.recording_url && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Recording</p>
+                  <audio controls className="w-full" src={callDetailsModal.call.recording_url}>
+                    Your browser does not support the audio element.
+                  </audio>
+                </div>
+              )}
+            </div>
+
+            <div className="elstar-modal-footer">
+              <button 
+                onClick={() => setCallDetailsModal({ isOpen: false, call: null })}
+                className="elstar-btn-primary"
+              >
+                Close
+              </button>
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

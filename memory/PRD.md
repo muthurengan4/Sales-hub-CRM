@@ -3,7 +3,32 @@
 ## Original Problem Statement
 Build an AI-powered CRM with Lead Management, Pipeline & Deals, Analytics Dashboard, and AI features.
 
-## Latest Update (March 16, 2026) - Batch 2
+## Latest Update (March 16, 2026) - AI Calling Features
+
+### AI Calling Implementation
+1. ✅ **"Start AI Calling" Button** - Added to Lead Detail page header (blue phone icon)
+2. ✅ **AI Call Modal** with:
+   - AI Agent selection (Sarah, Michael, Emma) with avatars and descriptions
+   - Deal selection dropdown (mandatory - to discuss specific deal)
+   - Phone number display (auto-filled from lead)
+   - "Start Call" and "Cancel" buttons
+3. ✅ **Knowledge Base Upload** - Added to Pipeline "Create Deal" form
+   - Optional upload for PDF, DOC, TXT files (Max 10MB)
+   - Purpose: Train AI to speak about the deal
+4. ✅ **AI Call Activity Timeline** - Shows AI calls in activity timeline
+   - Clickable to open Call Details modal
+   - Shows "AI Call" badge
+5. ✅ **Call Details Modal** with:
+   - Agent Name, Date, Time, Source, Direction
+   - Summary of the call
+   - Recording audio player (placeholder)
+6. ✅ **Backend API Endpoints**:
+   - POST `/api/ai-calls/initiate` - Initiate AI call
+   - GET `/api/ai-calls/lead/{lead_id}` - Get AI calls for a lead
+
+**Note:** AI Calling is MOCKED - actual integration with Twilio Voice or Bland.ai pending.
+
+## Previous Update (March 16, 2026) - Batch 2
 
 ### 10 Corrections Implemented
 1. ✅ **Mobile Responsive** - Added CSS media queries for mobile (375px+), tablet (769-1024px) breakpoints

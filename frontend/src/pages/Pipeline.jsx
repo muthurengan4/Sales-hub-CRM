@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import SlideInPanel from '../components/SlideInPanel';
 import ActionDropdown from '../components/ActionDropdown';
-import { Plus, Loader2, DollarSign, Calendar, Trash2, Edit, Sparkles, Building2, Search, Eye, X } from 'lucide-react';
+import { Plus, Loader2, DollarSign, Calendar, Trash2, Edit, Sparkles, Building2, Search, Eye, X, FileText, Upload } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -29,7 +29,7 @@ const initialFormData = {
 };
 
 // Deal Form Fields - MOVED OUTSIDE to prevent re-renders
-const DealFormFields = memo(({ data, onChange, isEdit = false, companies = [], companySearch, setCompanySearch }) => (
+const DealFormFields = memo(({ data, onChange, isEdit = false, companies = [], companySearch, setCompanySearch, knowledgeBaseFile, setKnowledgeBaseFile }) => (
   <div className="space-y-6">
     <div>
       <label className="block text-sm font-medium mb-2">Deal Title *</label>
@@ -74,6 +74,44 @@ const DealFormFields = memo(({ data, onChange, isEdit = false, companies = [], c
       >
         {STAGES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
       </select>
+    </div>
+
+    {/* Knowledge Base Upload - for AI Training */}
+    <div>
+      <label className="block text-sm font-medium mb-2">
+        Knowledge Base (Optional)
+        <span className="text-xs text-muted-foreground ml-2">- Train AI to speak about this deal</span>
+      </label>
+      <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary transition-colors">
+        <input 
+          type="file" 
+          accept=".pdf,.doc,.docx,.txt"
+          className="hidden" 
+          id="knowledge-base-upload"
+          onChange={(e) => setKnowledgeBaseFile && setKnowledgeBaseFile(e.target.files[0])}
+        />
+        <label htmlFor="knowledge-base-upload" className="cursor-pointer">
+          {knowledgeBaseFile ? (
+            <div className="flex items-center justify-center gap-2 text-primary">
+              <FileText className="w-5 h-5" />
+              <span className="font-medium">{knowledgeBaseFile.name}</span>
+              <button 
+                type="button"
+                onClick={(e) => { e.preventDefault(); setKnowledgeBaseFile && setKnowledgeBaseFile(null); }}
+                className="text-muted-foreground hover:text-destructive ml-2"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Upload product info, pricing, or brochure</p>
+              <p className="text-xs text-muted-foreground mt-1">PDF, DOC, TXT (Max 10MB)</p>
+            </>
+          )}
+        </label>
+      </div>
     </div>
     
     {/* LINK COMPANIES Section - matching Picture 2 */}
@@ -135,6 +173,7 @@ export default function Pipeline() {
   const [formData, setFormData] = useState(initialFormData);
   const [companies, setCompanies] = useState([]);
   const [companySearch, setCompanySearch] = useState('');
+  const [knowledgeBaseFile, setKnowledgeBaseFile] = useState(null);
 
   useEffect(() => { fetchDeals(); fetchCompanies(); }, []);
 
@@ -360,7 +399,7 @@ export default function Pipeline() {
       {/* Create Deal Slide-in Panel */}
       <SlideInPanel isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create New Deal">
         <form onSubmit={handleCreate}>
-          <DealFormFields data={formData} onChange={handleInputChange} companies={companies} companySearch={companySearch} setCompanySearch={setCompanySearch} />
+          <DealFormFields data={formData} onChange={handleInputChange} companies={companies} companySearch={companySearch} setCompanySearch={setCompanySearch} knowledgeBaseFile={knowledgeBaseFile} setKnowledgeBaseFile={setKnowledgeBaseFile} />
           <div className="flex gap-3 mt-6 pt-4 border-t border-border">
             <button type="submit" disabled={formLoading} className="elstar-btn-primary flex-1 flex items-center justify-center gap-2" data-testid="submit-deal-btn">
               {formLoading && <Loader2 className="w-4 h-4 animate-spin" />} Create Deal
@@ -373,7 +412,7 @@ export default function Pipeline() {
       {/* Edit Deal Slide-in Panel */}
       <SlideInPanel isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} title="Edit Deal">
         <form onSubmit={handleEdit}>
-          <DealFormFields data={formData} onChange={handleInputChange} isEdit companies={companies} companySearch={companySearch} setCompanySearch={setCompanySearch} />
+          <DealFormFields data={formData} onChange={handleInputChange} isEdit companies={companies} companySearch={companySearch} setCompanySearch={setCompanySearch} knowledgeBaseFile={knowledgeBaseFile} setKnowledgeBaseFile={setKnowledgeBaseFile} />
           <div className="flex gap-3 mt-6 pt-4 border-t border-border">
             <button type="submit" disabled={formLoading} className="elstar-btn-primary flex-1 flex items-center justify-center gap-2">
               {formLoading && <Loader2 className="w-4 h-4 animate-spin" />} Update Deal
