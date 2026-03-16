@@ -1220,7 +1220,7 @@ export default function Leads() {
         onClose={() => { setAiCallModal(false); setSelectedLeadForCall(null); }} 
         title={selectedLeadForCall ? "Start AI Calling" : `Start AI Calling (${selectedLeads.size} leads)`}
       >
-        <div className="space-y-4">
+        <div className="elstar-modal-body space-y-4">
           {/* Selected Lead Info (for single lead call) */}
           {selectedLeadForCall && (
             <div className="p-4 bg-secondary/50 rounded-lg">
@@ -1293,7 +1293,7 @@ export default function Leads() {
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 mt-6">
+        <div className="elstar-modal-footer">
           <button 
             onClick={() => { setAiCallModal(false); setSelectedLeadForCall(null); }} 
             className="elstar-btn-ghost"
