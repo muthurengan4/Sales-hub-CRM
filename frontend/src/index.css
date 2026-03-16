@@ -771,3 +771,111 @@ div[style*="position: fixed"][style*="right: 16px"][style*="bottom: 16px"] {
   background: linear-gradient(135deg, #A8E6E6 0%, #7DD8D8 100%);
 }
 
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  /* General mobile adjustments */
+  .elstar-card {
+    padding: 1rem;
+  }
+  
+  /* Make tables horizontally scrollable */
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Reduce font sizes on mobile */
+  h1 {
+    font-size: 1.5rem !important;
+  }
+  
+  h2 {
+    font-size: 1.25rem !important;
+  }
+  
+  /* Adjust sidebar for mobile */
+  .sidebar-container {
+    width: 100% !important;
+    position: fixed;
+    z-index: 50;
+  }
+  
+  /* Form inputs full width on mobile */
+  .elstar-input,
+  .elstar-select {
+    font-size: 16px !important; /* Prevent zoom on iOS */
+  }
+  
+  /* Button adjustments */
+  .elstar-btn-primary,
+  .elstar-btn-ghost {
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+  }
+  
+  /* Table cell padding reduction */
+  table th,
+  table td {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.75rem;
+  }
+  
+  /* Slide panel full width on mobile */
+  [data-testid="slide-panel"] {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  /* Modal full width on mobile */
+  .elstar-modal {
+    width: 95% !important;
+    max-width: 100% !important;
+    margin: 1rem;
+  }
+  
+  /* Grid adjustments */
+  .grid-cols-12 {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  }
+  
+  /* Card grid for dashboard */
+  .grid-cols-2,
+  .grid-cols-3,
+  .grid-cols-4 {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* Tablet adjustments */
+  .grid-cols-12 {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  }
+  
+  .grid-cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Ensure viewport scaling works properly */
+@media screen and (max-width: 480px) {
+  html {
+    font-size: 14px;
+  }
+  
+  /* Pipeline cards stack vertically */
+  .flex.gap-4.overflow-x-auto {
+    flex-direction: column;
+    overflow-x: visible;
+  }
+  
+  /* Action buttons wrap */
+  .flex.gap-2.flex-wrap {
+    gap: 0.5rem;
+  }
+  
+  .flex.gap-2.flex-wrap > button {
+    flex: 1 1 calc(50% - 0.25rem);
+    min-width: 0;
+    justify-content: center;
+  }
+}

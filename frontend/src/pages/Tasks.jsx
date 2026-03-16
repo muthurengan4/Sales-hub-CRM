@@ -406,7 +406,12 @@ export default function Tasks() {
                         </td>
                         <td className="px-4 py-4">
                           {task.deal_name ? (
-                            <span className="text-primary font-medium">{task.deal_name}</span>
+                            <div>
+                              <span className="text-primary font-medium">{task.deal_name}</span>
+                              {task.deal_value && (
+                                <p className="text-xs text-muted-foreground mt-0.5">RM {task.deal_value?.toLocaleString()}</p>
+                              )}
+                            </div>
                           ) : (
                             <span className="text-muted-foreground">-</span>
                           )}
@@ -508,24 +513,8 @@ export default function Tasks() {
             >
               <option value="">Select deal...</option>
               {deals.map(deal => (
-                <option key={deal.id} value={deal.id}>{deal.title}</option>
+                <option key={deal.id} value={deal.id}>{deal.title} - RM {(deal.value || 0).toLocaleString()}</option>
               ))}
-            </select>
-          </div>
-
-          {/* Status */}
-          <div>
-            <label className="block text-sm text-muted-foreground mb-2">Status *</label>
-            <select
-              value={formData.status}
-              onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
-              className="w-full bg-card border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary"
-              data-testid="task-status-select"
-            >
-              <option value="">Select status...</option>
-              <option value="pending">Pending</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
             </select>
           </div>
 

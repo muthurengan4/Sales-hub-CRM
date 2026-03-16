@@ -13,7 +13,7 @@ import {
 const API = process.env.REACT_APP_BACKEND_URL;
 
 const PIPELINE_STAGES = [
-  { id: 'new', label: 'New' },
+  { id: 'lead', label: 'Lead' },
   { id: 'qualified', label: 'Qualified' },
   { id: 'proposal', label: 'Proposal' },
   { id: 'negotiation', label: 'Negotiation' },
@@ -37,7 +37,7 @@ export default function LeadDetailPage() {
   
   const [lead, setLead] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [pipelineStatus, setPipelineStatus] = useState('new');
+  const [pipelineStatus, setPipelineStatus] = useState('lead');
   const [remark, setRemark] = useState('');
   const [selectedDealId, setSelectedDealId] = useState('');
   const [activities, setActivities] = useState([]);
@@ -87,7 +87,9 @@ export default function LeadDetailPage() {
       if (response.ok) {
         const data = await response.json();
         setLead(data);
-        setPipelineStatus(data.pipeline_status || data.status || 'new');
+        // Map 'new' to 'lead' for consistency
+        const status = data.pipeline_status || data.status || 'lead';
+        setPipelineStatus(status === 'new' ? 'lead' : status);
         // Check if lead is already converted to customer
         setIsCustomer(data.converted_to_customer === true || data.status === 'customer');
       } else {
@@ -198,6 +200,12 @@ export default function LeadDetailPage() {
   };
 
   const handleUpdateStatus = async () => {
+    // Validate deal selection is mandatory
+    if (!selectedDealId) {
+      toast.error('Please select a deal before saving');
+      return;
+    }
+    
     setSaving(true);
     try {
       // Update lead status
@@ -210,14 +218,14 @@ export default function LeadDetailPage() {
         body: JSON.stringify({ 
           ...lead,
           pipeline_status: pipelineStatus,
-          status: pipelineStatus === 'closed' ? 'qualified' : (pipelineStatus === 'new' ? 'new' : 'contacted')
+          status: pipelineStatus === 'closed' ? 'qualified' : (pipelineStatus === 'lead' ? 'new' : 'contacted')
         })
       });
       
       if (response.ok) {
-        // Log activity if remark exists
+        // Log activity
         const activityDescription = `Status updated to ${PIPELINE_STAGES.find(s => s.id === pipelineStatus)?.label}`;
-        const selectedDeal = selectedDealId ? allDeals.find(d => d.id === selectedDealId) : null;
+        const selectedDeal = allDeals.find(d => d.id === selectedDealId);
         
         await fetch(`${API}/api/leads/${id}/activities`, {
           method: 'POST',
@@ -232,59 +240,41 @@ export default function LeadDetailPage() {
           })
         });
 
-        // If a deal is selected, link this lead to that deal
-        if (selectedDealId) {
-          const selectedDealData = allDeals.find(d => d.id === selectedDealId);
-          if (selectedDealData) {
-            const existingLinkedIds = selectedDealData.linked_company_ids || [];
-            if (!existingLinkedIds.includes(id)) {
-              await fetch(`${API}/api/deals/${selectedDealId}`, {
-                method: 'PUT',
-                headers: { 
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${token}` 
-                },
-                body: JSON.stringify({ 
-                  linked_company_ids: [...existingLinkedIds, id],
-                  stage: pipelineStatus === 'closed' ? 'sales_closed' : (pipelineStatus === 'lost' ? 'lost' : selectedDealData.stage)
-                })
-              });
-            }
-          }
-        }
-        
-        // Auto-create deal when status is changed to qualified, proposal, negotiation, or closed (only if no deal selected)
-        if (!selectedDealId && ['qualified', 'proposal', 'negotiation', 'closed'].includes(pipelineStatus)) {
-          const existingDeal = deals.find(d => d.linked_company_ids?.includes(id));
-          if (!existingDeal) {
-            const dealResponse = await fetch(`${API}/api/deals`, {
-              method: 'POST',
-              headers: { 
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}` 
-              },
-              body: JSON.stringify({
-                title: `${lead.company || lead.name} Deal`,
-                value: 0,
-                stage: pipelineStatus === 'closed' ? 'sales_closed' : pipelineStatus,
-                linked_company_ids: [id],
-                expected_close_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-              })
-            });
-            if (dealResponse.ok) {
-              toast.success('Deal automatically created');
-            }
-          } else {
-            // Update existing deal stage
-            await fetch(`${API}/api/deals/${existingDeal.id}`, {
+        // Link this lead to the selected deal
+        if (selectedDeal) {
+          const existingLinkedIds = selectedDeal.linked_company_ids || [];
+          if (!existingLinkedIds.includes(id)) {
+            await fetch(`${API}/api/deals/${selectedDealId}`, {
               method: 'PUT',
               headers: { 
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${token}` 
               },
-              body: JSON.stringify({ stage: pipelineStatus === 'closed' ? 'sales_closed' : pipelineStatus })
+              body: JSON.stringify({ 
+                linked_company_ids: [...existingLinkedIds, id],
+                stage: pipelineStatus === 'closed' ? 'sales_closed' : (pipelineStatus === 'lost' ? 'lost' : pipelineStatus)
+              })
             });
           }
+          
+          // Auto-create task for this lead-deal linkage
+          await fetch(`${API}/api/tasks`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}` 
+            },
+            body: JSON.stringify({
+              title: lead.company || lead.name,
+              description: remark || `Follow up for ${selectedDeal.title}`,
+              lead_id: id,
+              deal_id: selectedDealId,
+              status: 'pending',
+              priority: 'medium',
+              payment_status: 'unpaid'
+            })
+          });
+          toast.success('Task created for this deal');
         }
         
         toast.success('Pipeline status updated');
@@ -562,33 +552,124 @@ export default function LeadDetailPage() {
           <div className="bg-white dark:bg-card rounded-xl p-4 shadow-sm border border-border">
             <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider mb-4">Contact Information</h3>
             <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
-                  <Mail className="w-4 h-4 text-amber-600" />
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                  <User className="w-4 h-4 text-purple-600" />
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Email</p>
-                  <p className="text-sm font-medium">{lead.email || '-'}</p>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">PIC Name</p>
+                  <p className="text-sm font-medium break-words">{lead.pic_name || lead.name || '-'}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                  <Building2 className="w-4 h-4 text-amber-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Company</p>
+                  <p className="text-sm font-medium break-words">{lead.company || '-'}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <Mail className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Email</p>
+                  <p className="text-sm font-medium break-words">{lead.email || '-'}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
                   <Phone className="w-4 h-4 text-emerald-600" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">Phone</p>
-                  <p className="text-sm font-medium">{lead.phone || lead.office_number || '-'}</p>
+                  <p className="text-sm font-medium break-words">{lead.phone || '-'}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                  <MapPin className="w-4 h-4 text-blue-600" />
+              {lead.office_number && (
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
+                    <Phone className="w-4 h-4 text-slate-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Office Number</p>
+                    <p className="text-sm font-medium break-words">{lead.office_number}</p>
+                  </div>
                 </div>
+              )}
+            </div>
+          </div>
+
+          {/* Full Address Card */}
+          <div className="bg-white dark:bg-card rounded-xl p-4 shadow-sm border border-border">
+            <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider mb-4">Address</h3>
+            <div className="space-y-3">
+              {lead.address && (
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm break-words">{lead.address}</p>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                {lead.postcode && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Postcode</p>
+                    <p className="font-medium">{lead.postcode}</p>
+                  </div>
+                )}
+                {lead.city && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">City</p>
+                    <p className="font-medium">{lead.city}</p>
+                  </div>
+                )}
+                {lead.state && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">State</p>
+                    <p className="font-medium">{lead.state}</p>
+                  </div>
+                )}
+                {lead.country && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Country</p>
+                    <p className="font-medium">{lead.country}</p>
+                  </div>
+                )}
+              </div>
+              {!lead.address && !lead.city && !lead.state && !lead.country && (
+                <p className="text-sm text-muted-foreground">No address information</p>
+              )}
+            </div>
+          </div>
+
+          {/* Additional Info Card */}
+          <div className="bg-white dark:bg-card rounded-xl p-4 shadow-sm border border-border">
+            <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider mb-4">Additional Details</h3>
+            <div className="space-y-3 text-sm">
+              {lead.source && (
                 <div>
-                  <p className="text-xs text-muted-foreground">Location</p>
-                  <p className="text-sm font-medium">{lead.city || lead.state || lead.country || '-'}</p>
+                  <p className="text-xs text-muted-foreground">Source</p>
+                  <p className="font-medium">{lead.source}</p>
                 </div>
+              )}
+              {lead.industry && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Industry</p>
+                  <p className="font-medium">{lead.industry}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-xs text-muted-foreground">AI Score</p>
+                <p className="font-medium text-amber-600">{lead.ai_score || 0}/100</p>
               </div>
+              {lead.notes && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Notes</p>
+                  <p className="text-sm break-words">{lead.notes}</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -648,22 +729,24 @@ export default function LeadDetailPage() {
               ))}
             </div>
 
-            {/* Deal Selection - Shows all deals dynamically */}
+            {/* Deal Selection - Mandatory */}
             <div>
-              <label className="block text-sm font-medium mb-2">Associate with Deal</label>
+              <label className="block text-sm font-medium mb-2">Associate with Deal <span className="text-red-500">*</span></label>
               <select
                 value={selectedDealId}
                 onChange={(e) => setSelectedDealId(e.target.value)}
-                className="elstar-select w-full"
+                className={`elstar-select w-full ${!selectedDealId ? 'border-red-300' : ''}`}
                 data-testid="deal-select"
+                required
               >
-                <option value="">Select a deal (optional)</option>
+                <option value="">Select a deal (required)</option>
                 {allDeals.map(deal => (
                   <option key={deal.id} value={deal.id}>
                     {deal.title} - RM {(deal.value || 0).toLocaleString()}
                   </option>
                 ))}
               </select>
+              {!selectedDealId && <p className="text-xs text-red-500 mt-1">Please select a deal to continue</p>}
             </div>
 
             <textarea

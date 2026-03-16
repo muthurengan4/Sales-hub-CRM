@@ -1628,11 +1628,35 @@ async def update_lead(lead_id: str, lead_data: LeadUpdate, user: dict = Depends(
     update_data = {k: v for k, v in lead_data.model_dump().items() if v is not None}
     update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
     
-    # Recalculate AI score if needed
+    # Calculate AI score based on pipeline status
+    pipeline_status = update_data.get('pipeline_status') or lead.get('pipeline_status', 'lead')
+    pipeline_scores = {
+        'lead': 20,
+        'new': 20,
+        'qualified': 40,
+        'proposal': 60,
+        'negotiation': 75,
+        'closed': 100,
+        'sales_closed': 100,
+        'lost': 0
+    }
+    base_score = pipeline_scores.get(pipeline_status, 20)
+    
+    # Add bonus points for engagement
+    bonus = 0
+    if lead.get('email'): bonus += 5
+    if lead.get('phone'): bonus += 5
+    if lead.get('company'): bonus += 5
+    if lead.get('notes'): bonus += 5
+    
+    update_data['ai_score'] = min(100, base_score + bonus)
+    
+    # Also recalculate if company info changes
     if any(k in update_data for k in ['company', 'title', 'company_size', 'email', 'phone']):
         lead.update(update_data)
         ai_result = await calculate_lead_score(lead)
-        update_data['ai_score'] = ai_result['score']
+        if ai_result['score'] > update_data['ai_score']:
+            update_data['ai_score'] = ai_result['score']
         update_data['ai_insights'] = ai_result['insights']
     
     await db.leads.update_one({'id': lead_id}, {'$set': update_data})

@@ -514,6 +514,54 @@ export default function Settings() {
         </div>
       )}
 
+      {/* AI Score Configuration - Admin Only */}
+      {isAdmin && user?.organization_id && (
+        <div className="elstar-card p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-purple-500" />
+            </div>
+            <div>
+              <h2 className="font-semibold">AI Score Configuration</h2>
+              <p className="text-sm text-muted-foreground">Configure how AI scores are calculated based on pipeline stages</p>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              AI Score is automatically calculated based on the lead's pipeline stage. Each stage has a base score that contributes to the final AI Score.
+            </p>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {[
+                { stage: 'Lead', score: 20, color: 'bg-slate-500' },
+                { stage: 'Qualified', score: 40, color: 'bg-amber-500' },
+                { stage: 'Proposal', score: 60, color: 'bg-orange-500' },
+                { stage: 'Negotiation', score: 75, color: 'bg-red-500' },
+                { stage: 'Sales Closed', score: 100, color: 'bg-blue-500' },
+                { stage: 'Lost', score: 0, color: 'bg-gray-600' }
+              ].map(item => (
+                <div key={item.stage} className="p-3 rounded-lg bg-secondary/50 border border-border">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`w-3 h-3 rounded-full ${item.color}`}></div>
+                    <span className="font-medium text-sm">{item.stage}</span>
+                  </div>
+                  <p className="text-2xl font-bold text-primary">{item.score}</p>
+                  <p className="text-xs text-muted-foreground">Base Score</p>
+                </div>
+              ))}
+            </div>
+            
+            <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <p className="text-sm text-amber-600 dark:text-amber-400">
+                <strong>How it works:</strong> When a lead's pipeline status is updated, the AI Score is automatically recalculated. 
+                Additional factors like engagement, deal value, and activity count may also influence the final score.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* AI Features Card */}
       <div className="elstar-card p-6 border-primary/20">
         <div className="flex items-center gap-3 mb-4">

@@ -348,13 +348,12 @@ export default function Customers() {
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <span className="font-medium text-foreground">{companyName}</span>
                                 <button
                                   onClick={() => openPreviewPanel(customer)}
-                                  className="text-xs text-muted-foreground hover:text-primary border border-border rounded px-2 py-0.5 hover:border-primary transition-colors"
-                                  data-testid={`preview-customer-${customer.id}`}
+                                  className="font-medium text-foreground hover:text-primary hover:underline cursor-pointer transition-colors"
+                                  data-testid={`company-name-${customer.id}`}
                                 >
-                                  Preview
+                                  {companyName}
                                 </button>
                               </div>
                               <p className="text-xs text-muted-foreground mt-0.5">{industry} - {country}</p>
@@ -552,7 +551,16 @@ export default function Customers() {
             {/* Footer */}
             <div className="border-t border-border px-6 py-4 flex items-center gap-3">
               <button
-                onClick={() => navigate(`/profile/customer/${selectedCustomer.id}`)}
+                onClick={() => {
+                  // Navigate to lead detail page if lead_id exists, otherwise stay on customer view
+                  if (selectedCustomer.lead_id) {
+                    navigate(`/leads/${selectedCustomer.lead_id}`);
+                  } else {
+                    // For customers without a lead_id, navigate to customers list
+                    toast.info('This customer was not converted from a lead');
+                    setIsPreviewOpen(false);
+                  }
+                }}
                 className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 rounded-lg text-sm font-medium transition-colors"
               >
                 Open Full Profile

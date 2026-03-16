@@ -3,9 +3,25 @@
 ## Original Problem Statement
 Build an AI-powered CRM with Lead Management, Pipeline & Deals, Analytics Dashboard, and AI features.
 
-## Latest Update (March 16, 2026)
+## Latest Update (March 16, 2026) - Batch 2
 
-### Major Corrections Batch (8 items)
+### 10 Corrections Implemented
+1. ✅ **Mobile Responsive** - Added CSS media queries for mobile (375px+), tablet (769-1024px) breakpoints
+2. ✅ **Lead Detail - Full Address** - Left sidebar now shows Contact Info, Address (postcode, city, state, country), Additional Details, Ownership
+3. ✅ **Deal Selection Mandatory** - "Associate with Deal" now required with red asterisk and validation
+4. ✅ **AI Score Configuration** - New Settings section showing base scores by pipeline stage (Lead:20, Qualified:40, Proposal:60, Negotiation:75, Sales Closed:100, Lost:0)
+5. ✅ **Pipeline "New" → "Lead"** - Changed first stage from "New" to "Lead" everywhere
+6. ✅ **Task Auto-creation Fixed** - Tasks now auto-created when pipeline status is updated with a deal
+7. ✅ **Tasks - Deal Cost** - Deal column now shows deal name + RM amount below
+8. ✅ **Tasks - Removed Status from Edit** - Status field removed from task edit form
+9. ✅ **Customers - Clickable Company Name** - Company name directly opens preview panel (removed separate Preview button)
+10. ✅ **Customers - Open Full Profile** - Now navigates to lead detail page if customer was converted from a lead
+
+### Additional Fixes
+- AI Score auto-updates based on pipeline status changes (backend updated)
+- Backend calculates score: base_score + bonus points (email:+5, phone:+5, company:+5, notes:+5)
+
+## Previous Update (March 16, 2026) - Batch 1
 1. ✅ **Dashboard** - Analytics data already dynamically updates based on activities
 2. ✅ **Lead Detail - Pipeline Status Update** - Added "Associate with Deal" dropdown showing all deals dynamically, comment textarea, Save Update button
 3. ✅ **Lead Detail - Activity Summary** - Replaced "Company" section with "Activity Summary" showing Total Activities, AI Calls, WhatsApp, AI Score
