@@ -17,7 +17,8 @@ const PIPELINE_STAGES = [
   { id: 'qualified', label: 'Qualified' },
   { id: 'proposal', label: 'Proposal' },
   { id: 'negotiation', label: 'Negotiation' },
-  { id: 'closed', label: 'Sales Closed' }
+  { id: 'closed', label: 'Sales Closed' },
+  { id: 'lost', label: 'Lost' }
 ];
 
 const LOG_ACTIVITY_TYPES = [
@@ -38,9 +39,12 @@ export default function LeadDetailPage() {
   const [loading, setLoading] = useState(true);
   const [pipelineStatus, setPipelineStatus] = useState('new');
   const [remark, setRemark] = useState('');
+  const [selectedDealId, setSelectedDealId] = useState('');
   const [activities, setActivities] = useState([]);
   const [deals, setDeals] = useState([]);
+  const [allDeals, setAllDeals] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [isCustomer, setIsCustomer] = useState(false);
   
   // Activity modal states
   const [activityModal, setActivityModal] = useState({ isOpen: false, type: null });
@@ -62,6 +66,7 @@ export default function LeadDetailPage() {
     fetchLead();
     fetchActivities();
     fetchDeals();
+    fetchAllDeals();
   }, [id]);
 
   useEffect(() => {
@@ -83,6 +88,8 @@ export default function LeadDetailPage() {
         const data = await response.json();
         setLead(data);
         setPipelineStatus(data.pipeline_status || data.status || 'new');
+        // Check if lead is already converted to customer
+        setIsCustomer(data.converted_to_customer === true || data.status === 'customer');
       } else {
         toast.error('Lead not found');
         navigate('/leads');
@@ -91,6 +98,20 @@ export default function LeadDetailPage() {
       toast.error('Failed to load lead');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAllDeals = async () => {
+    try {
+      const response = await fetch(`${API}/api/deals`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAllDeals(data || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch all deals');
     }
   };
 
@@ -195,23 +216,45 @@ export default function LeadDetailPage() {
       
       if (response.ok) {
         // Log activity if remark exists
-        if (remark.trim()) {
-          await fetch(`${API}/api/leads/${id}/activities`, {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}` 
-            },
-            body: JSON.stringify({
-              type: 'status_update',
-              description: `Status updated to ${PIPELINE_STAGES.find(s => s.id === pipelineStatus)?.label}`,
-              notes: remark
-            })
-          });
+        const activityDescription = `Status updated to ${PIPELINE_STAGES.find(s => s.id === pipelineStatus)?.label}`;
+        const selectedDeal = selectedDealId ? allDeals.find(d => d.id === selectedDealId) : null;
+        
+        await fetch(`${API}/api/leads/${id}/activities`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}` 
+          },
+          body: JSON.stringify({
+            type: 'status_update',
+            description: selectedDeal ? `${activityDescription} - Deal: ${selectedDeal.title}` : activityDescription,
+            notes: remark || ''
+          })
+        });
+
+        // If a deal is selected, link this lead to that deal
+        if (selectedDealId) {
+          const selectedDealData = allDeals.find(d => d.id === selectedDealId);
+          if (selectedDealData) {
+            const existingLinkedIds = selectedDealData.linked_company_ids || [];
+            if (!existingLinkedIds.includes(id)) {
+              await fetch(`${API}/api/deals/${selectedDealId}`, {
+                method: 'PUT',
+                headers: { 
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}` 
+                },
+                body: JSON.stringify({ 
+                  linked_company_ids: [...existingLinkedIds, id],
+                  stage: pipelineStatus === 'closed' ? 'sales_closed' : (pipelineStatus === 'lost' ? 'lost' : selectedDealData.stage)
+                })
+              });
+            }
+          }
         }
         
-        // Auto-create deal when status is changed to qualified, proposal, negotiation, or closed
-        if (['qualified', 'proposal', 'negotiation', 'closed'].includes(pipelineStatus)) {
+        // Auto-create deal when status is changed to qualified, proposal, negotiation, or closed (only if no deal selected)
+        if (!selectedDealId && ['qualified', 'proposal', 'negotiation', 'closed'].includes(pipelineStatus)) {
           const existingDeal = deals.find(d => d.linked_company_ids?.includes(id));
           if (!existingDeal) {
             const dealResponse = await fetch(`${API}/api/deals`, {
@@ -230,7 +273,6 @@ export default function LeadDetailPage() {
             });
             if (dealResponse.ok) {
               toast.success('Deal automatically created');
-              fetchDeals();
             }
           } else {
             // Update existing deal stage
@@ -242,14 +284,16 @@ export default function LeadDetailPage() {
               },
               body: JSON.stringify({ stage: pipelineStatus === 'closed' ? 'sales_closed' : pipelineStatus })
             });
-            fetchDeals();
           }
         }
         
         toast.success('Pipeline status updated');
         setRemark('');
+        setSelectedDealId('');
         fetchLead();
         fetchActivities();
+        fetchDeals();
+        fetchAllDeals();
       }
     } catch (error) {
       toast.error('Failed to update status');
@@ -491,15 +535,22 @@ export default function LeadDetailPage() {
             <Edit className="w-4 h-4" />
             Edit
           </button>
-          <button 
-            onClick={handleConvertToCustomer}
-            disabled={saving}
-            className="elstar-btn-primary flex items-center gap-2"
-            data-testid="convert-customer-btn"
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
-            Convert to Customer
-          </button>
+          {isCustomer ? (
+            <span className="px-4 py-2 rounded-lg bg-green-500/20 text-green-500 font-medium flex items-center gap-2">
+              <UserCheck className="w-4 h-4" />
+              Customer
+            </span>
+          ) : (
+            <button 
+              onClick={handleConvertToCustomer}
+              disabled={saving}
+              className="elstar-btn-primary flex items-center gap-2"
+              data-testid="convert-customer-btn"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
+              Convert to Customer
+            </button>
+          )}
         </div>
       </div>
 
@@ -610,7 +661,7 @@ export default function LeadDetailPage() {
                   onClick={() => setPipelineStatus(stage.id)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                     pipelineStatus === stage.id
-                      ? 'bg-amber-500 text-black'
+                      ? stage.id === 'lost' ? 'bg-gray-600 text-white' : 'bg-amber-500 text-black'
                       : 'bg-secondary hover:bg-secondary/80 text-foreground'
                   }`}
                   data-testid={`stage-${stage.id}`}
@@ -620,10 +671,28 @@ export default function LeadDetailPage() {
               ))}
             </div>
 
+            {/* Deal Selection - Shows all deals dynamically */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Associate with Deal</label>
+              <select
+                value={selectedDealId}
+                onChange={(e) => setSelectedDealId(e.target.value)}
+                className="elstar-select w-full"
+                data-testid="deal-select"
+              >
+                <option value="">Select a deal (optional)</option>
+                {allDeals.map(deal => (
+                  <option key={deal.id} value={deal.id}>
+                    {deal.title} - RM {(deal.value || 0).toLocaleString()}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <textarea
               value={remark}
               onChange={(e) => setRemark(e.target.value)}
-              placeholder="Add remark..."
+              placeholder="Add comment..."
               className="elstar-input min-h-[80px] w-full"
               data-testid="remark-input"
             />
@@ -752,36 +821,37 @@ export default function LeadDetailPage() {
           </div>
         </div>
 
-        {/* Right Sidebar - Company & Deals */}
+        {/* Right Sidebar - Activity Summary & Deals */}
         <div className="col-span-12 lg:col-span-3 space-y-4">
-          {/* Company Section */}
+          {/* Activity Summary Section - Replacing Company */}
           <div className="bg-white dark:bg-card rounded-xl p-4 shadow-sm border border-border">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider">Company</h3>
+              <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider">Activity Summary</h3>
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold">
-                  {(lead.company || lead.name)?.charAt(0)?.toUpperCase() || '?'}
-                </div>
-                <div>
-                  <p className="font-semibold text-sm">{lead.company || lead.name}</p>
-                  <p className="text-xs text-muted-foreground">{lead.office_number || '-'}</p>
-                </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-gray-50 dark:bg-secondary rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-amber-600">{activities.length}</p>
+                <p className="text-xs text-muted-foreground">Total Activities</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-secondary rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-blue-600">{aiCallsCount}</p>
+                <p className="text-xs text-muted-foreground">AI Calls</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-secondary rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-green-600">{whatsappMessages.length}</p>
+                <p className="text-xs text-muted-foreground">WhatsApp</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-secondary rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-purple-600">{lead.ai_score || 0}</p>
+                <p className="text-xs text-muted-foreground">AI Score</p>
               </div>
             </div>
           </div>
 
-          {/* Deals Section - Shows deals auto-created from status updates */}
+          {/* Deals Section - Shows deals auto-created from status updates - NO ADD BUTTON */}
           <div className="bg-white dark:bg-card rounded-xl p-4 shadow-sm border border-border">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider">Deals</h3>
-              <button 
-                onClick={() => navigate('/pipeline')}
-                className="text-xs text-amber-500 hover:underline"
-              >
-                + Add
-              </button>
             </div>
             {deals.length > 0 ? (
               <div className="space-y-4">

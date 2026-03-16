@@ -3,7 +3,23 @@
 ## Original Problem Statement
 Build an AI-powered CRM with Lead Management, Pipeline & Deals, Analytics Dashboard, and AI features.
 
-## Latest Update (March 13, 2026)
+## Latest Update (March 16, 2026)
+
+### Major Corrections Batch (8 items)
+1. ✅ **Dashboard** - Analytics data already dynamically updates based on activities
+2. ✅ **Lead Detail - Pipeline Status Update** - Added "Associate with Deal" dropdown showing all deals dynamically, comment textarea, Save Update button
+3. ✅ **Lead Detail - Activity Summary** - Replaced "Company" section with "Activity Summary" showing Total Activities, AI Calls, WhatsApp, AI Score
+4. ✅ **Lead Detail - Deals Section** - Removed "+ Add" button, now only shows associated deals
+5. ✅ **Lead Detail - Convert to Customer** - If lead is already converted, button changes to "Customer" badge (green)
+6. ✅ **Pipeline Page - Lost Stage** - Added "Lost" as 6th pipeline stage (Lead, Qualified, Proposal, Negotiation, Sales Closed, Lost)
+7. ✅ **Pipeline Page - Date Picker** - Date field now has `showPicker()` to open calendar on click
+8. ✅ **Tasks Page - New Column Order**: NO., COMPANY NAME, PIC NAME, DEAL, PIPELINE, COMMENTS, DATE & TIME, PAYMENT
+
+### Text Changes
+- ✅ Changed "POC Name" to "PIC Name" in Leads page
+- ✅ Changed "Convert to Client" to "Convert to Customer" everywhere
+
+## Previous Updates (March 13, 2026)
 
 ### Twilio WhatsApp Integration (NEW - March 13, 2026)
 - ✅ **Backend integration** - Twilio SDK installed and configured

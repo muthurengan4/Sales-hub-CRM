@@ -14,7 +14,8 @@ const STAGES = [
   { id: 'qualified', label: 'Qualified', color: 'bg-amber-500' },
   { id: 'proposal', label: 'Proposal', color: 'bg-orange-500' },
   { id: 'negotiation', label: 'Negotiation', color: 'bg-red-500' },
-  { id: 'sales_closed', label: 'Sales Closed', color: 'bg-blue-500' }
+  { id: 'sales_closed', label: 'Sales Closed', color: 'bg-blue-500' },
+  { id: 'lost', label: 'Lost', color: 'bg-gray-600' }
 ];
 
 const getHealthClass = (score) => {
@@ -55,10 +56,11 @@ const DealFormFields = memo(({ data, onChange, isEdit = false, companies = [], c
       <div>
         <label className="block text-sm font-medium mb-2">Expected Close Date *</label>
         <input 
-          className="elstar-input" 
+          className="elstar-input cursor-pointer" 
           type="date" 
           value={data.expected_close_date || ''} 
           onChange={(e) => onChange('expected_close_date', e.target.value)}
+          onClick={(e) => e.target.showPicker && e.target.showPicker()}
           data-testid="deal-close-date-input"
         />
       </div>

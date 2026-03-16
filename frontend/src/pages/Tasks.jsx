@@ -380,15 +380,19 @@ export default function Tasks() {
                   <tr className="border-b border-border">
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-16">NO.</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">COMPANY NAME</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">DEAL</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">STATUS</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">PIC NAME</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">DEAL</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">PIPELINE</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">COMMENTS</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">DATE & TIME</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">PAYMENT</th>
                     <th className="w-12"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {tasks.map((task, index) => {
                     const statusDisplay = getStatusDisplay(task);
+                    const paymentDisplay = paymentStatusConfig[task.payment_status] || { label: task.payment_status || 'Unpaid', class: 'bg-gray-500/20 text-gray-400' };
                     return (
                       <tr key={task.id} className="border-b border-border hover:bg-secondary/30 transition-colors" data-testid={`task-row-${task.id}`}>
                         <td className="px-4 py-4 text-sm text-muted-foreground">
@@ -396,6 +400,9 @@ export default function Tasks() {
                         </td>
                         <td className="px-4 py-4">
                           <span className="font-medium">{task.company_name || task.title}</span>
+                        </td>
+                        <td className="px-4 py-4 text-sm">
+                          {task.pic_name || task.lead_name || '-'}
                         </td>
                         <td className="px-4 py-4">
                           {task.deal_name ? (
@@ -410,7 +417,22 @@ export default function Tasks() {
                           </span>
                         </td>
                         <td className="px-4 py-4 text-sm">
-                          {task.pic_name || task.lead_name || '-'}
+                          <span className="text-muted-foreground line-clamp-2 max-w-[150px]">
+                            {task.description || '-'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-sm text-muted-foreground">
+                          {task.due_date ? new Date(task.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="space-y-1">
+                            <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${paymentDisplay.class}`}>
+                              {paymentDisplay.label}
+                            </span>
+                            {task.paid_amount > 0 && (
+                              <p className="text-xs text-muted-foreground">RM {task.paid_amount?.toLocaleString()}</p>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-2">
                           <ActionDropdown testId={`task-actions-${task.id}`}>
