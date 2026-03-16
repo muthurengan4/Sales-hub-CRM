@@ -660,23 +660,9 @@ export default function Settings() {
                 <div className="text-center py-8 text-muted-foreground border-2 border-dashed border-border rounded-lg">
                   <Bot className="w-8 h-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">No AI agents configured yet</p>
-                  <p className="text-xs mt-1">Add your ElevenLabs agent IDs above</p>
+                  <p className="text-xs mt-1">Add your agent IDs above</p>
                 </div>
               )}
-            </div>
-
-            {/* Setup Instructions */}
-            <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
-              <p className="text-sm text-blue-600 dark:text-blue-400">
-                <strong>Setup Instructions:</strong>
-                <br />1. Sign up at{' '}
-                <a href="https://elevenlabs.io" target="_blank" rel="noopener noreferrer" className="underline">
-                  elevenlabs.io
-                </a>
-                <br />2. Create a Conversational AI Agent
-                <br />3. Copy the Agent ID from the agent settings
-                <br />4. Paste the Agent ID above and give it a name
-              </p>
             </div>
           </div>
         </div>
