@@ -886,9 +886,11 @@ export default function Leads() {
             data-testid="status-filter"
           >
             <option value="all">All Statuses</option>
-            <option value="new">New</option>
-            <option value="contacted">Contacted</option>
+            <option value="lead">Lead</option>
             <option value="qualified">Qualified</option>
+            <option value="proposal">Proposal</option>
+            <option value="negotiation">Negotiation</option>
+            <option value="sales_closed">Sales Closed</option>
             <option value="lost">Lost</option>
           </select>
           <select 
