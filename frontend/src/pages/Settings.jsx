@@ -34,7 +34,7 @@ export default function Settings() {
   
   // ElevenLabs AI Agents
   const [aiAgents, setAiAgents] = useState([]);
-  const [newAgent, setNewAgent] = useState({ name: '', agent_id: '', description: '' });
+  const [newAgent, setNewAgent] = useState({ name: '', agent_id: '' });
 
   useEffect(() => {
     if (user?.organization_id) {
@@ -96,7 +96,7 @@ export default function Settings() {
       if (response.ok) {
         const data = await response.json();
         setAiAgents(prev => [...prev, data.agent]);
-        setNewAgent({ name: '', agent_id: '', description: '' });
+        setNewAgent({ name: '', agent_id: '' });
         toast.success('AI Agent added successfully');
       } else {
         const error = await response.json();
@@ -592,7 +592,7 @@ export default function Settings() {
             {/* Add New Agent Form */}
             <div className="p-4 rounded-lg bg-secondary/30 border border-border">
               <h3 className="font-medium text-sm mb-3">Add New Agent</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium mb-1">Agent Name *</label>
                   <input
@@ -605,7 +605,7 @@ export default function Settings() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium mb-1">ElevenLabs Agent ID *</label>
+                  <label className="block text-xs font-medium mb-1">Agent ID *</label>
                   <input
                     type="text"
                     value={newAgent.agent_id}
@@ -613,16 +613,6 @@ export default function Settings() {
                     placeholder="e.g., abc123xyz..."
                     className="elstar-input text-sm"
                     data-testid="new-agent-id"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium mb-1">Description</label>
-                  <input
-                    type="text"
-                    value={newAgent.description}
-                    onChange={(e) => setNewAgent(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="e.g., Sales assistant"
-                    className="elstar-input text-sm"
                   />
                 </div>
               </div>
