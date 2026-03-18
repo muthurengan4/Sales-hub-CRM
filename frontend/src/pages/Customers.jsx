@@ -366,7 +366,12 @@ export default function Customers() {
                         
                         {/* PIC/Doctor Column */}
                         <td className="px-4 py-4 hidden sm:table-cell">
-                          <span className="text-sm">{customer.first_name || '-'} {customer.last_name || ''}</span>
+                          <span className="text-sm">
+                            {/* Show blank if first_name matches company name or is not set */}
+                            {(customer.first_name && customer.first_name !== customer.company && customer.first_name !== companyName) 
+                              ? `${customer.first_name}${customer.last_name ? ' ' + customer.last_name : ''}`
+                              : ''}
+                          </span>
                         </td>
                         
                         {/* Role Column */}

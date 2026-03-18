@@ -3549,6 +3549,16 @@ async def get_tasks(
             if deal:
                 task['deal_name'] = deal.get('title')
                 task['deal_value'] = deal.get('value')
+            
+            # Fetch pipeline_status from lead-deal linkage if both lead_id and deal_id exist
+            if task.get('lead_id'):
+                linkage = await db.lead_deal_linkages.find_one({
+                    'lead_id': task['lead_id'],
+                    'deal_id': task['deal_id'],
+                    'organization_id': user['organization_id']
+                }, {'_id': 0, 'pipeline_status': 1})
+                if linkage:
+                    task['pipeline_status'] = linkage.get('pipeline_status')
     
     return {
         "items": tasks,
