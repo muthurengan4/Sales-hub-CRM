@@ -934,10 +934,10 @@ export default function Leads() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="elstar-table">
+              <table className="elstar-table w-full">
                 <thead>
                   <tr>
-                    <th className="w-10">
+                    <th className="w-8 sm:w-10">
                       <input
                         type="checkbox"
                         checked={selectAll}
@@ -946,16 +946,16 @@ export default function Leads() {
                         data-testid="select-all-checkbox"
                       />
                     </th>
-                    <th>Company Name</th>
+                    <th className="min-w-[100px]">Company Name</th>
                     <th className="hidden sm:table-cell">PIC Name</th>
                     <th className="hidden md:table-cell">Mobile / Office</th>
                     <th className="hidden lg:table-cell">Email</th>
                     <th className="hidden lg:table-cell">Location</th>
                     <th className="hidden xl:table-cell">State</th>
                     <th className="hidden xl:table-cell">Country</th>
-                    <th>Status</th>
-                    <th className="text-center">AI Score</th>
-                    <th className="w-12"></th>
+                    <th className="w-20 sm:w-24">Status</th>
+                    <th className="w-14 sm:w-20 text-center">AI Score</th>
+                    <th className="w-10"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -980,9 +980,9 @@ export default function Leads() {
                         />
                       </td>
                       <td>
-                        <div className="flex items-center gap-2">
-                          <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
-                          <span className="font-medium truncate max-w-[150px] sm:max-w-[180px]">{lead.company || lead.name}</span>
+                        <div className="flex items-center gap-1 sm:gap-2">
+                          <Building2 className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0 text-muted-foreground" />
+                          <span className="font-medium truncate max-w-[80px] sm:max-w-[180px] text-xs sm:text-sm">{lead.company || lead.name}</span>
                         </div>
                       </td>
                       <td className="hidden sm:table-cell">
@@ -1016,14 +1016,14 @@ export default function Leads() {
                         <div className="text-xs text-muted-foreground">{lead.country || 'Malaysia'}</div>
                       </td>
                       <td>
-                        <span className={`elstar-badge text-xs ${statusConfig[lead.status]?.class || 'elstar-badge-info'}`}>
+                        <span className={`elstar-badge text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 ${statusConfig[lead.status]?.class || 'elstar-badge-info'}`}>
                           {statusConfig[lead.status]?.label || lead.status}
                         </span>
                       </td>
                       <td className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Sparkles className={`w-3 h-3 sm:w-4 sm:h-4 ${getScoreClass(lead.ai_score)}`} />
-                          <span className={`font-mono text-sm font-bold ${getScoreClass(lead.ai_score)}`}>{lead.ai_score}</span>
+                        <div className="flex items-center justify-center gap-0.5 sm:gap-1">
+                          <Sparkles className={`w-3 h-3 ${getScoreClass(lead.ai_score)}`} />
+                          <span className={`font-mono text-xs sm:text-sm font-bold ${getScoreClass(lead.ai_score)}`}>{lead.ai_score}</span>
                         </div>
                       </td>
                       <td onClick={(e) => e.stopPropagation()}>
