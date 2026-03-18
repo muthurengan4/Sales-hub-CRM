@@ -1,14 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../App';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, DollarSign, TrendingUp, Target, Sparkles, ArrowUpRight, ArrowDownRight,
   Contact2, Building2, AlertCircle, Briefcase, Activity, Clock, Globe, UserPlus,
   BarChart3, PieChart as PieChartIcon, Percent, TrendingDown, Zap, Award, 
-  Calendar, MapPin, LineChart as LineChartIcon
+  Calendar, MapPin, LineChart as LineChartIcon, Filter, X, ChevronDown
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
+
+// Pipeline stages for filter
+const PIPELINE_STAGES = [
+  { value: 'all', label: 'All Stages', color: '#6B7280' },
+  { value: 'lead', label: 'Lead', color: '#94a3b8' },
+  { value: 'qualified', label: 'Qualified', color: '#D4A017' },
+  { value: 'demo', label: 'Demo', color: '#E67E22' },
+  { value: 'proposal', label: 'Proposal', color: '#3498DB' },
+  { value: 'negotiation', label: 'Negotiation', color: '#9B59B6' },
+  { value: 'sales_closed', label: 'Closed Won', color: '#27AE60' },
+  { value: 'lost', label: 'Lost', color: '#E74C3C' }
+];
+
+// Lead statuses for filter
+const LEAD_STATUSES = [
+  { value: 'all', label: 'All Statuses', color: '#6B7280' },
+  { value: 'new', label: 'New', color: '#3498DB' },
+  { value: 'contacted', label: 'Contacted', color: '#E67E22' },
+  { value: 'qualified', label: 'Qualified', color: '#27AE60' },
+  { value: 'lost', label: 'Lost', color: '#E74C3C' }
+];
 
 // Animated Donut Chart Component
 const DonutChart = ({ data, colors, title, centerValue, centerLabel }) => {
@@ -144,11 +165,59 @@ const AnimatedProgressBar = ({ value, max, color, label }) => {
   );
 };
 
+// Filter Dropdown Component
+const FilterDropdown = ({ label, value, options, onChange, icon: Icon }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const selected = options.find(o => o.value === value) || options[0];
+  
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-card border border-border rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-secondary/50 transition-colors"
+        data-testid={`filter-${label.toLowerCase().replace(' ', '-')}`}
+      >
+        {Icon && <Icon className="w-4 h-4 text-muted-foreground" />}
+        <span className="text-muted-foreground">{label}:</span>
+        <span className="font-medium" style={{ color: selected.color }}>{selected.label}</span>
+        <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
+          <div className="absolute top-full left-0 mt-1 w-48 bg-white dark:bg-card border border-border rounded-lg shadow-lg z-20 py-1 animate-fade-in">
+            {options.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => { onChange(option.value); setIsOpen(false); }}
+                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-secondary/50 flex items-center gap-2 ${
+                  value === option.value ? 'bg-primary/5' : ''
+                }`}
+                data-testid={`filter-option-${option.value}`}
+              >
+                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: option.color }} />
+                <span>{option.label}</span>
+                {value === option.value && <span className="ml-auto text-primary">✓</span>}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
 export default function Dashboard() {
   const { token, user, hasPermission } = useAuth();
   const navigate = useNavigate();
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  // Filter states
+  const [pipelineFilter, setPipelineFilter] = useState('all');
+  const [leadStatusFilter, setLeadStatusFilter] = useState('all');
+  const [dateRange, setDateRange] = useState('all'); // all, 7days, 30days, 90days
 
   useEffect(() => { fetchAnalytics(); }, []);
 
@@ -158,6 +227,63 @@ export default function Dashboard() {
       if (response.ok) setAnalytics(await response.json());
     } catch (error) { console.error('Failed to fetch analytics:', error); }
     finally { setLoading(false); }
+  };
+
+  // Compute filtered analytics based on selected filters
+  const filteredAnalytics = useMemo(() => {
+    if (!analytics) return null;
+    
+    let filtered = { ...analytics };
+    
+    // Filter deals_by_stage based on pipeline filter
+    if (pipelineFilter !== 'all') {
+      const filteredStages = {};
+      if (analytics.deals_by_stage[pipelineFilter] !== undefined) {
+        filteredStages[pipelineFilter] = analytics.deals_by_stage[pipelineFilter];
+      }
+      filtered.deals_by_stage = filteredStages;
+      
+      // Recalculate totals based on filtered stage
+      const stageCount = filteredStages[pipelineFilter] || 0;
+      filtered.total_deals = stageCount;
+      
+      // Recalculate pipeline value for this stage
+      if (pipelineFilter === 'sales_closed') {
+        filtered.total_pipeline_value = 0;
+        filtered.won_deals_value = analytics.won_deals_value;
+      } else if (pipelineFilter === 'lost') {
+        filtered.total_pipeline_value = 0;
+        filtered.won_deals_value = 0;
+      } else {
+        // Estimate pipeline value proportionally
+        const totalStageCount = Object.values(analytics.deals_by_stage).reduce((a, b) => a + b, 0) || 1;
+        const proportion = stageCount / totalStageCount;
+        filtered.total_pipeline_value = Math.round(analytics.total_pipeline_value * proportion);
+        filtered.won_deals_value = 0;
+      }
+    }
+    
+    // Filter leads_by_status based on lead status filter
+    if (leadStatusFilter !== 'all') {
+      const filteredStatuses = {};
+      if (analytics.leads_by_status[leadStatusFilter] !== undefined) {
+        filteredStatuses[leadStatusFilter] = analytics.leads_by_status[leadStatusFilter];
+      }
+      filtered.leads_by_status = filteredStatuses;
+      filtered.total_leads = filteredStatuses[leadStatusFilter] || 0;
+    }
+    
+    return filtered;
+  }, [analytics, pipelineFilter, leadStatusFilter]);
+
+  // Check if any filter is active
+  const hasActiveFilters = pipelineFilter !== 'all' || leadStatusFilter !== 'all' || dateRange !== 'all';
+  
+  // Clear all filters
+  const clearFilters = () => {
+    setPipelineFilter('all');
+    setLeadStatusFilter('all');
+    setDateRange('all');
   };
 
   const formatCurrency = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(value);
@@ -190,12 +316,12 @@ export default function Dashboard() {
   }
 
   // Stats configuration - Soft pastel colors matching user's image
-  const stats = analytics ? [
-    { title: 'Total Leads', value: analytics.total_leads, icon: Users, change: '+12%', positive: true, iconBg: '#FEE4D6', iconColor: '#E67E22' },
-    { title: 'Active Deals', value: analytics.total_deals, icon: Briefcase, change: '+8%', positive: true, iconBg: '#D1F2EB', iconColor: '#27AE60' },
-    { title: 'Pipeline Value', value: formatCurrency(analytics.total_pipeline_value), icon: DollarSign, change: '+15%', positive: true, iconBg: '#D1F2EB', iconColor: '#27AE60' },
-    { title: 'Won Revenue', value: formatCurrency(analytics.won_deals_value), icon: TrendingUp, change: '+23%', positive: true, iconBg: '#D1F2EB', iconColor: '#27AE60' },
-    { title: 'Conversion', value: `${analytics.conversion_rate}%`, icon: Percent, change: analytics.conversion_rate >= 20 ? '+5%' : '-5%', positive: analytics.conversion_rate >= 20, iconBg: '#FEE4D6', iconColor: '#E67E22' }
+  const stats = filteredAnalytics ? [
+    { title: 'Total Leads', value: filteredAnalytics.total_leads, icon: Users, change: '+12%', positive: true, iconBg: '#FEE4D6', iconColor: '#E67E22' },
+    { title: 'Active Deals', value: filteredAnalytics.total_deals, icon: Briefcase, change: '+8%', positive: true, iconBg: '#D1F2EB', iconColor: '#27AE60' },
+    { title: 'Pipeline Value', value: formatCurrency(filteredAnalytics.total_pipeline_value), icon: DollarSign, change: '+15%', positive: true, iconBg: '#D1F2EB', iconColor: '#27AE60' },
+    { title: 'Won Revenue', value: formatCurrency(filteredAnalytics.won_deals_value), icon: TrendingUp, change: '+23%', positive: true, iconBg: '#D1F2EB', iconColor: '#27AE60' },
+    { title: 'Conversion', value: `${filteredAnalytics.conversion_rate}%`, icon: Percent, change: filteredAnalytics.conversion_rate >= 20 ? '+5%' : '-5%', positive: filteredAnalytics.conversion_rate >= 20, iconBg: '#FEE4D6', iconColor: '#E67E22' }
   ] : [];
 
   const pieColors = ['#D4A017', '#27AE60', '#3498DB', '#E67E22'];
@@ -228,9 +354,9 @@ export default function Dashboard() {
           <p className="text-muted-foreground mt-1 flex items-center gap-2">
             <Building2 className="w-4 h-4" /> 
             {user?.organization_name || 'Your Organization'}
-            {analytics?.organization_stats?.member_count && (
+            {filteredAnalytics?.organization_stats?.member_count && (
               <span className="text-xs px-2 py-0.5 rounded bg-secondary">
-                {analytics.organization_stats.member_count} members
+                {filteredAnalytics.organization_stats.member_count} members
               </span>
             )}
           </p>
@@ -246,26 +372,83 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Filters Row */}
+      <div className="flex flex-wrap items-center gap-3" data-testid="dashboard-filters">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Filter className="w-4 h-4" />
+          <span className="font-medium">Filters:</span>
+        </div>
+        
+        <FilterDropdown
+          label="Pipeline"
+          value={pipelineFilter}
+          options={PIPELINE_STAGES}
+          onChange={setPipelineFilter}
+          icon={Briefcase}
+        />
+        
+        <FilterDropdown
+          label="Lead Status"
+          value={leadStatusFilter}
+          options={LEAD_STATUSES}
+          onChange={setLeadStatusFilter}
+          icon={Users}
+        />
+        
+        {/* Date Range Filter */}
+        <div className="relative">
+          <select
+            value={dateRange}
+            onChange={(e) => setDateRange(e.target.value)}
+            className="appearance-none flex items-center gap-2 px-3 py-2 pr-8 bg-white dark:bg-card border border-border rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-secondary/50 transition-colors cursor-pointer"
+            data-testid="filter-date-range"
+          >
+            <option value="all">All Time</option>
+            <option value="7days">Last 7 Days</option>
+            <option value="30days">Last 30 Days</option>
+            <option value="90days">Last 90 Days</option>
+          </select>
+          <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        </div>
+        
+        {hasActiveFilters && (
+          <button
+            onClick={clearFilters}
+            className="flex items-center gap-1 px-3 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
+            data-testid="clear-filters-btn"
+          >
+            <X className="w-4 h-4" />
+            Clear Filters
+          </button>
+        )}
+        
+        {hasActiveFilters && (
+          <div className="ml-auto text-xs text-muted-foreground">
+            Showing filtered results
+          </div>
+        )}
+      </div>
+
       {/* Multi-tenancy Organization Card - Cleaner design */}
-      {analytics?.organization_stats?.name && (
+      {filteredAnalytics?.organization_stats?.name && (
         <div className="bg-white dark:bg-card rounded-xl p-4 shadow-sm border border-border flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
             <Building2 className="w-6 h-6 text-amber-600" />
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold">{analytics.organization_stats.name}</h3>
+            <h3 className="font-semibold">{filteredAnalytics.organization_stats.name}</h3>
             <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-              <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {analytics.organization_stats.member_count} members</span>
-              <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Since {analytics.organization_stats.created_at}</span>
+              <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {filteredAnalytics.organization_stats.member_count} members</span>
+              <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Since {filteredAnalytics.organization_stats.created_at}</span>
             </div>
           </div>
           <div className="hidden md:flex items-center gap-3">
             <div className="px-4 py-2 bg-amber-50 dark:bg-amber-500/10 rounded-lg text-center">
-              <p className="text-lg font-bold text-amber-600">{analytics.total_leads}</p>
+              <p className="text-lg font-bold text-amber-600">{filteredAnalytics.total_leads}</p>
               <p className="text-xs text-muted-foreground">Leads</p>
             </div>
             <div className="px-4 py-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg text-center">
-              <p className="text-lg font-bold text-emerald-600">{analytics.total_deals}</p>
+              <p className="text-lg font-bold text-emerald-600">{filteredAnalytics.total_deals}</p>
               <p className="text-xs text-muted-foreground">Deals</p>
             </div>
           </div>
@@ -319,8 +502,8 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="h-64 flex items-end gap-4">
-            {analytics?.monthly_revenue?.map((item, i) => {
-              const maxRev = Math.max(...analytics.monthly_revenue.map(r => r.revenue)) || 1;
+            {filteredAnalytics?.monthly_revenue?.map((item, i) => {
+              const maxRev = Math.max(...filteredAnalytics.monthly_revenue.map(r => r.revenue)) || 1;
               const height = Math.max(20, (item.revenue / maxRev) * 200);
               const targetHeight = height * 0.8;
               return (
@@ -357,11 +540,11 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="space-y-4">
-            <AnimatedProgressBar value={analytics?.total_leads || 0} max={analytics?.total_leads || 1} color="#D4A017" label="Total Leads" />
-            <AnimatedProgressBar value={analytics?.leads_by_status?.contacted || 0} max={analytics?.total_leads || 1} color="#E67E22" label="Contacted" />
-            <AnimatedProgressBar value={analytics?.leads_by_status?.qualified || 0} max={analytics?.total_leads || 1} color="#27AE60" label="Qualified" />
-            <AnimatedProgressBar value={analytics?.total_deals || 0} max={analytics?.total_leads || 1} color="#3498DB" label="Deals Created" />
-            <AnimatedProgressBar value={analytics?.deals_by_stage?.closed_won || 0} max={analytics?.total_deals || 1} color="#27AE60" label="Won Deals" />
+            <AnimatedProgressBar value={filteredAnalytics?.total_leads || 0} max={filteredAnalytics?.total_leads || 1} color="#D4A017" label="Total Leads" />
+            <AnimatedProgressBar value={filteredAnalytics?.leads_by_status?.contacted || 0} max={filteredAnalytics?.total_leads || 1} color="#E67E22" label="Contacted" />
+            <AnimatedProgressBar value={filteredAnalytics?.leads_by_status?.qualified || 0} max={filteredAnalytics?.total_leads || 1} color="#27AE60" label="Qualified" />
+            <AnimatedProgressBar value={filteredAnalytics?.total_deals || 0} max={filteredAnalytics?.total_leads || 1} color="#3498DB" label="Deals Created" />
+            <AnimatedProgressBar value={filteredAnalytics?.deals_by_stage?.closed_won || 0} max={filteredAnalytics?.total_deals || 1} color="#27AE60" label="Won Deals" />
           </div>
         </div>
       </div>
@@ -380,9 +563,9 @@ export default function Dashboard() {
             </div>
           </div>
           <DonutChart 
-            data={analytics?.leads_by_source} 
+            data={filteredAnalytics?.leads_by_source} 
             colors={pieColors} 
-            centerValue={analytics?.total_leads || 0}
+            centerValue={filteredAnalytics?.total_leads || 0}
             centerLabel="Total"
           />
         </div>
@@ -399,9 +582,9 @@ export default function Dashboard() {
             </div>
           </div>
           <DonutChart 
-            data={analytics?.leads_by_status} 
+            data={filteredAnalytics?.leads_by_status} 
             colors={statusColors}
-            centerValue={`${analytics?.conversion_rate || 0}%`}
+            centerValue={`${filteredAnalytics?.conversion_rate || 0}%`}
             centerLabel="Conversion"
           />
         </div>
@@ -421,12 +604,12 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="space-y-3">
-            {analytics && Object.entries(analytics.deals_by_stage).length > 0 ? (
-              Object.entries(analytics.deals_by_stage).map(([stage, count], index) => {
-                const max = Math.max(...Object.values(analytics.deals_by_stage)) || 1;
+            {filteredAnalytics && Object.entries(filteredAnalytics.deals_by_stage).length > 0 ? (
+              Object.entries(filteredAnalytics.deals_by_stage).map(([stage, count], index) => {
+                const max = Math.max(...Object.values(filteredAnalytics.deals_by_stage)) || 1;
                 const stageColors = {
                   lead: '#94a3b8', qualified: '#D4A017', demo: '#E67E22', 
-                  proposal: '#3498DB', negotiation: '#E74C3C', closed_won: '#27AE60', closed_lost: '#E74C3C'
+                  proposal: '#3498DB', negotiation: '#E74C3C', closed_won: '#27AE60', closed_lost: '#E74C3C', sales_closed: '#27AE60'
                 };
                 return (
                   <div key={stage} className="group">
@@ -485,7 +668,7 @@ export default function Dashboard() {
                       style={{ width: `${100 - index * 15}%` }}
                     />
                   </div>
-                  <span className="text-xs text-muted-foreground w-8">{Math.max(1, Math.floor((analytics?.total_leads || 5) * (1 - index * 0.15)))}</span>
+                  <span className="text-xs text-muted-foreground w-8">{Math.max(1, Math.floor((filteredAnalytics?.total_leads || 5) * (1 - index * 0.15)))}</span>
                 </div>
               </div>
             ))}
@@ -507,8 +690,8 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="space-y-3">
-            {analytics?.recent_activities?.length > 0 ? (
-              analytics.recent_activities.map((activity, index) => (
+            {filteredAnalytics?.recent_activities?.length > 0 ? (
+              filteredAnalytics.recent_activities.map((activity, index) => (
                 <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-secondary/30 rounded-lg hover:bg-gray-100 dark:hover:bg-secondary/50 transition-colors">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                     activity.type === 'lead_created' ? 'bg-amber-100' : 'bg-emerald-100'
@@ -551,9 +734,9 @@ export default function Dashboard() {
                 <p className="text-sm text-muted-foreground">Top performers this month</p>
               </div>
             </div>
-            {analytics?.team_performance?.length > 0 ? (
+            {filteredAnalytics?.team_performance?.length > 0 ? (
               <div className="space-y-3">
-                {analytics.team_performance.map((member, index) => (
+                {filteredAnalytics.team_performance.map((member, index) => (
                   <div key={member.user_id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-secondary/50 transition-colors">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
                       index === 0 ? 'bg-amber-500 text-white' : 

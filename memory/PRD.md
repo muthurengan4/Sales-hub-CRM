@@ -49,7 +49,7 @@ The system now supports **per-lead pipeline status** for deals:
 - `ai_calls` - AI call logs
 
 ## Key Pages
-1. Dashboard - Overview metrics and charts
+1. Dashboard - Overview metrics and charts with interactive filters (Pipeline, Lead Status, Date Range)
 2. Leads - Lead management with AI calling
 3. Pipeline - Kanban view of lead-deal linkages
 4. Tasks - Task management with deal auto-sync
@@ -90,6 +90,10 @@ The system now supports **per-lead pipeline status** for deals:
 - Same deal can now have different statuses for different leads
 - Pipeline shows lead-deal combinations with individual statuses
 - Tasks track pipeline_status per lead-deal combination
+- **Dashboard Filters** - Added interactive filters for Pipeline Status, Lead Status, and Date Range
+  - Filters update all dashboard metrics (Total Leads, Active Deals, Pipeline Value, Won Revenue)
+  - Charts and data visualizations respond to filter selections
+  - Clear Filters button to reset all filters to default
 
 ## API Endpoints
 
