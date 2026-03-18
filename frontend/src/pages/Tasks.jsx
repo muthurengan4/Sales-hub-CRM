@@ -375,17 +375,17 @@ export default function Tasks() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[800px]">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-16">NO.</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-16 hidden sm:table-cell">NO.</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">COMPANY NAME</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">PIC NAME</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">DEAL</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell">PIC NAME</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">DEAL</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">PIPELINE</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">COMMENTS</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">DATE & TIME</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">PAYMENT</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden xl:table-cell">COMMENTS</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">DATE & TIME</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell">PAYMENT</th>
                     <th className="w-12"></th>
                   </tr>
                 </thead>
@@ -395,16 +395,20 @@ export default function Tasks() {
                     const paymentDisplay = paymentStatusConfig[task.payment_status] || { label: task.payment_status || 'Unpaid', class: 'bg-gray-500/20 text-gray-400' };
                     return (
                       <tr key={task.id} className="border-b border-border hover:bg-secondary/30 transition-colors" data-testid={`task-row-${task.id}`}>
-                        <td className="px-4 py-4 text-sm text-muted-foreground">
+                        <td className="px-4 py-4 text-sm text-muted-foreground hidden sm:table-cell">
                           {String((currentPage - 1) * pageSize + index + 1).padStart(4, '0')}
                         </td>
                         <td className="px-4 py-4">
-                          <span className="font-medium">{task.company_name || task.title}</span>
+                          <div>
+                            <span className="font-medium">{task.company_name || task.title}</span>
+                            {/* Show PIC on mobile */}
+                            <p className="text-xs text-muted-foreground md:hidden mt-0.5">{task.pic_name || task.lead_name || '-'}</p>
+                          </div>
                         </td>
-                        <td className="px-4 py-4 text-sm">
+                        <td className="px-4 py-4 text-sm hidden md:table-cell">
                           {task.pic_name || task.lead_name || '-'}
                         </td>
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-4 hidden lg:table-cell">
                           {task.deal_name ? (
                             <div>
                               <span className="text-primary font-medium">{task.deal_name}</span>
@@ -421,15 +425,15 @@ export default function Tasks() {
                             {statusDisplay.label}
                           </span>
                         </td>
-                        <td className="px-4 py-4 text-sm">
+                        <td className="px-4 py-4 text-sm hidden xl:table-cell">
                           <span className="text-muted-foreground line-clamp-2 max-w-[150px]">
                             {task.description || '-'}
                           </span>
                         </td>
-                        <td className="px-4 py-4 text-sm text-muted-foreground">
+                        <td className="px-4 py-4 text-sm text-muted-foreground hidden lg:table-cell">
                           {task.due_date ? new Date(task.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
                         </td>
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-4 hidden md:table-cell">
                           <div className="space-y-1">
                             <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${paymentDisplay.class}`}>
                               {paymentDisplay.label}

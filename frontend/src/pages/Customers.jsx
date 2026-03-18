@@ -318,7 +318,7 @@ export default function Customers() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[600px]">
                 <thead>
                   <tr className="border-b border-border bg-secondary/30">
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">COMPANY NAME</th>
@@ -327,6 +327,7 @@ export default function Customers() {
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">MOBILE</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden xl:table-cell">EMAIL</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">STATUS</th>
+                    <th className="w-12"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -343,20 +344,22 @@ export default function Customers() {
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-3">
                             {/* Colored Avatar */}
-                            <div className={`w-10 h-10 rounded-lg ${avatarColor.bg} border-2 ${avatarColor.border} flex items-center justify-center text-white font-bold text-lg`}>
+                            <div className={`w-10 h-10 shrink-0 rounded-lg ${avatarColor.bg} border-2 ${avatarColor.border} flex items-center justify-center text-white font-bold text-lg`}>
                               {companyName.charAt(0).toUpperCase()}
                             </div>
-                            <div>
+                            <div className="min-w-0">
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => openPreviewPanel(customer)}
-                                  className="font-medium text-foreground hover:text-primary hover:underline cursor-pointer transition-colors"
+                                  className="font-medium text-foreground hover:text-primary hover:underline cursor-pointer transition-colors truncate"
                                   data-testid={`company-name-${customer.id}`}
                                 >
                                   {companyName}
                                 </button>
                               </div>
-                              <p className="text-xs text-muted-foreground mt-0.5">{industry} - {country}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5 truncate">{industry} - {country}</p>
+                              {/* Show PIC on mobile */}
+                              <p className="text-xs text-muted-foreground sm:hidden">{customer.first_name || ''}</p>
                             </div>
                           </div>
                         </td>
@@ -380,7 +383,7 @@ export default function Customers() {
                         
                         {/* Email Column */}
                         <td className="px-4 py-4 hidden xl:table-cell">
-                          <span className="text-sm text-muted-foreground">{customer.email || '-'}</span>
+                          <span className="text-sm text-muted-foreground truncate max-w-[150px] block">{customer.email || '-'}</span>
                         </td>
                         
                         {/* Status Column */}
@@ -388,6 +391,25 @@ export default function Customers() {
                           <span className="inline-flex px-3 py-1 rounded-lg text-xs font-medium bg-blue-600/20 text-blue-400 border border-blue-500/30">
                             Customer
                           </span>
+                        </td>
+                        
+                        {/* Actions Column */}
+                        <td className="px-2 py-4">
+                          <ActionDropdown testId={`customer-actions-${customer.id}`}>
+                            {(closeDropdown) => (
+                              <>
+                                <button onClick={() => { openPreviewPanel(customer); closeDropdown(); }} className="w-full text-left px-3 py-2 text-sm hover:bg-secondary flex items-center gap-2 rounded">
+                                  <User className="w-4 h-4" /> View Profile
+                                </button>
+                                <button onClick={() => openEditDialog(customer, closeDropdown)} className="w-full text-left px-3 py-2 text-sm hover:bg-secondary flex items-center gap-2 rounded">
+                                  <Pencil className="w-4 h-4" /> Edit
+                                </button>
+                                <button onClick={() => { handleDelete(customer.id); closeDropdown(); }} className="w-full text-left px-3 py-2 text-sm hover:bg-secondary flex items-center gap-2 rounded text-red-500">
+                                  <Trash2 className="w-4 h-4" /> Delete
+                                </button>
+                              </>
+                            )}
+                          </ActionDropdown>
                         </td>
                       </tr>
                     );

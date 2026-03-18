@@ -153,15 +153,15 @@ export default function LeadDetailPage() {
 
   const fetchDeals = async () => {
     try {
-      // Fetch all deals and filter by linked_company_ids containing this lead's id
+      // Fetch all deals and filter by lead_id OR linked_company_ids containing this lead's id
       const response = await fetch(`${API}/api/deals`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (response.ok) {
         const data = await response.json();
-        // Filter deals that have this lead in linked_company_ids
+        // Filter deals that have this lead in linked_company_ids OR have lead_id matching
         const linkedDeals = (data || []).filter(deal => 
-          deal.linked_company_ids?.includes(id)
+          deal.linked_company_ids?.includes(id) || deal.lead_id === id
         );
         setDeals(linkedDeals);
       }
@@ -337,22 +337,26 @@ export default function LeadDetailPage() {
           })
         });
 
-        // Link this lead to the selected deal
+        // Link this lead to the selected deal and always update deal stage
         if (selectedDeal) {
           const existingLinkedIds = selectedDeal.linked_company_ids || [];
+          // Always update deal stage, and add lead to linked if not present
+          const updatePayload = {
+            stage: pipelineStatus === 'closed' ? 'sales_closed' : (pipelineStatus === 'lost' ? 'lost' : pipelineStatus)
+          };
+          
           if (!existingLinkedIds.includes(id)) {
-            await fetch(`${API}/api/deals/${selectedDealId}`, {
-              method: 'PUT',
-              headers: { 
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}` 
-              },
-              body: JSON.stringify({ 
-                linked_company_ids: [...existingLinkedIds, id],
-                stage: pipelineStatus === 'closed' ? 'sales_closed' : (pipelineStatus === 'lost' ? 'lost' : pipelineStatus)
-              })
-            });
+            updatePayload.linked_company_ids = [...existingLinkedIds, id];
           }
+          
+          await fetch(`${API}/api/deals/${selectedDealId}`, {
+            method: 'PUT',
+            headers: { 
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}` 
+            },
+            body: JSON.stringify(updatePayload)
+          });
           
           // Auto-create task for this lead-deal linkage
           await fetch(`${API}/api/tasks`, {
@@ -1047,25 +1051,31 @@ export default function LeadDetailPage() {
           {/* Deals Section - Shows deals auto-created from status updates - NO ADD BUTTON */}
           <div className="bg-white dark:bg-card rounded-xl p-4 shadow-sm border border-border">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider">Deals</h3>
+              <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider">Deals ({deals.length})</h3>
+              {deals.length > 0 && (
+                <p className="text-sm font-bold text-green-600">
+                  Total: RM {deals.reduce((sum, d) => sum + (d.value || 0), 0).toLocaleString()}
+                </p>
+              )}
             </div>
             {deals.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {deals.map(deal => (
-                  <div key={deal.id} className="p-3 bg-gray-50 dark:bg-secondary rounded-lg space-y-2">
-                    <p className="font-semibold text-sm">{deal.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      RM {(deal.value || 0).toLocaleString()}
-                    </p>
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Stage</p>
-                      <span className="inline-block px-2 py-0.5 text-xs font-medium rounded bg-amber-500/20 text-amber-600">
+                  <div key={deal.id} className="p-3 bg-gray-50 dark:bg-secondary rounded-lg">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-sm truncate">{deal.title}</p>
+                        <p className="text-lg font-bold text-primary mt-1">
+                          RM {(deal.value || 0).toLocaleString()}
+                        </p>
+                      </div>
+                      <span className="shrink-0 inline-block px-2 py-0.5 text-xs font-medium rounded bg-amber-500/20 text-amber-600">
                         {PIPELINE_STAGES.find(s => s.id === deal.stage || s.id === deal.stage?.replace('sales_', ''))?.label || deal.stage}
                       </span>
                     </div>
                     {deal.expected_close_date && (
-                      <p className="text-xs text-muted-foreground">
-                        Close: {formatDate(deal.expected_close_date)}
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Expected Close: {formatDate(deal.expected_close_date)}
                       </p>
                     )}
                   </div>
