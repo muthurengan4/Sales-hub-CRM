@@ -621,54 +621,54 @@ export default function LeadDetailPage() {
   return (
     <div className="space-y-0" data-testid="lead-detail-page">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3 sm:gap-4">
           <button 
             onClick={() => navigate('/leads')}
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-1 sm:gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors shrink-0"
             data-testid="back-btn"
           >
             <ArrowLeft className="w-4 h-4" />
             Back
           </button>
-          <div>
-            <h1 className="text-xl font-bold">{lead.pic_name || lead.name}</h1>
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-xl font-bold truncate">{lead.pic_name || lead.name}</h1>
             {lead.company && (
-              <p className="text-xs text-muted-foreground">at {lead.company}</p>
+              <p className="text-xs text-muted-foreground truncate">at {lead.company}</p>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <button 
             onClick={openEditForm}
-            className="elstar-btn-ghost flex items-center gap-2"
+            className="elstar-btn-ghost flex items-center gap-1 sm:gap-2 text-sm px-2 sm:px-4"
             data-testid="edit-lead-btn"
           >
             <Edit className="w-4 h-4" />
-            Edit
+            <span className="hidden xs:inline">Edit</span>
           </button>
           <button 
             onClick={() => setAiCallModal(true)}
-            className="elstar-btn-ghost flex items-center gap-2 text-blue-500 border-blue-500 hover:bg-blue-500/10"
+            className="elstar-btn-ghost flex items-center gap-1 sm:gap-2 text-sm px-2 sm:px-4 text-blue-500 border-blue-500 hover:bg-blue-500/10"
             data-testid="start-ai-call-btn"
           >
             <PhoneCall className="w-4 h-4" />
-            Start AI Calling
+            <span className="text-xs sm:text-sm">Start AI Calling</span>
           </button>
           {isCustomer ? (
-            <span className="px-4 py-2 rounded-lg bg-green-500/20 text-green-500 font-medium flex items-center gap-2">
+            <span className="px-2 sm:px-4 py-2 rounded-lg bg-green-500/20 text-green-500 font-medium flex items-center gap-1 sm:gap-2 text-sm">
               <UserCheck className="w-4 h-4" />
-              Customer
+              <span className="hidden sm:inline">Customer</span>
             </span>
           ) : (
             <button 
               onClick={handleConvertToCustomer}
               disabled={saving}
-              className="elstar-btn-primary flex items-center gap-2"
+              className="elstar-btn-primary flex items-center gap-1 sm:gap-2 text-sm px-2 sm:px-4"
               data-testid="convert-customer-btn"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
-              Convert to Customer
+              <span className="hidden sm:inline">Convert to Customer</span>
             </button>
           )}
         </div>

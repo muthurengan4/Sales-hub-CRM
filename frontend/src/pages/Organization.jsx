@@ -197,32 +197,32 @@ export default function Organization() {
       </div>
 
       {/* Organization Overview */}
-      <div className="elstar-card p-6">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-16 h-16 ai-gradient rounded-lg flex items-center justify-center">
-            <Building2 className="w-8 h-8 text-white" />
+      <div className="elstar-card p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 ai-gradient rounded-lg flex items-center justify-center shrink-0">
+            <Building2 className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
           </div>
-          <div>
-            <h2 className="text-xl font-semibold">{currentOrg?.name}</h2>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-              {currentOrg?.domain && <span className="flex items-center gap-1"><Globe className="w-4 h-4" />{currentOrg.domain}</span>}
-              {currentOrg?.industry && <span className="flex items-center gap-1"><Briefcase className="w-4 h-4" />{currentOrg.industry}</span>}
-              {currentOrg?.size && <span className="flex items-center gap-1"><Users className="w-4 h-4" />{currentOrg.size} employees</span>}
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg sm:text-xl font-semibold">{currentOrg?.name}</h2>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs sm:text-sm text-muted-foreground mt-1">
+              {currentOrg?.domain && <span className="flex items-center gap-1"><Globe className="w-3 h-3 sm:w-4 sm:h-4" />{currentOrg.domain}</span>}
+              {currentOrg?.industry && <span className="flex items-center gap-1"><Briefcase className="w-3 h-3 sm:w-4 sm:h-4" />{currentOrg.industry}</span>}
+              {currentOrg?.size && <span className="flex items-center gap-1"><Users className="w-3 h-3 sm:w-4 sm:h-4" />{currentOrg.size} employees</span>}
             </div>
           </div>
         </div>
         
-        <div className="grid grid-cols-3 gap-4 p-4 bg-secondary/30 rounded-lg">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 p-3 sm:p-4 bg-secondary/30 rounded-lg">
           <div className="text-center">
-            <p className="text-2xl font-bold text-primary">{currentOrg?.member_count || 1}</p>
+            <p className="text-xl sm:text-2xl font-bold text-primary">{currentOrg?.member_count || 1}</p>
             <p className="text-xs text-muted-foreground">Members</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-emerald-500">{currentOrg?.lead_count || 0}</p>
+            <p className="text-xl sm:text-2xl font-bold text-emerald-500">{currentOrg?.lead_count || 0}</p>
             <p className="text-xs text-muted-foreground">Leads</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-amber-500">{currentOrg?.deal_count || 0}</p>
+            <p className="text-xl sm:text-2xl font-bold text-amber-500">{currentOrg?.deal_count || 0}</p>
             <p className="text-xs text-muted-foreground">Deals</p>
           </div>
         </div>
