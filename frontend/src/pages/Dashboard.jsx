@@ -373,8 +373,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Filters Row */}
-      <div className="flex flex-wrap items-center gap-3" data-testid="dashboard-filters">
+      {/* Filters Row - Hidden on mobile, visible on sm+ */}
+      <div className="hidden sm:flex flex-wrap items-center gap-3" data-testid="dashboard-filters">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Filter className="w-4 h-4" />
           <span className="font-medium">Filters:</span>
@@ -456,31 +456,58 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* 5 Stats Tiles with Mini Charts - Clean white design */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        {stats.map((stat, index) => (
+      {/* 5 Stats Tiles with Mini Charts - Mobile 2x2 grid, Desktop 5 columns */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+        {stats.slice(0, 4).map((stat, index) => (
           <div 
             key={stat.title} 
-            className="bg-white dark:bg-card rounded-xl p-5 shadow-sm border border-border hover:shadow-md transition-shadow animate-fade-in" 
+            className="bg-white dark:bg-card rounded-xl p-4 sm:p-5 shadow-sm border border-border hover:shadow-md transition-shadow animate-fade-in" 
             style={{ animationDelay: `${index * 50}ms` }} 
             data-testid={`stat-${stat.title.toLowerCase().replace(' ', '-')}`}
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: stat.iconBg }}>
-                <stat.icon className="w-5 h-5" style={{ color: stat.iconColor }} />
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: stat.iconBg }}>
+                <stat.icon className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: stat.iconColor }} />
               </div>
               <div className={`flex items-center text-xs font-medium ${stat.positive ? 'text-emerald-500' : 'text-red-500'}`}>
                 {stat.positive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                 {stat.change}
               </div>
             </div>
-            <div className="text-2xl font-bold mb-1">{stat.value}</div>
-            <span className="text-sm text-muted-foreground">{stat.title}</span>
-            <div className="mt-3 h-10 overflow-hidden">
+            <div className="text-xl sm:text-2xl font-bold mb-1">{stat.value}</div>
+            <span className="text-xs sm:text-sm text-muted-foreground">{stat.title}</span>
+            <div className="mt-2 sm:mt-3 h-8 sm:h-10 overflow-hidden">
               <AreaChart data={generateTrendData(100)} color={stat.iconColor} />
             </div>
           </div>
         ))}
+        {/* Conversion stat - full width on mobile, normal on desktop */}
+        {stats[4] && (() => {
+          const conversionStat = stats[4];
+          const ConversionIcon = conversionStat.icon;
+          return (
+            <div 
+              className="col-span-2 lg:col-span-1 bg-white dark:bg-card rounded-xl p-4 sm:p-5 shadow-sm border border-border hover:shadow-md transition-shadow animate-fade-in" 
+              style={{ animationDelay: '200ms' }} 
+              data-testid={`stat-${conversionStat.title.toLowerCase().replace(' ', '-')}`}
+            >
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: conversionStat.iconBg }}>
+                  <ConversionIcon className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: conversionStat.iconColor }} />
+                </div>
+                <div className={`flex items-center text-xs font-medium ${conversionStat.positive ? 'text-emerald-500' : 'text-red-500'}`}>
+                  {conversionStat.positive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                  {conversionStat.change}
+                </div>
+              </div>
+              <div className="text-xl sm:text-2xl font-bold mb-1">{conversionStat.value}</div>
+              <span className="text-xs sm:text-sm text-muted-foreground">{conversionStat.title}</span>
+              <div className="mt-2 sm:mt-3 h-8 sm:h-10 overflow-hidden">
+                <AreaChart data={generateTrendData(100)} color={conversionStat.iconColor} />
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Main Charts Row - Clean white cards */}

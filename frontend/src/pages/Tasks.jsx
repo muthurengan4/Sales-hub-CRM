@@ -387,17 +387,16 @@ export default function Tasks() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[800px]">
+              <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-16 hidden sm:table-cell">NO.</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">COMPANY NAME</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell">PIC NAME</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">DEAL</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">PIC NAME</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">PIPELINE</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden xl:table-cell">COMMENTS</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">DATE & TIME</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell">PAYMENT</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">PAYMENT</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden xl:table-cell">DEAL</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden xl:table-cell">DATE & TIME</th>
                     <th className="w-12"></th>
                   </tr>
                 </thead>
@@ -412,20 +411,30 @@ export default function Tasks() {
                         </td>
                         <td className="px-4 py-4">
                           <div>
-                            <span className="font-medium">{task.company_name || task.title}</span>
-                            {/* Show PIC on mobile only if available */}
+                            <span className="font-medium text-sm">{task.company_name || task.title}</span>
+                            {/* Show PIC on mobile below company name */}
                             {task.pic_name && (
-                              <p className="text-xs text-muted-foreground md:hidden mt-0.5">{task.pic_name}</p>
+                              <p className="text-xs text-muted-foreground lg:hidden mt-0.5">{task.pic_name}</p>
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-4 text-sm hidden md:table-cell">
+                        <td className="px-4 py-4 text-sm hidden lg:table-cell">
                           {task.pic_name || ''}
                         </td>
-                        <td className="px-4 py-4 hidden lg:table-cell">
+                        <td className="px-4 py-4">
+                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${statusDisplay.class}`}>
+                            {statusDisplay.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${paymentDisplay.class}`}>
+                            {paymentDisplay.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 hidden xl:table-cell">
                           {task.deal_name ? (
                             <div>
-                              <span className="text-primary font-medium">{task.deal_name}</span>
+                              <span className="text-primary font-medium text-sm">{task.deal_name}</span>
                               {task.deal_value && (
                                 <p className="text-xs text-muted-foreground mt-0.5">RM {task.deal_value?.toLocaleString()}</p>
                               )}
@@ -434,36 +443,27 @@ export default function Tasks() {
                             <span className="text-muted-foreground">-</span>
                           )}
                         </td>
-                        <td className="px-4 py-4">
-                          <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${statusDisplay.class}`}>
-                            {statusDisplay.label}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-sm hidden xl:table-cell">
-                          <span className="text-muted-foreground line-clamp-2 max-w-[150px]">
-                            {task.description || '-'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-sm text-muted-foreground hidden lg:table-cell">
+                        <td className="px-4 py-4 text-sm text-muted-foreground hidden xl:table-cell">
                           {task.updated_at || task.created_at ? 
                             new Date(task.updated_at || task.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' +
                             new Date(task.updated_at || task.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
                             : '-'}
                         </td>
-                        <td className="px-4 py-4 hidden md:table-cell">
-                          <div className="space-y-1">
-                            <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${paymentDisplay.class}`}>
-                              {paymentDisplay.label}
-                            </span>
-                            {task.paid_amount > 0 && (
-                              <p className="text-xs text-muted-foreground">RM {task.paid_amount?.toLocaleString()}</p>
-                            )}
-                          </div>
-                        </td>
                         <td className="px-4 py-2">
                           <ActionDropdown testId={`task-actions-${task.id}`}>
                             {(closeDropdown) => (
                               <>
+                                {/* Mobile-only expanded info */}
+                                <div className="xl:hidden px-3 py-2 border-b border-border mb-1">
+                                  <p className="text-xs text-muted-foreground mb-1">Deal: <span className="text-foreground">{task.deal_name || '-'}</span></p>
+                                  <p className="text-xs text-muted-foreground mb-1">Date: <span className="text-foreground">
+                                    {task.updated_at || task.created_at ? 
+                                      new Date(task.updated_at || task.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' +
+                                      new Date(task.updated_at || task.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+                                      : '-'}
+                                  </span></p>
+                                  {task.description && <p className="text-xs text-muted-foreground">Notes: <span className="text-foreground">{task.description}</span></p>}
+                                </div>
                                 <button onClick={() => openEditPanel(task, closeDropdown)} className="w-full text-left px-3 py-2 text-sm hover:bg-secondary flex items-center gap-2 rounded">
                                   <Edit className="w-4 h-4" /> Edit
                                 </button>

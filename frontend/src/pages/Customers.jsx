@@ -318,15 +318,15 @@ export default function Customers() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[600px]">
+              <table className="w-full">
                 <thead>
                   <tr className="border-b border-border bg-secondary/30">
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">COMPANY NAME</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden sm:table-cell">PIC / DOCTOR</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell">ROLE</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">ROLE</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">STATUS</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">MOBILE</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden xl:table-cell">EMAIL</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">STATUS</th>
                     <th className="w-12"></th>
                   </tr>
                 </thead>
@@ -344,22 +344,20 @@ export default function Customers() {
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-3">
                             {/* Colored Avatar */}
-                            <div className={`w-10 h-10 shrink-0 rounded-lg ${avatarColor.bg} border-2 ${avatarColor.border} flex items-center justify-center text-white font-bold text-lg`}>
+                            <div className={`w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-lg ${avatarColor.bg} border-2 ${avatarColor.border} flex items-center justify-center text-white font-bold text-sm sm:text-lg`}>
                               {companyName.charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => openPreviewPanel(customer)}
-                                  className="font-medium text-foreground hover:text-primary hover:underline cursor-pointer transition-colors truncate"
+                                  className="font-medium text-sm text-foreground hover:text-primary hover:underline cursor-pointer transition-colors truncate max-w-[120px] sm:max-w-none"
                                   data-testid={`company-name-${customer.id}`}
                                 >
                                   {companyName}
                                 </button>
                               </div>
                               <p className="text-xs text-muted-foreground mt-0.5 truncate">{industry} - {country}</p>
-                              {/* Show PIC on mobile */}
-                              <p className="text-xs text-muted-foreground sm:hidden">{customer.first_name || ''}</p>
                             </div>
                           </div>
                         </td>
@@ -375,9 +373,16 @@ export default function Customers() {
                         </td>
                         
                         {/* Role Column */}
-                        <td className="px-4 py-4 hidden md:table-cell">
-                          <span className={`inline-flex px-2.5 py-1 rounded text-xs font-medium ${roleBadge.class}`}>
+                        <td className="px-4 py-4">
+                          <span className={`inline-flex px-2 py-1 rounded text-xs font-medium ${roleBadge.class}`}>
                             {roleBadge.label}
+                          </span>
+                        </td>
+                        
+                        {/* Status Column */}
+                        <td className="px-4 py-4">
+                          <span className="inline-flex px-2 sm:px-3 py-1 rounded-lg text-xs font-medium bg-blue-600/20 text-blue-400 border border-blue-500/30">
+                            Customer
                           </span>
                         </td>
                         
@@ -391,18 +396,21 @@ export default function Customers() {
                           <span className="text-sm text-muted-foreground truncate max-w-[150px] block">{customer.email || '-'}</span>
                         </td>
                         
-                        {/* Status Column */}
-                        <td className="px-4 py-4">
-                          <span className="inline-flex px-3 py-1 rounded-lg text-xs font-medium bg-blue-600/20 text-blue-400 border border-blue-500/30">
-                            Customer
-                          </span>
-                        </td>
-                        
                         {/* Actions Column */}
                         <td className="px-2 py-4">
                           <ActionDropdown testId={`customer-actions-${customer.id}`}>
                             {(closeDropdown) => (
                               <>
+                                {/* Mobile-only expanded info */}
+                                <div className="sm:hidden px-3 py-2 border-b border-border mb-1">
+                                  <p className="text-xs text-muted-foreground mb-1">PIC: <span className="text-foreground">
+                                    {(customer.first_name && customer.first_name !== customer.company && customer.first_name !== companyName) 
+                                      ? `${customer.first_name}${customer.last_name ? ' ' + customer.last_name : ''}`
+                                      : '-'}
+                                  </span></p>
+                                  <p className="text-xs text-muted-foreground mb-1">Phone: <span className="text-foreground">{customer.phone || '-'}</span></p>
+                                  <p className="text-xs text-muted-foreground">Email: <span className="text-foreground">{customer.email || '-'}</span></p>
+                                </div>
                                 <button onClick={() => { 
                                   closeDropdown();
                                   // Navigate to lead detail if has lead_id, otherwise customer profile

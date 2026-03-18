@@ -81,8 +81,11 @@ The system now supports **per-lead pipeline status** for deals:
 - [x] Google Calendar placeholder UI
 
 ### Mobile Responsiveness
-- [x] Tasks page - responsive table
-- [x] Customers page - responsive table
+- [x] Dashboard - 2x2 stat grid on mobile, filters hidden
+- [x] Leads page - Simplified table: Checkbox, Company, Status, AI Score, Actions
+- [x] Tasks page - Company Name, Pipeline, Payment columns with expandable dropdown showing Deal, Date, Notes
+- [x] Customers page - Company Name with avatar, Role, Status with expandable dropdown showing PIC, Phone, Email
+- [x] Pipeline page - Horizontally scrollable kanban board
 - [x] LeadDetailPage - responsive layout
 
 ### Recent Updates (March 18, 2026)

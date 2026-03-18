@@ -982,7 +982,7 @@ export default function Leads() {
                       <td>
                         <div className="flex items-center gap-2">
                           <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
-                          <span className="font-medium truncate max-w-[180px]">{lead.company || lead.name}</span>
+                          <span className="font-medium truncate max-w-[150px] sm:max-w-[180px]">{lead.company || lead.name}</span>
                         </div>
                       </td>
                       <td className="hidden sm:table-cell">
@@ -1016,14 +1016,14 @@ export default function Leads() {
                         <div className="text-xs text-muted-foreground">{lead.country || 'Malaysia'}</div>
                       </td>
                       <td>
-                        <span className={`elstar-badge ${statusConfig[lead.status]?.class || 'elstar-badge-info'}`}>
+                        <span className={`elstar-badge text-xs ${statusConfig[lead.status]?.class || 'elstar-badge-info'}`}>
                           {statusConfig[lead.status]?.label || lead.status}
                         </span>
                       </td>
                       <td className="text-center">
                         <div className="flex items-center justify-center gap-1">
-                          <Sparkles className={`w-4 h-4 ${getScoreClass(lead.ai_score)}`} />
-                          <span className={`font-mono font-bold ${getScoreClass(lead.ai_score)}`}>{lead.ai_score}</span>
+                          <Sparkles className={`w-3 h-3 sm:w-4 sm:h-4 ${getScoreClass(lead.ai_score)}`} />
+                          <span className={`font-mono text-sm font-bold ${getScoreClass(lead.ai_score)}`}>{lead.ai_score}</span>
                         </div>
                       </td>
                       <td onClick={(e) => e.stopPropagation()}>
