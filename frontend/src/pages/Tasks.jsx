@@ -413,12 +413,14 @@ export default function Tasks() {
                         <td className="px-4 py-4">
                           <div>
                             <span className="font-medium">{task.company_name || task.title}</span>
-                            {/* Show PIC on mobile */}
-                            <p className="text-xs text-muted-foreground md:hidden mt-0.5">{task.pic_name || task.lead_name || '-'}</p>
+                            {/* Show PIC on mobile only if available */}
+                            {task.pic_name && (
+                              <p className="text-xs text-muted-foreground md:hidden mt-0.5">{task.pic_name}</p>
+                            )}
                           </div>
                         </td>
                         <td className="px-4 py-4 text-sm hidden md:table-cell">
-                          {task.pic_name || task.lead_name || '-'}
+                          {task.pic_name || ''}
                         </td>
                         <td className="px-4 py-4 hidden lg:table-cell">
                           {task.deal_name ? (
@@ -443,7 +445,10 @@ export default function Tasks() {
                           </span>
                         </td>
                         <td className="px-4 py-4 text-sm text-muted-foreground hidden lg:table-cell">
-                          {task.due_date ? new Date(task.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                          {task.updated_at || task.created_at ? 
+                            new Date(task.updated_at || task.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' +
+                            new Date(task.updated_at || task.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+                            : '-'}
                         </td>
                         <td className="px-4 py-4 hidden md:table-cell">
                           <div className="space-y-1">

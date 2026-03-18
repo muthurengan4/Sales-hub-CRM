@@ -3535,7 +3535,7 @@ async def get_tasks(
             if lead:
                 task['lead_name'] = lead.get('name')
                 task['company_name'] = lead.get('company') or lead.get('name')
-                task['pic_name'] = lead.get('pic_name') or lead.get('name')
+                task['pic_name'] = lead.get('pic_name')  # Don't fallback to name, keep it blank if not set
         
         if task.get('client_id'):
             client = await db.clients.find_one({'id': task['client_id']}, {'_id': 0, 'customer_name': 1, 'company': 1})
