@@ -292,6 +292,18 @@ export default function Tasks() {
   };
 
   const getStatusDisplay = (task) => {
+    // Use pipeline_status if available (from lead-deal linkage)
+    if (task.pipeline_status) {
+      const statusMap = {
+        'lead': { label: 'Lead', class: 'bg-slate-500/20 text-slate-400' },
+        'qualified': { label: 'Qualified', class: 'bg-amber-500/20 text-amber-400' },
+        'proposal': { label: 'Proposal', class: 'bg-orange-500/20 text-orange-400' },
+        'negotiation': { label: 'Negotiation', class: 'bg-red-500/20 text-red-400' },
+        'sales_closed': { label: 'Sales Closed', class: 'bg-blue-500/20 text-blue-400' },
+        'lost': { label: 'Lost', class: 'bg-gray-600/20 text-gray-400' }
+      };
+      return statusMap[task.pipeline_status] || { label: task.pipeline_status, class: 'bg-gray-500/20 text-gray-400' };
+    }
     // Check if task is linked to a lead or customer
     if (task.client_id) {
       return { label: 'Customer', class: 'bg-green-500/20 text-green-400' };

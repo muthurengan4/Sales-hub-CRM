@@ -489,6 +489,34 @@ class AICallCreate(BaseModel):
     script_type: Optional[str] = "default"
     notes: Optional[str] = None
 
+# Lead-Deal Linkage Models - for tracking per-lead pipeline status
+class LeadDealLinkageCreate(BaseModel):
+    lead_id: str
+    deal_id: str
+    pipeline_status: str = "lead"  # lead, qualified, proposal, negotiation, sales_closed, lost
+    notes: Optional[str] = None
+
+class LeadDealLinkageUpdate(BaseModel):
+    pipeline_status: Optional[str] = None
+    notes: Optional[str] = None
+
+class LeadDealLinkageResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    lead_id: str
+    deal_id: str
+    pipeline_status: str
+    notes: Optional[str] = None
+    organization_id: str
+    created_at: str
+    updated_at: str
+    # Enriched fields
+    lead_name: Optional[str] = None
+    lead_company: Optional[str] = None
+    lead_phone: Optional[str] = None
+    deal_title: Optional[str] = None
+    deal_value: Optional[float] = None
+
 class AICallResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
@@ -2096,6 +2124,144 @@ async def delete_deal(deal_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Deal not found")
     
     return {"message": "Deal deleted"}
+
+# ============= LEAD-DEAL LINKAGE ROUTES =============
+# These track the pipeline status per lead-deal combination
+
+@api_router.post("/lead-deal-linkages")
+async def create_or_update_linkage(linkage_data: LeadDealLinkageCreate, user: dict = Depends(get_current_user)):
+    """Create or update a lead-deal linkage with pipeline status"""
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="Please create or join an organization first")
+    
+    # Check if linkage already exists
+    existing = await db.lead_deal_linkages.find_one({
+        'lead_id': linkage_data.lead_id,
+        'deal_id': linkage_data.deal_id,
+        'organization_id': user['organization_id']
+    })
+    
+    now = datetime.now(timezone.utc).isoformat()
+    
+    if existing:
+        # Update existing linkage
+        update_data = {
+            'pipeline_status': linkage_data.pipeline_status,
+            'notes': linkage_data.notes,
+            'updated_at': now
+        }
+        await db.lead_deal_linkages.update_one(
+            {'id': existing['id']},
+            {'$set': update_data}
+        )
+        linkage_id = existing['id']
+    else:
+        # Create new linkage
+        linkage_id = str(uuid.uuid4())
+        linkage_doc = {
+            'id': linkage_id,
+            'lead_id': linkage_data.lead_id,
+            'deal_id': linkage_data.deal_id,
+            'pipeline_status': linkage_data.pipeline_status,
+            'notes': linkage_data.notes,
+            'organization_id': user['organization_id'],
+            'created_at': now,
+            'updated_at': now
+        }
+        await db.lead_deal_linkages.insert_one(linkage_doc)
+    
+    # Fetch the linkage with enriched data
+    linkage = await db.lead_deal_linkages.find_one({'id': linkage_id}, {'_id': 0})
+    
+    # Enrich with lead and deal info
+    lead = await db.leads.find_one({'id': linkage['lead_id']}, {'_id': 0, 'name': 1, 'company': 1, 'phone': 1})
+    deal = await db.deals.find_one({'id': linkage['deal_id']}, {'_id': 0, 'title': 1, 'value': 1})
+    
+    if lead:
+        linkage['lead_name'] = lead.get('name')
+        linkage['lead_company'] = lead.get('company')
+        linkage['lead_phone'] = lead.get('phone')
+    if deal:
+        linkage['deal_title'] = deal.get('title')
+        linkage['deal_value'] = deal.get('value')
+    
+    return linkage
+
+@api_router.get("/lead-deal-linkages")
+async def get_linkages(
+    lead_id: Optional[str] = None,
+    deal_id: Optional[str] = None,
+    pipeline_status: Optional[str] = None,
+    user: dict = Depends(get_current_user)
+):
+    """Get all lead-deal linkages for the organization, optionally filtered"""
+    if not user.get('organization_id'):
+        return []
+    
+    query = {'organization_id': user['organization_id']}
+    if lead_id:
+        query['lead_id'] = lead_id
+    if deal_id:
+        query['deal_id'] = deal_id
+    if pipeline_status:
+        query['pipeline_status'] = pipeline_status
+    
+    linkages = await db.lead_deal_linkages.find(query, {'_id': 0}).sort('updated_at', -1).to_list(1000)
+    
+    # Enrich with lead and deal info
+    for linkage in linkages:
+        lead = await db.leads.find_one({'id': linkage['lead_id']}, {'_id': 0, 'name': 1, 'company': 1, 'phone': 1, 'state': 1})
+        deal = await db.deals.find_one({'id': linkage['deal_id']}, {'_id': 0, 'title': 1, 'value': 1, 'expected_close_date': 1})
+        
+        if lead:
+            linkage['lead_name'] = lead.get('name')
+            linkage['lead_company'] = lead.get('company')
+            linkage['lead_phone'] = lead.get('phone')
+            linkage['lead_state'] = lead.get('state')
+        if deal:
+            linkage['deal_title'] = deal.get('title')
+            linkage['deal_value'] = deal.get('value')
+            linkage['deal_expected_close_date'] = deal.get('expected_close_date')
+    
+    return linkages
+
+@api_router.put("/lead-deal-linkages/{linkage_id}")
+async def update_linkage(linkage_id: str, linkage_data: LeadDealLinkageUpdate, user: dict = Depends(get_current_user)):
+    """Update a specific lead-deal linkage"""
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="Please create or join an organization first")
+    
+    linkage = await db.lead_deal_linkages.find_one({
+        'id': linkage_id,
+        'organization_id': user['organization_id']
+    })
+    
+    if not linkage:
+        raise HTTPException(status_code=404, detail="Linkage not found")
+    
+    update_data = {k: v for k, v in linkage_data.model_dump().items() if v is not None}
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.lead_deal_linkages.update_one({'id': linkage_id}, {'$set': update_data})
+    
+    updated = await db.lead_deal_linkages.find_one({'id': linkage_id}, {'_id': 0})
+    return updated
+
+@api_router.delete("/lead-deal-linkages/{linkage_id}")
+async def delete_linkage(linkage_id: str, user: dict = Depends(get_current_user)):
+    """Delete a lead-deal linkage"""
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="Please create or join an organization first")
+    
+    result = await db.lead_deal_linkages.delete_one({
+        'id': linkage_id,
+        'organization_id': user['organization_id']
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Linkage not found")
+    
+    return {"message": "Linkage deleted"}
 
 # ============= ACTIVITY ROUTES =============
 

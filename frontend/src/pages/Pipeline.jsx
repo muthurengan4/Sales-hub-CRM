@@ -163,6 +163,7 @@ export default function Pipeline() {
   const { token } = useAuth();
   const navigate = useNavigate();
   const [deals, setDeals] = useState([]);
+  const [linkages, setLinkages] = useState([]); // Lead-deal linkages for the Kanban
   const [loading, setLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -170,12 +171,13 @@ export default function Pipeline() {
   const [selectedDeal, setSelectedDeal] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   const [draggedDeal, setDraggedDeal] = useState(null);
+  const [draggedLinkage, setDraggedLinkage] = useState(null);
   const [formData, setFormData] = useState(initialFormData);
   const [companies, setCompanies] = useState([]);
   const [companySearch, setCompanySearch] = useState('');
   const [knowledgeBaseFile, setKnowledgeBaseFile] = useState(null);
 
-  useEffect(() => { fetchDeals(); fetchCompanies(); }, []);
+  useEffect(() => { fetchDeals(); fetchLinkages(); fetchCompanies(); }, []);
 
   const fetchDeals = async () => {
     try {
@@ -183,6 +185,13 @@ export default function Pipeline() {
       if (response.ok) setDeals(await response.json());
     } catch (error) { toast.error('Failed to fetch deals'); }
     finally { setLoading(false); }
+  };
+
+  const fetchLinkages = async () => {
+    try {
+      const response = await fetch(`${API}/api/lead-deal-linkages`, { headers: { Authorization: `Bearer ${token}` } });
+      if (response.ok) setLinkages(await response.json());
+    } catch (error) { console.error('Failed to fetch linkages'); }
   };
 
   const fetchCompanies = async () => {
@@ -237,9 +246,33 @@ export default function Pipeline() {
   };
 
   const handleDragStart = (e, deal) => { setDraggedDeal(deal); };
+  const handleLinkageDragStart = (e, linkage) => { setDraggedLinkage(linkage); };
   const handleDragOver = (e) => { e.preventDefault(); };
+  
   const handleDrop = async (e, newStage) => {
     e.preventDefault();
+    
+    // Handle linkage drag (lead-deal combination)
+    if (draggedLinkage) {
+      if (draggedLinkage.pipeline_status === newStage) { setDraggedLinkage(null); return; }
+      
+      // Optimistic update
+      setLinkages(prev => prev.map(l => l.id === draggedLinkage.id ? {...l, pipeline_status: newStage} : l));
+      
+      try {
+        await fetch(`${API}/api/lead-deal-linkages/${draggedLinkage.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ pipeline_status: newStage })
+        });
+        toast.success(`Moved to ${newStage.replace('_', ' ')}`);
+        fetchLinkages();
+      } catch (error) { fetchLinkages(); toast.error('Failed to update'); }
+      setDraggedLinkage(null);
+      return;
+    }
+    
+    // Handle deal drag (for deals not yet linked to a lead)
     if (!draggedDeal || draggedDeal.stage === newStage) { setDraggedDeal(null); return; }
     setDeals(prev => prev.map(d => d.id === draggedDeal.id ? {...d, stage: newStage} : d));
     try {
@@ -273,8 +306,20 @@ export default function Pipeline() {
     }
   };
 
-  const getDealsByStage = (stageId) => deals.filter(d => d.stage === stageId);
-  const getStageValue = (stageId) => getDealsByStage(stageId).reduce((sum, d) => sum + (d.value || 0), 0);
+  // Get linkages by pipeline_status (lead-deal combinations with their individual status)
+  const getLinkagesByStage = (stageId) => linkages.filter(l => l.pipeline_status === stageId);
+  const getLinkageStageValue = (stageId) => getLinkagesByStage(stageId).reduce((sum, l) => sum + (l.deal_value || 0), 0);
+  
+  // Get deals without any linkages (unassigned deals)
+  const getUnassignedDealsByStage = (stageId) => {
+    const linkedDealIds = linkages.map(l => l.deal_id);
+    return deals.filter(d => d.stage === stageId && !linkedDealIds.includes(d.id));
+  };
+  const getUnassignedStageValue = (stageId) => getUnassignedDealsByStage(stageId).reduce((sum, d) => sum + (d.value || 0), 0);
+  
+  const getStageValue = (stageId) => getLinkageStageValue(stageId) + getUnassignedStageValue(stageId);
+  const getStageCount = (stageId) => getLinkagesByStage(stageId).length + getUnassignedDealsByStage(stageId).length;
+  
   const formatCurrency = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(value);
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
@@ -309,21 +354,64 @@ export default function Pipeline() {
                   <div className={`w-2.5 h-2.5 rounded-full ${stage.color}`} />
                   <span className="font-medium text-sm">{stage.label}</span>
                   <span className="text-xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
-                    {getDealsByStage(stage.id).length}
+                    {getStageCount(stage.id)}
                   </span>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground font-mono mb-4">{formatCurrency(getStageValue(stage.id))}</p>
 
-              {/* Cards */}
+              {/* Cards - Lead-Deal Linkages (individual lead statuses) */}
               <div className="space-y-3 min-h-[300px]">
-                {getDealsByStage(stage.id).map((deal) => (
+                {/* Render lead-deal linkages first */}
+                {getLinkagesByStage(stage.id).map((linkage) => (
+                  <div
+                    key={linkage.id}
+                    draggable
+                    onDragStart={(e) => handleLinkageDragStart(e, linkage)}
+                    onClick={() => navigate(`/leads/${linkage.lead_id}`)}
+                    className={`elstar-kanban-card cursor-pointer hover:border-primary/50 transition-colors ${draggedLinkage?.id === linkage.id ? 'opacity-50' : ''}`}
+                    data-testid={`linkage-card-${linkage.id}`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <h4 className="font-medium text-sm line-clamp-2 pr-2">{linkage.deal_title}</h4>
+                    </div>
+                    
+                    {/* Lead/Company Info */}
+                    <div className="mb-2 flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                        <Building2 className="w-3 h-3 text-emerald-500" />
+                      </div>
+                      <div className="text-xs">
+                        <span className="text-foreground font-medium">{linkage.lead_company || linkage.lead_name}</span>
+                        {linkage.lead_state && (
+                          <span className="text-muted-foreground ml-1">• {linkage.lead_state}</span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1.5">
+                        <DollarSign className="w-3.5 h-3.5" />
+                        <span className="font-mono font-medium text-foreground">{formatCurrency(linkage.deal_value || 0)}</span>
+                      </div>
+                      {linkage.deal_expected_close_date && (
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5" />
+                          <span>{linkage.deal_expected_close_date}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Render unassigned deals (not linked to any lead yet) */}
+                {getUnassignedDealsByStage(stage.id).map((deal) => (
                   <div
                     key={deal.id}
                     draggable
                     onDragStart={(e) => handleDragStart(e, deal)}
                     onClick={() => openDealDetail(deal)}
-                    className={`elstar-kanban-card cursor-pointer hover:border-primary/50 transition-colors ${draggedDeal?.id === deal.id ? 'opacity-50' : ''}`}
+                    className={`elstar-kanban-card cursor-pointer hover:border-primary/50 transition-colors border-dashed ${draggedDeal?.id === deal.id ? 'opacity-50' : ''}`}
                     data-testid={`deal-card-${deal.id}`}
                   >
                     <div className="flex items-start justify-between mb-2">
@@ -347,27 +435,10 @@ export default function Pipeline() {
                       </div>
                     </div>
                     
-                    {/* Linked Companies - matching Picture 1 with icon */}
-                    {deal.linked_companies && deal.linked_companies.length > 0 ? (
-                      <div className="mb-2 flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                          <Building2 className="w-3 h-3 text-emerald-500" />
-                        </div>
-                        <div className="text-xs">
-                          <span className="text-foreground font-medium">{deal.linked_companies[0]?.name}</span>
-                          {deal.linked_companies_count > 1 && (
-                            <span className="text-amber-500 ml-1">+{deal.linked_companies_count - 1} more</span>
-                          )}
-                        </div>
-                      </div>
-                    ) : deal.company && (
-                      <div className="mb-2 flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                          <Building2 className="w-3 h-3 text-emerald-500" />
-                        </div>
-                        <span className="text-xs text-foreground">{deal.company}</span>
-                      </div>
-                    )}
+                    {/* Unassigned badge */}
+                    <div className="mb-2 flex items-center gap-2">
+                      <span className="text-xs px-2 py-0.5 rounded bg-gray-500/20 text-gray-400">Unassigned</span>
+                    </div>
                     
                     <div className="space-y-2 text-xs text-muted-foreground">
                       <div className="flex items-center gap-1.5">
@@ -385,7 +456,8 @@ export default function Pipeline() {
                     </div>
                   </div>
                 ))}
-                {getDealsByStage(stage.id).length === 0 && (
+                
+                {getStageCount(stage.id) === 0 && (
                   <div className="flex items-center justify-center h-24 border-2 border-dashed border-border rounded-lg text-sm text-muted-foreground">
                     Drop deals here
                   </div>

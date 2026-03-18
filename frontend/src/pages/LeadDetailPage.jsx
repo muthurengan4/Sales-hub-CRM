@@ -153,16 +153,22 @@ export default function LeadDetailPage() {
 
   const fetchDeals = async () => {
     try {
-      // Fetch all deals and filter by lead_id OR linked_company_ids containing this lead's id
-      const response = await fetch(`${API}/api/deals`, {
+      // Fetch lead-deal linkages for this lead
+      const linkagesResponse = await fetch(`${API}/api/lead-deal-linkages?lead_id=${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (response.ok) {
-        const data = await response.json();
-        // Filter deals that have this lead in linked_company_ids OR have lead_id matching
-        const linkedDeals = (data || []).filter(deal => 
-          deal.linked_company_ids?.includes(id) || deal.lead_id === id
-        );
+      if (linkagesResponse.ok) {
+        const linkagesData = await linkagesResponse.json();
+        // Transform linkages to deal-like objects for display
+        const linkedDeals = (linkagesData || []).map(linkage => ({
+          id: linkage.deal_id,
+          linkage_id: linkage.id,
+          title: linkage.deal_title,
+          value: linkage.deal_value,
+          stage: linkage.pipeline_status, // Use the linkage-specific status
+          expected_close_date: linkage.deal_expected_close_date,
+          lead_id: linkage.lead_id
+        }));
         setDeals(linkedDeals);
       }
     } catch (error) {
@@ -337,26 +343,37 @@ export default function LeadDetailPage() {
           })
         });
 
-        // Link this lead to the selected deal and always update deal stage
+        // Create or update the lead-deal linkage with this lead's specific pipeline status
         if (selectedDeal) {
-          const existingLinkedIds = selectedDeal.linked_company_ids || [];
-          // Always update deal stage, and add lead to linked if not present
-          const updatePayload = {
-            stage: pipelineStatus === 'closed' ? 'sales_closed' : (pipelineStatus === 'lost' ? 'lost' : pipelineStatus)
-          };
-          
-          if (!existingLinkedIds.includes(id)) {
-            updatePayload.linked_company_ids = [...existingLinkedIds, id];
-          }
-          
-          await fetch(`${API}/api/deals/${selectedDealId}`, {
-            method: 'PUT',
+          // Create/update linkage with this lead's pipeline status
+          await fetch(`${API}/api/lead-deal-linkages`, {
+            method: 'POST',
             headers: { 
               'Content-Type': 'application/json',
               Authorization: `Bearer ${token}` 
             },
-            body: JSON.stringify(updatePayload)
+            body: JSON.stringify({
+              lead_id: id,
+              deal_id: selectedDealId,
+              pipeline_status: pipelineStatus === 'closed' ? 'sales_closed' : (pipelineStatus === 'lost' ? 'lost' : pipelineStatus),
+              notes: remark || ''
+            })
           });
+          
+          // Also add to deal's linked_company_ids if not already there
+          const existingLinkedIds = selectedDeal.linked_company_ids || [];
+          if (!existingLinkedIds.includes(id)) {
+            await fetch(`${API}/api/deals/${selectedDealId}`, {
+              method: 'PUT',
+              headers: { 
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}` 
+              },
+              body: JSON.stringify({ 
+                linked_company_ids: [...existingLinkedIds, id]
+              })
+            });
+          }
           
           // Auto-create task for this lead-deal linkage
           await fetch(`${API}/api/tasks`, {
@@ -372,7 +389,8 @@ export default function LeadDetailPage() {
               deal_id: selectedDealId,
               status: 'pending',
               priority: 'medium',
-              payment_status: 'unpaid'
+              payment_status: 'unpaid',
+              pipeline_status: pipelineStatus === 'closed' ? 'sales_closed' : (pipelineStatus === 'lost' ? 'lost' : pipelineStatus)
             })
           });
           toast.success('Task created for this deal');
