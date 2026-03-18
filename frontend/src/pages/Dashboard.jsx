@@ -10,25 +10,26 @@ import {
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
-// Pipeline stages for filter
+// Pipeline stages for filter - matching Pipeline.jsx exactly
 const PIPELINE_STAGES = [
   { value: 'all', label: 'All Stages', color: '#6B7280' },
-  { value: 'lead', label: 'Lead', color: '#94a3b8' },
-  { value: 'qualified', label: 'Qualified', color: '#D4A017' },
-  { value: 'demo', label: 'Demo', color: '#E67E22' },
-  { value: 'proposal', label: 'Proposal', color: '#3498DB' },
-  { value: 'negotiation', label: 'Negotiation', color: '#9B59B6' },
-  { value: 'sales_closed', label: 'Closed Won', color: '#27AE60' },
-  { value: 'lost', label: 'Lost', color: '#E74C3C' }
+  { value: 'lead', label: 'Lead', color: '#64748b' },
+  { value: 'qualified', label: 'Qualified', color: '#f59e0b' },
+  { value: 'proposal', label: 'Proposal', color: '#f97316' },
+  { value: 'negotiation', label: 'Negotiation', color: '#ef4444' },
+  { value: 'sales_closed', label: 'Sales Closed', color: '#3b82f6' },
+  { value: 'lost', label: 'Lost', color: '#4b5563' }
 ];
 
-// Lead statuses for filter
+// Lead statuses for filter - matching Pipeline stages
 const LEAD_STATUSES = [
   { value: 'all', label: 'All Statuses', color: '#6B7280' },
-  { value: 'new', label: 'New', color: '#3498DB' },
-  { value: 'contacted', label: 'Contacted', color: '#E67E22' },
-  { value: 'qualified', label: 'Qualified', color: '#27AE60' },
-  { value: 'lost', label: 'Lost', color: '#E74C3C' }
+  { value: 'lead', label: 'Lead', color: '#64748b' },
+  { value: 'qualified', label: 'Qualified', color: '#f59e0b' },
+  { value: 'proposal', label: 'Proposal', color: '#f97316' },
+  { value: 'negotiation', label: 'Negotiation', color: '#ef4444' },
+  { value: 'sales_closed', label: 'Sales Closed', color: '#3b82f6' },
+  { value: 'lost', label: 'Lost', color: '#4b5563' }
 ];
 
 // Animated Donut Chart Component

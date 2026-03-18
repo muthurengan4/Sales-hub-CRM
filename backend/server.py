@@ -1576,6 +1576,7 @@ class PaginatedLeadsResponse(BaseModel):
 @api_router.get("/leads", response_model=PaginatedLeadsResponse)
 async def get_leads(
     status: Optional[str] = None, 
+    pipeline_status: Optional[str] = None,
     search: Optional[str] = None,
     state: Optional[str] = None,
     country: Optional[str] = None,
@@ -1593,6 +1594,8 @@ async def get_leads(
     
     if status:
         query['status'] = status
+    if pipeline_status:
+        query['pipeline_status'] = pipeline_status
     if state:
         query['state'] = state
     if country:
@@ -2339,7 +2342,8 @@ async def get_analytics(user: dict = Depends(get_current_user)):
     leads_by_status = {}
     leads_by_source = {}
     for lead in leads:
-        status = lead.get('status', 'new')
+        # Use pipeline_status instead of status for consistency with Pipeline page
+        status = lead.get('pipeline_status', lead.get('status', 'new'))
         leads_by_status[status] = leads_by_status.get(status, 0) + 1
         source = lead.get('source', 'other') or 'other'
         leads_by_source[source] = leads_by_source.get(source, 0) + 1

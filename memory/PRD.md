@@ -94,6 +94,8 @@ The system now supports **per-lead pipeline status** for deals:
   - Filters update all dashboard metrics (Total Leads, Active Deals, Pipeline Value, Won Revenue)
   - Charts and data visualizations respond to filter selections
   - Clear Filters button to reset all filters to default
+  - **Lead Status filter now shows Pipeline stages** (Lead, Qualified, Proposal, Negotiation, Sales Closed, Lost) - matching Pipeline page tabs
+- **Leads Page Filter Fixed** - Status filter now correctly filters by `pipeline_status` field
 
 ## API Endpoints
 

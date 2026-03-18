@@ -511,7 +511,7 @@ export default function Leads() {
       const params = new URLSearchParams();
       params.append('page', currentPage);
       params.append('limit', pageSize);
-      if (statusFilter && statusFilter !== 'all') params.append('status', statusFilter);
+      if (statusFilter && statusFilter !== 'all') params.append('pipeline_status', statusFilter);
       if (stateFilter && stateFilter !== 'all') params.append('state', stateFilter);
       if (debouncedSearch) params.append('search', debouncedSearch);
       
