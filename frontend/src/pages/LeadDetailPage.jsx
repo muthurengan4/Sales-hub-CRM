@@ -345,6 +345,8 @@ export default function LeadDetailPage() {
 
         // Create or update the lead-deal linkage with this lead's specific pipeline status
         if (selectedDeal) {
+          const newStage = pipelineStatus === 'closed' ? 'sales_closed' : (pipelineStatus === 'lost' ? 'lost' : pipelineStatus);
+          
           // Create/update linkage with this lead's pipeline status
           await fetch(`${API}/api/lead-deal-linkages`, {
             method: 'POST',
@@ -355,25 +357,28 @@ export default function LeadDetailPage() {
             body: JSON.stringify({
               lead_id: id,
               deal_id: selectedDealId,
-              pipeline_status: pipelineStatus === 'closed' ? 'sales_closed' : (pipelineStatus === 'lost' ? 'lost' : pipelineStatus),
+              pipeline_status: newStage,
               notes: remark || ''
             })
           });
           
-          // Also add to deal's linked_company_ids if not already there
+          // Update the deal's stage and add to linked_company_ids if not already there
           const existingLinkedIds = selectedDeal.linked_company_ids || [];
+          const dealUpdatePayload = {
+            stage: newStage  // Also update deal stage for Pipeline page
+          };
           if (!existingLinkedIds.includes(id)) {
-            await fetch(`${API}/api/deals/${selectedDealId}`, {
-              method: 'PUT',
-              headers: { 
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}` 
-              },
-              body: JSON.stringify({ 
-                linked_company_ids: [...existingLinkedIds, id]
-              })
-            });
+            dealUpdatePayload.linked_company_ids = [...existingLinkedIds, id];
           }
+          
+          await fetch(`${API}/api/deals/${selectedDealId}`, {
+            method: 'PUT',
+            headers: { 
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}` 
+            },
+            body: JSON.stringify(dealUpdatePayload)
+          });
           
           // Auto-create task for this lead-deal linkage
           await fetch(`${API}/api/tasks`, {
@@ -390,7 +395,7 @@ export default function LeadDetailPage() {
               status: 'pending',
               priority: 'medium',
               payment_status: 'unpaid',
-              pipeline_status: pipelineStatus === 'closed' ? 'sales_closed' : (pipelineStatus === 'lost' ? 'lost' : pipelineStatus)
+              pipeline_status: newStage
             })
           });
           toast.success('Task created for this deal');

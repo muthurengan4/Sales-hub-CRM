@@ -420,7 +420,7 @@ class DealResponse(BaseModel):
     probability: Optional[int] = None
     ai_health_score: int
     organization_id: Optional[str] = None  # Optional for legacy deals
-    owner_id: str
+    owner_id: Optional[str] = None  # Made optional for deals created without owner
     owner_name: Optional[str] = None
     assigned_to: Optional[str] = None
     assigned_to_name: Optional[str] = None
