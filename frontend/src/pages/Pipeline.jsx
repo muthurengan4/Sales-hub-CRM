@@ -252,42 +252,57 @@ export default function Pipeline() {
   };
 
   const handleDragStart = (e, deal) => { setDraggedDeal(deal); };
+  const handleLinkageDragStart = (e, linkage) => { setDraggedLinkage(linkage); };
   const handleDragOver = (e) => { e.preventDefault(); };
   
   const handleDrop = async (e, newStage) => {
     e.preventDefault();
     
-    if (!draggedDeal || draggedDeal.stage === newStage) { setDraggedDeal(null); return; }
-    
-    // Optimistic update
-    setDeals(prev => prev.map(d => d.id === draggedDeal.id ? {...d, stage: newStage} : d));
-    
-    try {
-      // Update deal stage
-      await fetch(`${API}/api/deals/${draggedDeal.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ stage: newStage })
-      });
+    // Handle linkage drag (individual lead-deal combination)
+    if (draggedLinkage) {
+      if (draggedLinkage.pipeline_status === newStage) { setDraggedLinkage(null); return; }
       
-      // Also update all lead-deal linkages for this deal
-      const linkedLinkages = linkages.filter(l => l.deal_id === draggedDeal.id);
-      for (const linkage of linkedLinkages) {
-        await fetch(`${API}/api/lead-deal-linkages/${linkage.id}`, {
+      // Optimistic update
+      setLinkages(prev => prev.map(l => l.id === draggedLinkage.id ? {...l, pipeline_status: newStage} : l));
+      
+      try {
+        // Only update this specific linkage's status
+        await fetch(`${API}/api/lead-deal-linkages/${draggedLinkage.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ pipeline_status: newStage })
         });
+        toast.success(`Moved to ${STAGES.find(s => s.id === newStage)?.label || newStage}`);
+        fetchLinkages();
+      } catch (error) { 
+        fetchLinkages(); 
+        toast.error('Failed to update'); 
       }
-      
-      toast.success(`Moved to ${STAGES.find(s => s.id === newStage)?.label || newStage}`);
-      fetchDeals();
-      fetchLinkages();
-    } catch (error) { 
-      fetchDeals(); 
-      toast.error('Failed to update'); 
+      setDraggedLinkage(null);
+      return;
     }
+    
     setDraggedDeal(null);
+  };
+
+  // Open linkage detail side panel
+  const openLinkageDetail = async (linkage) => {
+    // Create a deal-like object from linkage for the side panel
+    const deal = deals.find(d => d.id === linkage.deal_id);
+    if (deal) {
+      // Create a custom view with linkage-specific stage
+      setSelectedDeal({
+        ...deal,
+        stage: linkage.pipeline_status, // Use linkage's status, not deal's
+        _linkage_id: linkage.id,
+        _lead_id: linkage.lead_id,
+        _lead_name: linkage.lead_company || linkage.lead_name
+      });
+      setIsDealDetailOpen(true);
+    } else {
+      // If deal not found, navigate to lead
+      navigate(`/leads/${linkage.lead_id}`);
+    }
   };
 
   const openEditDialog = (deal) => {
@@ -347,9 +362,9 @@ export default function Pipeline() {
     }
   };
 
-  // Get deals by stage
-  const getDealsByStage = (stageId) => deals.filter(d => d.stage === stageId);
-  const getDealStageValue = (stageId) => getDealsByStage(stageId).reduce((sum, d) => sum + (d.value || 0), 0);
+  // Get linkages by pipeline_status (each lead-deal combination as individual tile)
+  const getLinkagesByStage = (stageId) => linkages.filter(l => l.pipeline_status === stageId);
+  const getLinkageStageValue = (stageId) => getLinkagesByStage(stageId).reduce((sum, l) => sum + (l.deal_value || 0), 0);
   
   const formatCurrency = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(value);
 
@@ -361,14 +376,14 @@ export default function Pipeline() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Pipeline</h1>
-          <p className="text-muted-foreground mt-1">Drag and drop deals to update stages</p>
+          <p className="text-muted-foreground mt-1">Drag and drop to update stages</p>
         </div>
         <button onClick={() => { setFormData(initialFormData); setIsCreateOpen(true); }} className="elstar-btn-primary flex items-center gap-2" data-testid="add-deal-btn">
           <Plus className="w-4 h-4" /> Add Deal
         </button>
       </div>
 
-      {/* Kanban Board */}
+      {/* Kanban Board - Shows individual lead-deal linkages */}
       <div className="overflow-x-auto pb-4">
         <div className="flex gap-4" style={{ minWidth: 'max-content' }}>
           {STAGES.map((stage) => (
@@ -385,37 +400,37 @@ export default function Pipeline() {
                   <div className={`w-2.5 h-2.5 rounded-full ${stage.color}`} />
                   <span className="font-medium text-sm">{stage.label}</span>
                   <span className="text-xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
-                    {getDealsByStage(stage.id).length}
+                    {getLinkagesByStage(stage.id).length}
                   </span>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground font-mono mb-4">{formatCurrency(getDealStageValue(stage.id))}</p>
+              <p className="text-xs text-muted-foreground font-mono mb-4">{formatCurrency(getLinkageStageValue(stage.id))}</p>
 
-              {/* Cards - Deals */}
+              {/* Cards - Each card is a lead-deal linkage (individual clinic) */}
               <div className="space-y-3 min-h-[300px]">
-                {getDealsByStage(stage.id).map((deal) => (
+                {getLinkagesByStage(stage.id).map((linkage) => (
                   <div
-                    key={deal.id}
+                    key={linkage.id}
                     draggable
-                    onDragStart={(e) => handleDragStart(e, deal)}
-                    onClick={() => openDealDetail(deal)}
-                    className={`elstar-kanban-card cursor-pointer hover:border-primary/50 transition-colors ${draggedDeal?.id === deal.id ? 'opacity-50' : ''}`}
-                    data-testid={`deal-card-${deal.id}`}
+                    onDragStart={(e) => handleLinkageDragStart(e, linkage)}
+                    onClick={() => openLinkageDetail(linkage)}
+                    className={`elstar-kanban-card cursor-pointer hover:border-primary/50 transition-colors ${draggedLinkage?.id === linkage.id ? 'opacity-50' : ''}`}
+                    data-testid={`linkage-card-${linkage.id}`}
                   >
                     <div className="flex items-start justify-between mb-2">
-                      <h4 className="font-medium text-sm line-clamp-2 pr-2">{deal.title}</h4>
+                      <h4 className="font-medium text-sm line-clamp-2 pr-2">{linkage.deal_title}</h4>
                       <div onClick={(e) => e.stopPropagation()}>
-                        <ActionDropdown testId={`deal-actions-${deal.id}`}>
+                        <ActionDropdown testId={`linkage-actions-${linkage.id}`}>
                           {(closeDropdown) => (
                             <>
-                              <button onClick={() => { openDealDetail(deal); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
+                              <button onClick={() => { openLinkageDetail(linkage); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
                                 <Eye className="w-4 h-4" /> View Details
                               </button>
-                              <button onClick={() => { openEditDialog(deal); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
-                                <Edit className="w-4 h-4" /> Edit
+                              <button onClick={() => { navigate(`/leads/${linkage.lead_id}`); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
+                                <Building2 className="w-4 h-4" /> View Lead
                               </button>
-                              <button onClick={() => { handleDelete(deal.id); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500">
-                                <Trash2 className="w-4 h-4" /> Delete
+                              <button onClick={() => { handleDeleteLinkage(linkage.id); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500">
+                                <Trash2 className="w-4 h-4" /> Remove
                               </button>
                             </>
                           )}
@@ -423,52 +438,43 @@ export default function Pipeline() {
                       </div>
                     </div>
                     
-                    {/* Linked Companies */}
-                    {deal.linked_companies && deal.linked_companies.length > 0 ? (
-                      <div className="mb-2 flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                          <Building2 className="w-3 h-3 text-emerald-500" />
-                        </div>
-                        <div className="text-xs">
-                          <span className="text-foreground font-medium">{deal.linked_companies[0]?.name}</span>
-                          {deal.linked_companies_count > 1 && (
-                            <span className="text-amber-500 ml-1">+{deal.linked_companies_count - 1} more</span>
-                          )}
-                        </div>
+                    {/* Lead/Clinic Info - Each card shows ONE clinic */}
+                    <div className="mb-2 flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                        <Building2 className="w-3 h-3 text-emerald-500" />
                       </div>
-                    ) : deal.company && (
-                      <div className="mb-2 flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                          <Building2 className="w-3 h-3 text-emerald-500" />
-                        </div>
-                        <span className="text-xs text-foreground">{deal.company}</span>
+                      <div className="text-xs">
+                        <span className="text-foreground font-medium">{linkage.lead_company || linkage.lead_name}</span>
+                        {linkage.lead_state && (
+                          <span className="text-muted-foreground ml-1">• {linkage.lead_state}</span>
+                        )}
                       </div>
-                    )}
+                    </div>
                     
                     <div className="space-y-2 text-xs text-muted-foreground">
                       <div className="flex items-center gap-1.5">
                         <DollarSign className="w-3.5 h-3.5" />
-                        <span className="font-mono font-medium text-foreground">{formatCurrency(deal.value || 0)}</span>
+                        <span className="font-mono font-medium text-foreground">{formatCurrency(linkage.deal_value || 0)}</span>
                       </div>
-                      {deal.expected_close_date && (
+                      {linkage.deal_expected_close_date && (
                         <div className="flex items-center gap-1.5">
                           <Calendar className="w-3.5 h-3.5" />
-                          <span>{deal.expected_close_date}</span>
+                          <span>{linkage.deal_expected_close_date}</span>
                         </div>
                       )}
                     </div>
                     <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">Health Score</span>
                       <div className="flex items-center gap-1">
-                        <Sparkles className={`w-3.5 h-3.5 ${getHealthClass(deal.ai_health_score)}`} />
-                        <span className={`font-mono text-xs font-bold ${getHealthClass(deal.ai_health_score)}`}>+{deal.ai_health_score || 0}</span>
+                        <Sparkles className={`w-3.5 h-3.5 ${getHealthClass(70)}`} />
+                        <span className={`font-mono text-xs font-bold ${getHealthClass(70)}`}>+70</span>
                       </div>
                     </div>
                   </div>
                 ))}
-                {getDealsByStage(stage.id).length === 0 && (
+                {getLinkagesByStage(stage.id).length === 0 && (
                   <div className="flex items-center justify-center h-24 border-2 border-dashed border-border rounded-lg text-sm text-muted-foreground">
-                    Drop deals here
+                    Drop items here
                   </div>
                 )}
               </div>
@@ -525,6 +531,14 @@ export default function Pipeline() {
               </div>
             </div>
 
+            {/* Current Lead Info - shown when opened from linkage card */}
+            {selectedDeal._lead_name && (
+              <div className="p-3 bg-primary/10 rounded-lg border border-primary/20 mb-4">
+                <p className="text-xs text-primary uppercase font-medium">Currently Viewing</p>
+                <p className="font-semibold">{selectedDeal._lead_name}</p>
+              </div>
+            )}
+
             {/* Pipeline Stage - matching Picture 3 */}
             <div>
               <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider mb-3">PIPELINE STAGE</h3>
@@ -535,27 +549,36 @@ export default function Pipeline() {
                     onClick={async () => {
                       if (selectedDeal.stage === stage.id) return;
                       try {
-                        // Update deal stage
-                        await fetch(`${API}/api/deals/${selectedDeal.id}`, {
-                          method: 'PUT',
-                          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                          body: JSON.stringify({ stage: stage.id })
-                        });
-                        
-                        // Also update all lead-deal linkages for this deal
-                        const linkedLinkages = linkages.filter(l => l.deal_id === selectedDeal.id);
-                        for (const linkage of linkedLinkages) {
-                          await fetch(`${API}/api/lead-deal-linkages/${linkage.id}`, {
+                        // If this is a linkage-specific view, only update this linkage
+                        if (selectedDeal._linkage_id) {
+                          await fetch(`${API}/api/lead-deal-linkages/${selectedDeal._linkage_id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                             body: JSON.stringify({ pipeline_status: stage.id })
                           });
+                          toast.success(`${selectedDeal._lead_name} moved to ${stage.label}`);
+                        } else {
+                          // Otherwise update the deal and all linkages
+                          await fetch(`${API}/api/deals/${selectedDeal.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                            body: JSON.stringify({ stage: stage.id })
+                          });
+                          
+                          const linkedLinkages = linkages.filter(l => l.deal_id === selectedDeal.id);
+                          for (const linkage of linkedLinkages) {
+                            await fetch(`${API}/api/lead-deal-linkages/${linkage.id}`, {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                              body: JSON.stringify({ pipeline_status: stage.id })
+                            });
+                          }
+                          toast.success(`Stage updated to ${stage.label}`);
                         }
                         
                         setSelectedDeal(prev => ({ ...prev, stage: stage.id }));
                         fetchDeals();
                         fetchLinkages();
-                        toast.success(`Stage updated to ${stage.label}`);
                       } catch (error) {
                         toast.error('Failed to update stage');
                       }

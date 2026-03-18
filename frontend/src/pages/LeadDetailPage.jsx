@@ -347,7 +347,7 @@ export default function LeadDetailPage() {
         if (selectedDeal) {
           const newStage = pipelineStatus === 'closed' ? 'sales_closed' : (pipelineStatus === 'lost' ? 'lost' : pipelineStatus);
           
-          // Create/update linkage with this lead's pipeline status
+          // Create/update linkage with this lead's pipeline status (ONLY this lead's status)
           await fetch(`${API}/api/lead-deal-linkages`, {
             method: 'POST',
             headers: { 
@@ -362,23 +362,21 @@ export default function LeadDetailPage() {
             })
           });
           
-          // Update the deal's stage and add to linked_company_ids if not already there
+          // Add to deal's linked_company_ids if not already there (but DON'T update deal.stage)
           const existingLinkedIds = selectedDeal.linked_company_ids || [];
-          const dealUpdatePayload = {
-            stage: newStage  // Also update deal stage for Pipeline page
-          };
           if (!existingLinkedIds.includes(id)) {
-            dealUpdatePayload.linked_company_ids = [...existingLinkedIds, id];
+            await fetch(`${API}/api/deals/${selectedDealId}`, {
+              method: 'PUT',
+              headers: { 
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}` 
+              },
+              body: JSON.stringify({ 
+                linked_company_ids: [...existingLinkedIds, id]
+                // Note: NOT updating deal.stage - each lead has its own status via linkages
+              })
+            });
           }
-          
-          await fetch(`${API}/api/deals/${selectedDealId}`, {
-            method: 'PUT',
-            headers: { 
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}` 
-            },
-            body: JSON.stringify(dealUpdatePayload)
-          });
           
           // Auto-create task for this lead-deal linkage
           await fetch(`${API}/api/tasks`, {
