@@ -240,7 +240,24 @@ export default function Pipeline() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ ...formData, value: parseFloat(formData.value) })
       });
-      if (response.ok) { toast.success('Deal updated'); setIsEditOpen(false); setSelectedDeal(null); setFormData(initialFormData); fetchDeals(); }
+      
+      if (response.ok) {
+        // If this was opened from a specific linkage, also update that linkage's pipeline_status
+        if (selectedDeal._linkage_id && formData.stage) {
+          await fetch(`${API}/api/lead-deal-linkages/${selectedDeal._linkage_id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ pipeline_status: formData.stage })
+          });
+        }
+        
+        toast.success('Deal updated'); 
+        setIsEditOpen(false); 
+        setSelectedDeal(null); 
+        setFormData(initialFormData); 
+        fetchDeals();
+        fetchLinkages();
+      }
     } catch (error) { toast.error('Failed to update deal'); }
     finally { setFormLoading(false); }
   };
