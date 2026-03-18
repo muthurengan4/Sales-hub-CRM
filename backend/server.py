@@ -2347,18 +2347,48 @@ async def get_analytics(user: dict = Depends(get_current_user)):
     # Get deals stats
     deals = await db.deals.find(org_filter, {'_id': 0}).to_list(10000)
     total_deals = len(deals)
-    total_pipeline_value = sum(d.get('value', 0) for d in deals if d.get('stage') not in ['closed_won', 'closed_lost'])
-    won_deals_value = sum(d.get('value', 0) for d in deals if d.get('stage') == 'closed_won')
     
+    # Get lead-deal linkages for pipeline values (individual lead statuses)
+    linkages = await db.lead_deal_linkages.find(org_filter, {'_id': 0}).to_list(10000)
+    
+    # Create a map of deal values
+    deal_values = {d['id']: d.get('value', 0) for d in deals}
+    
+    # Calculate pipeline value from linkages (each linkage has its own status)
+    total_pipeline_value = sum(
+        deal_values.get(l.get('deal_id'), 0) 
+        for l in linkages 
+        if l.get('pipeline_status') not in ['sales_closed', 'lost']
+    )
+    
+    # Calculate won deals value from linkages with 'sales_closed' status
+    won_deals_value = sum(
+        deal_values.get(l.get('deal_id'), 0) 
+        for l in linkages 
+        if l.get('pipeline_status') == 'sales_closed'
+    )
+    
+    # If no linkages exist, fallback to deals-based calculation
+    if not linkages:
+        total_pipeline_value = sum(d.get('value', 0) for d in deals if d.get('stage') not in ['sales_closed', 'lost'])
+        won_deals_value = sum(d.get('value', 0) for d in deals if d.get('stage') == 'sales_closed')
+    
+    # Count deals by stage (from linkages)
     deals_by_stage = {}
-    for deal in deals:
-        stage = deal.get('stage', 'lead')
+    for linkage in linkages:
+        stage = linkage.get('pipeline_status', 'lead')
         deals_by_stage[stage] = deals_by_stage.get(stage, 0) + 1
     
+    # If no linkages, fallback to deals
+    if not linkages:
+        for deal in deals:
+            stage = deal.get('stage', 'lead')
+            deals_by_stage[stage] = deals_by_stage.get(stage, 0) + 1
+    
     # Conversion rate
-    won_count = deals_by_stage.get('closed_won', 0)
-    total_closed = won_count + deals_by_stage.get('closed_lost', 0)
-    conversion_rate = (won_count / total_closed * 100) if total_closed > 0 else 0
+    won_count = deals_by_stage.get('sales_closed', 0)
+    total_closed = won_count + deals_by_stage.get('lost', 0)
+    conversion_rate = round((won_count / total_closed * 100), 1) if total_closed > 0 else 0
     
     # Get contacts count
     total_contacts = await db.contacts.count_documents(org_filter)
