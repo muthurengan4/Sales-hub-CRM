@@ -11,6 +11,7 @@ import Leads from './pages/Leads';
 import LeadDetailPage from './pages/LeadDetailPage';
 import Pipeline from './pages/Pipeline';
 import Customers from './pages/Customers';
+import CustomerDetailPage from './pages/CustomerDetailPage';
 import Users from './pages/Users';
 import Organization from './pages/Organization';
 import Settings from './pages/Settings';
@@ -160,6 +161,7 @@ function App() {
               <Route path="leads/:id" element={<LeadDetailPage />} />
               <Route path="pipeline" element={<Pipeline />} />
               <Route path="customers" element={<Customers />} />
+              <Route path="customer/:id" element={<CustomerDetailPage />} />
               <Route path="tasks" element={<Tasks />} />
               <Route path="calendar" element={<CalendarPage />} />
               <Route path="whatsapp" element={<WhatsAppMessages />} />

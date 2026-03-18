@@ -403,7 +403,15 @@ export default function Customers() {
                           <ActionDropdown testId={`customer-actions-${customer.id}`}>
                             {(closeDropdown) => (
                               <>
-                                <button onClick={() => { openPreviewPanel(customer); closeDropdown(); }} className="w-full text-left px-3 py-2 text-sm hover:bg-secondary flex items-center gap-2 rounded">
+                                <button onClick={() => { 
+                                  closeDropdown();
+                                  // Navigate to lead detail if has lead_id, otherwise customer profile
+                                  if (customer.lead_id) {
+                                    navigate(`/leads/${customer.lead_id}`);
+                                  } else {
+                                    openPreviewPanel(customer);
+                                  }
+                                }} className="w-full text-left px-3 py-2 text-sm hover:bg-secondary flex items-center gap-2 rounded">
                                   <User className="w-4 h-4" /> View Profile
                                 </button>
                                 <button onClick={() => openEditDialog(customer, closeDropdown)} className="w-full text-left px-3 py-2 text-sm hover:bg-secondary flex items-center gap-2 rounded">
@@ -580,9 +588,14 @@ export default function Customers() {
               <button
                 onClick={() => {
                   setIsPreviewOpen(false);
+                  // If customer has a lead_id, navigate to the lead detail page
+                  // Otherwise navigate to customer profile
+                  if (selectedCustomer.lead_id) {
+                    navigate(`/leads/${selectedCustomer.lead_id}`);
+                  } else {
+                    navigate(`/customer/${selectedCustomer.id}`);
+                  }
                   setSelectedCustomer(null);
-                  // Navigate to the customer profile page
-                  navigate(`/profile/customer/${selectedCustomer.id}`);
                 }}
                 className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 rounded-lg text-sm font-medium transition-colors"
               >
