@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import SlideInPanel from '../components/SlideInPanel';
 import ActionDropdown from '../components/ActionDropdown';
+import Modal from '../components/Modal';
 import { Plus, Loader2, DollarSign, Calendar, Trash2, Edit, Sparkles, Building2, Search, Eye, X, FileText, Upload } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -176,6 +177,11 @@ export default function Pipeline() {
   const [companies, setCompanies] = useState([]);
   const [companySearch, setCompanySearch] = useState('');
   const [knowledgeBaseFile, setKnowledgeBaseFile] = useState(null);
+  
+  // Linkage edit modal state
+  const [isLinkageEditOpen, setIsLinkageEditOpen] = useState(false);
+  const [selectedLinkage, setSelectedLinkage] = useState(null);
+  const [linkageEditStatus, setLinkageEditStatus] = useState('lead');
 
   useEffect(() => { fetchDeals(); fetchLinkages(); fetchCompanies(); }, []);
 
@@ -306,6 +312,44 @@ export default function Pipeline() {
     }
   };
 
+  // Linkage edit/delete functions
+  const openLinkageEditDialog = (linkage) => {
+    setSelectedLinkage(linkage);
+    setLinkageEditStatus(linkage.pipeline_status);
+    setIsLinkageEditOpen(true);
+  };
+
+  const handleLinkageEditSave = async () => {
+    if (!selectedLinkage) return;
+    try {
+      await fetch(`${API}/api/lead-deal-linkages/${selectedLinkage.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ pipeline_status: linkageEditStatus })
+      });
+      toast.success('Status updated');
+      setIsLinkageEditOpen(false);
+      setSelectedLinkage(null);
+      fetchLinkages();
+    } catch (error) {
+      toast.error('Failed to update status');
+    }
+  };
+
+  const handleDeleteLinkage = async (linkageId) => {
+    if (!confirm('Remove this lead from the deal?')) return;
+    try {
+      await fetch(`${API}/api/lead-deal-linkages/${linkageId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Removed from deal');
+      fetchLinkages();
+    } catch (error) {
+      toast.error('Failed to remove');
+    }
+  };
+
   // Get linkages by pipeline_status (lead-deal combinations with their individual status)
   const getLinkagesByStage = (stageId) => linkages.filter(l => l.pipeline_status === stageId);
   const getLinkageStageValue = (stageId) => getLinkagesByStage(stageId).reduce((sum, l) => sum + (l.deal_value || 0), 0);
@@ -368,16 +412,32 @@ export default function Pipeline() {
                     key={linkage.id}
                     draggable
                     onDragStart={(e) => handleLinkageDragStart(e, linkage)}
-                    onClick={() => navigate(`/leads/${linkage.lead_id}`)}
                     className={`elstar-kanban-card cursor-pointer hover:border-primary/50 transition-colors ${draggedLinkage?.id === linkage.id ? 'opacity-50' : ''}`}
                     data-testid={`linkage-card-${linkage.id}`}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <h4 className="font-medium text-sm line-clamp-2 pr-2">{linkage.deal_title}</h4>
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <ActionDropdown testId={`linkage-actions-${linkage.id}`}>
+                          {(closeDropdown) => (
+                            <>
+                              <button onClick={() => { navigate(`/leads/${linkage.lead_id}`); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
+                                <Eye className="w-4 h-4" /> View Lead
+                              </button>
+                              <button onClick={() => { openLinkageEditDialog(linkage); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2">
+                                <Edit className="w-4 h-4" /> Edit Status
+                              </button>
+                              <button onClick={() => { handleDeleteLinkage(linkage.id); closeDropdown(); }} className="elstar-dropdown-item w-full text-left flex items-center gap-2 text-red-500">
+                                <Trash2 className="w-4 h-4" /> Remove
+                              </button>
+                            </>
+                          )}
+                        </ActionDropdown>
+                      </div>
                     </div>
                     
                     {/* Lead/Company Info */}
-                    <div className="mb-2 flex items-center gap-2">
+                    <div className="mb-2 flex items-center gap-2" onClick={() => navigate(`/leads/${linkage.lead_id}`)}>
                       <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
                         <Building2 className="w-3 h-3 text-emerald-500" />
                       </div>
@@ -400,6 +460,13 @@ export default function Pipeline() {
                           <span>{linkage.deal_expected_close_date}</span>
                         </div>
                       )}
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Health Score</span>
+                      <div className="flex items-center gap-1">
+                        <Sparkles className={`w-3.5 h-3.5 ${getHealthClass(70)}`} />
+                        <span className={`font-mono text-xs font-bold ${getHealthClass(70)}`}>+70</span>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -634,6 +701,45 @@ export default function Pipeline() {
           </div>
         )}
       </SlideInPanel>
+
+      {/* Linkage Edit Modal */}
+      <Modal isOpen={isLinkageEditOpen} onClose={() => setIsLinkageEditOpen(false)} title="Edit Pipeline Status">
+        <div className="elstar-modal-body space-y-4">
+          {selectedLinkage && (
+            <>
+              <div className="p-3 bg-secondary/50 rounded-lg">
+                <p className="font-medium">{selectedLinkage.deal_title}</p>
+                <p className="text-sm text-muted-foreground">{selectedLinkage.lead_company || selectedLinkage.lead_name}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Pipeline Status</label>
+                <div className="flex flex-wrap gap-2">
+                  {STAGES.map(stage => (
+                    <button
+                      key={stage.id}
+                      type="button"
+                      onClick={() => setLinkageEditStatus(stage.id)}
+                      className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                        linkageEditStatus === stage.id
+                          ? 'bg-primary text-white border-primary'
+                          : 'border-border hover:bg-secondary'
+                      }`}
+                    >
+                      {stage.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+        <div className="elstar-modal-footer">
+          <button onClick={() => setIsLinkageEditOpen(false)} className="elstar-btn-ghost">Cancel</button>
+          <button onClick={handleLinkageEditSave} className="elstar-btn-primary">
+            Save Changes
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }
