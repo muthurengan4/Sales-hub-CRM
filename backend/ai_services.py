@@ -5,6 +5,7 @@ Handles ElevenLabs Conversational AI for calls and Twilio WhatsApp for messaging
 import os
 import json
 import logging
+import httpx
 from datetime import datetime, timezone
 from typing import Optional, Dict, List
 from elevenlabs import ElevenLabs
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 # Environment variables
 ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY')
+ELEVENLABS_AGENT_ID = os.environ.get('ELEVENLABS_AGENT_ID')
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
 TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
 TWILIO_WHATSAPP_NUMBER = os.environ.get('TWILIO_WHATSAPP_NUMBER', '+14155238886')
@@ -33,6 +35,8 @@ def init_clients():
         try:
             elevenlabs_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
             logger.info("ElevenLabs client initialized successfully")
+            if ELEVENLABS_AGENT_ID:
+                logger.info(f"ElevenLabs Agent ID configured: {ELEVENLABS_AGENT_ID}")
         except Exception as e:
             logger.error(f"Failed to initialize ElevenLabs client: {e}")
     
@@ -170,14 +174,7 @@ async def initiate_ai_call(
 ) -> Dict:
     """
     Initiate an AI-powered call using ElevenLabs Conversational AI.
-    
-    Note: ElevenLabs Conversational AI requires a specific setup:
-    1. Create a Conversational AI agent in the ElevenLabs dashboard
-    2. Configure the agent with your phone number provider (Twilio)
-    3. Use the agent_id to initiate calls
-    
-    For now, this returns the configuration needed for the call.
-    The actual call initiation depends on your ElevenLabs Conversational AI setup.
+    Uses the configured agent to make outbound calls.
     """
     if not elevenlabs_client:
         return {
@@ -193,14 +190,28 @@ async def initiate_ai_call(
         call_purpose=call_purpose
     )
     
-    # Get agent configuration
+    # Get agent ID from config or environment
+    agent_id = None
+    if agent_config and agent_config.get('agent_id'):
+        agent_id = agent_config.get('agent_id')
+    elif ELEVENLABS_AGENT_ID:
+        agent_id = ELEVENLABS_AGENT_ID
+    
     voice_id = agent_config.get('voice_id') if agent_config else None
-    agent_id = agent_config.get('agent_id') if agent_config else None
+    
+    # Format phone number for calling (E.164 format)
+    formatted_phone = phone_number.replace(' ', '').replace('-', '')
+    if not formatted_phone.startswith('+'):
+        # Assume Malaysia country code if not provided
+        if formatted_phone.startswith('0'):
+            formatted_phone = '+60' + formatted_phone[1:]
+        else:
+            formatted_phone = '+' + formatted_phone
     
     # Prepare call data for logging
     call_data = {
         "call_id": f"call_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}_{phone_number[-4:]}",
-        "phone_number": phone_number,
+        "phone_number": formatted_phone,
         "lead_id": lead_info.get('id'),
         "deal_id": deal_info.get('id') if deal_info else None,
         "agent_id": agent_id,
@@ -212,33 +223,98 @@ async def initiate_ai_call(
         "agent_name": agent_config.get('name', 'AI Agent') if agent_config else 'AI Agent'
     }
     
-    # Note: ElevenLabs Conversational AI for outbound calls requires:
-    # 1. A configured Conversational AI agent with phone capabilities
-    # 2. Integration with a telephony provider (Twilio Voice)
-    # 
-    # The actual implementation would use the ElevenLabs Conversational AI SDK
-    # to start a conversation session. For demo purposes, we return the call config.
-    
     try:
-        # In production, you would use ElevenLabs' Conversational AI API:
-        # conversation = elevenlabs_client.conversational_ai.conversations.create(
-        #     agent_id=agent_id,
-        #     phone_number=phone_number,
-        #     first_message=f"Hello, this is {agent_config.get('name', 'your AI assistant')}...",
-        #     system_prompt=script
-        # )
-        
-        return {
-            "success": True,
-            "call_data": call_data,
-            "message": "AI call configuration prepared. Connect to ElevenLabs Conversational AI dashboard to complete setup.",
-            "next_steps": [
-                "1. Go to ElevenLabs Dashboard > Conversational AI",
-                "2. Create or select an agent with phone capabilities",
-                "3. Connect your Twilio account for outbound calling",
-                "4. Use the agent_id in your CRM settings"
-            ]
-        }
+        if agent_id:
+            # Use ElevenLabs Conversational AI API to initiate call
+            # The API endpoint for outbound calls
+            api_url = f"https://api.elevenlabs.io/v1/convai/conversations"
+            
+            headers = {
+                "xi-api-key": ELEVENLABS_API_KEY,
+                "Content-Type": "application/json"
+            }
+            
+            # Build dynamic variables for the conversation
+            dynamic_variables = {
+                "customer_name": lead_info.get('pic_name') or lead_info.get('name', 'Customer'),
+                "company_name": lead_info.get('company', ''),
+                "deal_name": deal_info.get('title', '') if deal_info else '',
+                "deal_value": f"RM {deal_info.get('value', 0):,.2f}" if deal_info else '',
+                "call_purpose": call_purpose
+            }
+            
+            payload = {
+                "agent_id": agent_id,
+                "conversation_config_override": {
+                    "agent": {
+                        "prompt": {
+                            "prompt": script
+                        },
+                        "first_message": f"Hello, am I speaking with {lead_info.get('pic_name') or lead_info.get('name', 'there')}? This is your AI assistant calling regarding {deal_info.get('title', 'your inquiry') if deal_info else 'a follow-up'}."
+                    }
+                },
+                "dynamic_variables": dynamic_variables
+            }
+            
+            # For outbound calls, we need to use the phone call endpoint
+            # Note: This requires Twilio integration in ElevenLabs dashboard
+            outbound_url = f"https://api.elevenlabs.io/v1/convai/agents/{agent_id}/call"
+            
+            outbound_payload = {
+                "phone_number": formatted_phone,
+                "first_message": f"Hello, am I speaking with {lead_info.get('pic_name') or lead_info.get('name', 'there')}?",
+                "dynamic_variables": dynamic_variables
+            }
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    outbound_url,
+                    headers=headers,
+                    json=outbound_payload,
+                    timeout=30.0
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    call_data["conversation_id"] = result.get("conversation_id")
+                    call_data["status"] = "calling"
+                    
+                    return {
+                        "success": True,
+                        "call_data": call_data,
+                        "conversation_id": result.get("conversation_id"),
+                        "message": f"AI call initiated to {formatted_phone}. The AI agent is now calling."
+                    }
+                else:
+                    error_detail = response.text
+                    logger.error(f"ElevenLabs API error: {response.status_code} - {error_detail}")
+                    
+                    # If outbound call fails, provide instructions
+                    return {
+                        "success": False,
+                        "call_data": call_data,
+                        "error": f"API Error: {response.status_code}",
+                        "detail": error_detail,
+                        "message": "Could not initiate outbound call. Please ensure Twilio is connected in ElevenLabs dashboard.",
+                        "next_steps": [
+                            "1. Go to ElevenLabs Dashboard > Conversational AI > Your Agent",
+                            "2. Connect your Twilio account in the 'Phone' settings",
+                            "3. Enable outbound calling and add your Twilio phone number",
+                            "4. Try again after setup is complete"
+                        ]
+                    }
+        else:
+            return {
+                "success": False,
+                "call_data": call_data,
+                "error": "No agent_id configured",
+                "message": "Please configure an ElevenLabs Conversational AI agent.",
+                "next_steps": [
+                    "1. Go to ElevenLabs Dashboard > Conversational AI",
+                    "2. Create or select an agent",
+                    "3. Copy the agent_id and add it to your CRM Settings > AI Agents"
+                ]
+            }
     except Exception as e:
         logger.error(f"Error initiating AI call: {e}")
         return {
