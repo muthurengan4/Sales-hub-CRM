@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 # Environment variables
 ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY')
 ELEVENLABS_AGENT_ID = os.environ.get('ELEVENLABS_AGENT_ID')
+ELEVENLABS_PHONE_NUMBER_ID = os.environ.get('ELEVENLABS_PHONE_NUMBER_ID')
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
 TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
 TWILIO_WHATSAPP_NUMBER = os.environ.get('TWILIO_WHATSAPP_NUMBER', '+14155238886')
@@ -173,13 +174,13 @@ async def initiate_ai_call(
     call_purpose: str = "follow_up"
 ) -> Dict:
     """
-    Initiate an AI-powered call using ElevenLabs Conversational AI.
+    Initiate an AI-powered call using ElevenLabs Conversational AI via Twilio.
     Uses the configured agent to make outbound calls.
     """
-    if not elevenlabs_client:
+    if not ELEVENLABS_API_KEY:
         return {
             "success": False,
-            "error": "ElevenLabs client not initialized. Please check API key."
+            "error": "ElevenLabs API key not configured."
         }
     
     # Generate the AI script/context
@@ -190,12 +191,15 @@ async def initiate_ai_call(
         call_purpose=call_purpose
     )
     
-    # Get agent ID from config or environment
-    agent_id = None
-    if agent_config and agent_config.get('agent_id'):
-        agent_id = agent_config.get('agent_id')
-    elif ELEVENLABS_AGENT_ID:
-        agent_id = ELEVENLABS_AGENT_ID
+    # Get agent ID and phone number ID from config or environment
+    agent_id = ELEVENLABS_AGENT_ID
+    phone_number_id = ELEVENLABS_PHONE_NUMBER_ID
+    
+    if agent_config:
+        if agent_config.get('agent_id'):
+            agent_id = agent_config.get('agent_id')
+        if agent_config.get('phone_number_id'):
+            phone_number_id = agent_config.get('phone_number_id')
     
     voice_id = agent_config.get('voice_id') if agent_config else None
     
@@ -215,6 +219,7 @@ async def initiate_ai_call(
         "lead_id": lead_info.get('id'),
         "deal_id": deal_info.get('id') if deal_info else None,
         "agent_id": agent_id,
+        "phone_number_id": phone_number_id,
         "voice_id": voice_id,
         "call_purpose": call_purpose,
         "script": script,
@@ -223,98 +228,89 @@ async def initiate_ai_call(
         "agent_name": agent_config.get('name', 'AI Agent') if agent_config else 'AI Agent'
     }
     
+    if not agent_id or not phone_number_id:
+        return {
+            "success": False,
+            "call_data": call_data,
+            "error": "Missing agent_id or phone_number_id",
+            "message": "Please configure ElevenLabs agent_id and phone_number_id in environment variables.",
+            "next_steps": [
+                "1. Set ELEVENLABS_AGENT_ID in backend/.env",
+                "2. Set ELEVENLABS_PHONE_NUMBER_ID in backend/.env",
+                "3. Restart the backend server"
+            ]
+        }
+    
     try:
-        if agent_id:
-            # Use ElevenLabs Conversational AI API to initiate call
-            # The API endpoint for outbound calls
-            api_url = f"https://api.elevenlabs.io/v1/convai/conversations"
-            
-            headers = {
-                "xi-api-key": ELEVENLABS_API_KEY,
-                "Content-Type": "application/json"
+        # Use ElevenLabs Twilio Outbound Call API
+        api_url = "https://api.elevenlabs.io/v1/convai/twilio/outbound-call"
+        
+        headers = {
+            "xi-api-key": ELEVENLABS_API_KEY,
+            "Content-Type": "application/json"
+        }
+        
+        # Build dynamic variables for the conversation
+        customer_name = lead_info.get('pic_name') or lead_info.get('name', 'Customer')
+        company_name = lead_info.get('company', '')
+        deal_name = deal_info.get('title', '') if deal_info else ''
+        
+        # Prepare the payload for ElevenLabs Twilio outbound call
+        payload = {
+            "agent_id": agent_id,
+            "agent_phone_number_id": phone_number_id,
+            "to_number": formatted_phone,
+            "conversation_initiation_client_data": {
+                "dynamic_variables": {
+                    "customer_name": customer_name,
+                    "company_name": company_name,
+                    "deal_name": deal_name,
+                    "deal_value": f"RM {deal_info.get('value', 0):,.2f}" if deal_info else '',
+                    "call_purpose": call_purpose
+                }
             }
+        }
+        
+        logger.info(f"Initiating ElevenLabs outbound call to {formatted_phone}")
+        logger.info(f"Agent ID: {agent_id}, Phone Number ID: {phone_number_id}")
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                api_url,
+                headers=headers,
+                json=payload,
+                timeout=30.0
+            )
             
-            # Build dynamic variables for the conversation
-            dynamic_variables = {
-                "customer_name": lead_info.get('pic_name') or lead_info.get('name', 'Customer'),
-                "company_name": lead_info.get('company', ''),
-                "deal_name": deal_info.get('title', '') if deal_info else '',
-                "deal_value": f"RM {deal_info.get('value', 0):,.2f}" if deal_info else '',
-                "call_purpose": call_purpose
-            }
+            logger.info(f"ElevenLabs API response status: {response.status_code}")
             
-            payload = {
-                "agent_id": agent_id,
-                "conversation_config_override": {
-                    "agent": {
-                        "prompt": {
-                            "prompt": script
-                        },
-                        "first_message": f"Hello, am I speaking with {lead_info.get('pic_name') or lead_info.get('name', 'there')}? This is your AI assistant calling regarding {deal_info.get('title', 'your inquiry') if deal_info else 'a follow-up'}."
-                    }
-                },
-                "dynamic_variables": dynamic_variables
-            }
-            
-            # For outbound calls, we need to use the phone call endpoint
-            # Note: This requires Twilio integration in ElevenLabs dashboard
-            outbound_url = f"https://api.elevenlabs.io/v1/convai/agents/{agent_id}/call"
-            
-            outbound_payload = {
-                "phone_number": formatted_phone,
-                "first_message": f"Hello, am I speaking with {lead_info.get('pic_name') or lead_info.get('name', 'there')}?",
-                "dynamic_variables": dynamic_variables
-            }
-            
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    outbound_url,
-                    headers=headers,
-                    json=outbound_payload,
-                    timeout=30.0
-                )
+            if response.status_code == 200:
+                result = response.json()
+                call_data["conversation_id"] = result.get("conversation_id")
+                call_data["call_sid"] = result.get("callSid")
+                call_data["status"] = "calling"
                 
-                if response.status_code == 200:
-                    result = response.json()
-                    call_data["conversation_id"] = result.get("conversation_id")
-                    call_data["status"] = "calling"
-                    
-                    return {
-                        "success": True,
-                        "call_data": call_data,
-                        "conversation_id": result.get("conversation_id"),
-                        "message": f"AI call initiated to {formatted_phone}. The AI agent is now calling."
-                    }
-                else:
-                    error_detail = response.text
-                    logger.error(f"ElevenLabs API error: {response.status_code} - {error_detail}")
-                    
-                    # If outbound call fails, provide instructions
-                    return {
-                        "success": False,
-                        "call_data": call_data,
-                        "error": f"API Error: {response.status_code}",
-                        "detail": error_detail,
-                        "message": "Could not initiate outbound call. Please ensure Twilio is connected in ElevenLabs dashboard.",
-                        "next_steps": [
-                            "1. Go to ElevenLabs Dashboard > Conversational AI > Your Agent",
-                            "2. Connect your Twilio account in the 'Phone' settings",
-                            "3. Enable outbound calling and add your Twilio phone number",
-                            "4. Try again after setup is complete"
-                        ]
-                    }
-        else:
-            return {
-                "success": False,
-                "call_data": call_data,
-                "error": "No agent_id configured",
-                "message": "Please configure an ElevenLabs Conversational AI agent.",
-                "next_steps": [
-                    "1. Go to ElevenLabs Dashboard > Conversational AI",
-                    "2. Create or select an agent",
-                    "3. Copy the agent_id and add it to your CRM Settings > AI Agents"
-                ]
-            }
+                logger.info(f"Call initiated successfully: {result}")
+                
+                return {
+                    "success": True,
+                    "call_data": call_data,
+                    "conversation_id": result.get("conversation_id"),
+                    "call_sid": result.get("callSid"),
+                    "message": f"AI call initiated to {formatted_phone}. The AI agent is now calling."
+                }
+            else:
+                error_detail = response.text
+                logger.error(f"ElevenLabs API error: {response.status_code} - {error_detail}")
+                
+                return {
+                    "success": False,
+                    "call_data": call_data,
+                    "error": f"API Error: {response.status_code}",
+                    "detail": error_detail,
+                    "message": f"Could not initiate outbound call. Error: {error_detail}"
+                }
+                
     except Exception as e:
         logger.error(f"Error initiating AI call: {e}")
         return {
