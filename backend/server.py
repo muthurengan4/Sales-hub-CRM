@@ -2719,10 +2719,13 @@ class AiCallInitiate(BaseModel):
     deal_id: str
     agent_name: str
     phone: Optional[str] = None
+    call_purpose: Optional[str] = "follow_up"  # follow_up, appointment, qualification, custom
 
 @api_router.post("/ai-calls/initiate")
-async def initiate_ai_call(call_data: AiCallInitiate, user: dict = Depends(get_current_user)):
-    """Initiate an AI call to a lead (mock implementation - actual Twilio/Bland.ai integration pending)"""
+async def initiate_ai_call_endpoint(call_data: AiCallInitiate, user: dict = Depends(get_current_user)):
+    """Initiate an AI call to a lead using ElevenLabs Conversational AI"""
+    from ai_services import initiate_ai_call as ai_initiate_call
+    
     if not user.get('organization_id'):
         raise HTTPException(status_code=400, detail="Please create or join an organization first")
     
@@ -2736,25 +2739,51 @@ async def initiate_ai_call(call_data: AiCallInitiate, user: dict = Depends(get_c
     if not deal:
         raise HTTPException(status_code=404, detail="Deal not found")
     
+    # Get AI agent configuration
+    agent = await db.ai_agents.find_one(
+        {'organization_id': user['organization_id'], 'name': call_data.agent_name},
+        {'_id': 0}
+    )
+    
+    # Get knowledge base from deal if available
+    knowledge_base = deal.get('knowledge_base_content')
+    
+    # Phone number to call
+    phone_number = call_data.phone or lead.get('phone')
+    if not phone_number:
+        raise HTTPException(status_code=400, detail="No phone number available for this lead")
+    
+    # Initiate AI call via ElevenLabs
+    result = await ai_initiate_call(
+        phone_number=phone_number,
+        lead_info=lead,
+        deal_info=deal,
+        agent_config=agent,
+        knowledge_base=knowledge_base,
+        call_purpose=call_data.call_purpose or "follow_up"
+    )
+    
     call_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     
-    # Create AI call record (mock - actual AI call would be initiated here)
+    # Create AI call record
     call_doc = {
         'id': call_id,
         'lead_id': call_data.lead_id,
         'deal_id': call_data.deal_id,
         'agent_name': call_data.agent_name,
-        'phone': call_data.phone or lead.get('phone'),
+        'phone': phone_number,
         'lead_name': lead.get('name') or lead.get('company'),
         'deal_title': deal.get('title'),
-        'status': 'initiated',  # initiated, ringing, in_progress, completed, failed
+        'status': 'initiated' if result.get('success') else 'failed',
         'direction': 'outbound',
         'source': 'AI Call',
         'duration': None,
         'summary': f'AI call initiated to discuss {deal.get("title")}. Agent: {call_data.agent_name}',
         'recording_url': None,
         'transcript': None,
+        'call_purpose': call_data.call_purpose or "follow_up",
+        'ai_script': result.get('call_data', {}).get('script'),
         'organization_id': user['organization_id'],
         'initiated_by': user['id'],
         'created_at': now,
@@ -2779,13 +2808,14 @@ async def initiate_ai_call(call_data: AiCallInitiate, user: dict = Depends(get_c
         'metadata': {
             'agent_name': call_data.agent_name,
             'deal_title': deal.get('title'),
-            'phone': call_data.phone or lead.get('phone')
+            'phone': phone_number,
+            'call_purpose': call_data.call_purpose
         },
         'created_at': now
     })
     
     call_doc.pop('_id', None)
-    return {"success": True, "call": call_doc, "message": f"AI call initiated with {call_data.agent_name}"}
+    return {"success": result.get('success', False), "call": call_doc, "message": result.get('message', f"AI call initiated with {call_data.agent_name}"), "next_steps": result.get('next_steps', [])}
 
 # ============= AI AGENTS MANAGEMENT =============
 
@@ -4285,6 +4315,202 @@ async def send_whatsapp_message(message_data: WhatsAppMessageSend, user: dict = 
     })
     
     return {"success": True, "message": message_doc, "twilio_sid": twilio_message_sid}
+
+# ============= BATCH AI CALLING & MESSAGING =============
+
+class BatchAiCallRequest(BaseModel):
+    lead_ids: List[str]
+    agent_name: str
+    call_purpose: Optional[str] = "follow_up"  # follow_up, appointment, qualification, custom
+
+class BatchWhatsAppRequest(BaseModel):
+    lead_ids: List[str]
+    message_type: Optional[str] = "follow_up"  # follow_up, appointment, introduction, thank_you
+    custom_message: Optional[str] = None
+
+class AiWhatsAppMessageRequest(BaseModel):
+    lead_id: str
+    message_type: Optional[str] = "follow_up"
+    custom_message: Optional[str] = None
+
+@api_router.post("/ai-calls/batch")
+async def batch_ai_call_endpoint(request: BatchAiCallRequest, user: dict = Depends(get_current_user)):
+    """Initiate batch AI calls to multiple leads"""
+    from ai_services import batch_ai_call
+    
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="Please create or join an organization first")
+    
+    # Get leads
+    leads = await db.leads.find(
+        {'id': {'$in': request.lead_ids}, 'organization_id': user['organization_id']},
+        {'_id': 0}
+    ).to_list(100)
+    
+    if not leads:
+        raise HTTPException(status_code=404, detail="No leads found")
+    
+    # Get agent configuration
+    agent = await db.ai_agents.find_one(
+        {'organization_id': user['organization_id'], 'name': request.agent_name},
+        {'_id': 0}
+    )
+    
+    # Execute batch calls
+    result = await batch_ai_call(
+        leads=leads,
+        agent_config=agent or {'name': request.agent_name},
+        call_purpose=request.call_purpose
+    )
+    
+    # Log batch activity
+    now = datetime.now(timezone.utc).isoformat()
+    await db.activities.insert_one({
+        'id': str(uuid.uuid4()),
+        'organization_id': user['organization_id'],
+        'entity_type': 'batch',
+        'entity_id': 'batch_call',
+        'action': 'batch_ai_call',
+        'title': f'Batch AI Call - {len(leads)} leads',
+        'description': f'Initiated batch AI calls with {request.agent_name}. Success: {result["successful"]}, Failed: {result["failed"]}',
+        'user_id': user['id'],
+        'user_name': user['name'],
+        'metadata': {
+            'total': result['total'],
+            'successful': result['successful'],
+            'failed': result['failed'],
+            'agent_name': request.agent_name,
+            'call_purpose': request.call_purpose
+        },
+        'created_at': now
+    })
+    
+    return result
+
+@api_router.post("/whatsapp/batch")
+async def batch_whatsapp_endpoint(request: BatchWhatsAppRequest, user: dict = Depends(get_current_user)):
+    """Send batch WhatsApp messages to multiple leads"""
+    from ai_services import batch_whatsapp_message
+    
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="Please create or join an organization first")
+    
+    # Get leads
+    leads = await db.leads.find(
+        {'id': {'$in': request.lead_ids}, 'organization_id': user['organization_id']},
+        {'_id': 0}
+    ).to_list(100)
+    
+    if not leads:
+        raise HTTPException(status_code=404, detail="No leads found")
+    
+    # Execute batch messaging
+    result = await batch_whatsapp_message(
+        leads=leads,
+        message_type=request.message_type,
+        custom_message=request.custom_message
+    )
+    
+    # Log batch activity
+    now = datetime.now(timezone.utc).isoformat()
+    await db.activities.insert_one({
+        'id': str(uuid.uuid4()),
+        'organization_id': user['organization_id'],
+        'entity_type': 'batch',
+        'entity_id': 'batch_whatsapp',
+        'action': 'batch_whatsapp',
+        'title': f'Batch WhatsApp - {len(leads)} leads',
+        'description': f'Sent batch WhatsApp messages. Success: {result["successful"]}, Failed: {result["failed"]}',
+        'user_id': user['id'],
+        'user_name': user['name'],
+        'metadata': {
+            'total': result['total'],
+            'successful': result['successful'],
+            'failed': result['failed'],
+            'message_type': request.message_type
+        },
+        'created_at': now
+    })
+    
+    return result
+
+@api_router.post("/whatsapp/ai-send")
+async def send_ai_whatsapp_message_endpoint(request: AiWhatsAppMessageRequest, user: dict = Depends(get_current_user)):
+    """Send an AI-powered personalized WhatsApp message to a lead"""
+    from ai_services import send_ai_whatsapp_message
+    
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="Please create or join an organization first")
+    
+    # Get lead
+    lead = await db.leads.find_one(
+        {'id': request.lead_id, 'organization_id': user['organization_id']},
+        {'_id': 0}
+    )
+    
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    phone = lead.get('phone') or lead.get('office_number')
+    if not phone:
+        raise HTTPException(status_code=400, detail="No phone number available for this lead")
+    
+    # Get deal info if available
+    deal = None
+    linkage = await db.lead_deal_linkages.find_one({'lead_id': request.lead_id}, {'_id': 0})
+    if linkage:
+        deal = await db.deals.find_one({'id': linkage['deal_id']}, {'_id': 0})
+    
+    # Send AI WhatsApp message
+    result = await send_ai_whatsapp_message(
+        recipient_phone=phone,
+        lead_info=lead,
+        deal_info=deal,
+        message_type=request.message_type,
+        custom_message=request.custom_message
+    )
+    
+    # Store message in database
+    if result.get('success'):
+        now = datetime.now(timezone.utc).isoformat()
+        message_doc = {
+            'id': str(uuid.uuid4()),
+            'organization_id': user['organization_id'],
+            'contact_id': request.lead_id,
+            'direction': 'outgoing',
+            'sender': 'AI',
+            'content': result.get('body', ''),
+            'message_type': request.message_type,
+            'phone': phone,
+            'twilio_sid': result.get('message_sid'),
+            'status': result.get('status', 'sent'),
+            'timestamp': now
+        }
+        await db.whatsapp_messages.insert_one(message_doc)
+        
+        # Log activity
+        await db.activities.insert_one({
+            'id': str(uuid.uuid4()),
+            'organization_id': user['organization_id'],
+            'entity_type': 'lead',
+            'entity_id': request.lead_id,
+            'action': 'ai_whatsapp_sent',
+            'title': 'AI WhatsApp Message Sent',
+            'description': f'AI {request.message_type} message sent to {lead.get("name") or lead.get("company")}',
+            'user_id': user['id'],
+            'user_name': user['name'],
+            'created_at': now
+        })
+    
+    return result
+
+@api_router.get("/elevenlabs/voices")
+async def get_elevenlabs_voices(user: dict = Depends(get_current_user)):
+    """Get available ElevenLabs voices for AI calling"""
+    from ai_services import get_available_voices
+    
+    voices = await get_available_voices()
+    return {"voices": voices}
 
 # ============= ROOT ROUTE =============
 

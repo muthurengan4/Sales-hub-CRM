@@ -120,16 +120,43 @@ The system now supports **per-lead pipeline status** for deals:
 
 ### P0 - Critical
 - [x] Per-lead pipeline status system ✅ DONE
+- [x] ElevenLabs AI Calling Integration ✅ DONE
+- [x] Twilio WhatsApp Integration ✅ DONE
 
 ### P1 - High Priority
 - [ ] Implement Google Calendar sync logic
 - [ ] Backend for Knowledge Base file processing
-- [ ] Actual ElevenLabs API integration for calls
+- [ ] ElevenLabs Conversational AI dashboard setup (requires ElevenLabs account configuration)
 
 ### P2 - Medium Priority
 - [ ] Populate AI Call Detail modal with real data
 - [ ] Export to CSV functionality
 - [ ] Custom report builder
+
+## AI Integration Details
+
+### ElevenLabs Conversational AI (CONFIGURED)
+- **API Key:** Configured in backend/.env
+- **Available Voices:** 44+ voices available via `/api/elevenlabs/voices`
+- **Endpoints:**
+  - `POST /api/ai-calls/initiate` - Start single AI call with context
+  - `POST /api/ai-calls/batch` - Batch AI calls to multiple leads
+  - `GET /api/elevenlabs/voices` - List available voices
+- **Features:**
+  - Dynamic script generation from lead/deal context
+  - Knowledge base integration from deals
+  - Call purpose types: follow_up, appointment, qualification, custom
+  
+### Twilio WhatsApp (CONFIGURED)
+- **Account SID & Auth Token:** Configured in backend/.env
+- **Endpoints:**
+  - `POST /api/whatsapp/send` - Manual message sending
+  - `POST /api/whatsapp/ai-send` - AI-powered personalized messages
+  - `POST /api/whatsapp/batch` - Batch messaging to multiple leads
+- **Features:**
+  - AI-generated personalized messages
+  - Message types: follow_up, appointment, introduction, thank_you
+  - Full message history tracking
 
 ### Technical Debt
 - [ ] **CRITICAL:** Refactor server.py (4000+ lines) into modular APIRouter files
