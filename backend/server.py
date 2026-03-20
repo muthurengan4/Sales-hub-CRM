@@ -2295,12 +2295,21 @@ async def get_activities(
     contact_id: Optional[str] = None,
     lead_id: Optional[str] = None,
     deal_id: Optional[str] = None,
+    entity_id: Optional[str] = None,
     user: dict = Depends(get_current_user)
 ):
     if not user.get('organization_id'):
         return []
     
     query = {'organization_id': user['organization_id']}
+    
+    # Support entity_id as a general filter (checks both lead_id and entity_id fields)
+    if entity_id:
+        query['$or'] = [
+            {'lead_id': entity_id},
+            {'entity_id': entity_id},
+            {'contact_id': entity_id}
+        ]
     if contact_id:
         query['contact_id'] = contact_id
     if lead_id:
@@ -2311,8 +2320,17 @@ async def get_activities(
     activities = await db.activities.find(query, {'_id': 0}).sort('created_at', -1).to_list(100)
     
     for activity in activities:
-        owner = await db.users.find_one({'id': activity['owner_id']}, {'_id': 0, 'name': 1})
-        activity['owner_name'] = owner['name'] if owner else None
+        # Handle missing owner_id gracefully
+        owner_id = activity.get('owner_id') or activity.get('user_id')
+        if owner_id:
+            owner = await db.users.find_one({'id': owner_id}, {'_id': 0, 'name': 1})
+            activity['owner_name'] = owner['name'] if owner else None
+        else:
+            activity['owner_name'] = activity.get('user_name')
+        
+        # Ensure owner_id exists for response model
+        if 'owner_id' not in activity:
+            activity['owner_id'] = owner_id or 'system'
     
     return [ActivityResponse(**a) for a in activities]
 
@@ -2516,10 +2534,14 @@ async def get_entity_timeline(entity_type: str, entity_id: str, user: dict = Dep
     
     activities = await db.activities.find(query, {'_id': 0}).sort('created_at', -1).to_list(100)
     
-    # Add owner names
+    # Add owner names - handle missing owner_id gracefully
     for activity in activities:
-        owner = await db.users.find_one({'id': activity['owner_id']}, {'_id': 0, 'name': 1})
-        activity['owner_name'] = owner['name'] if owner else None
+        owner_id = activity.get('owner_id') or activity.get('user_id')
+        if owner_id:
+            owner = await db.users.find_one({'id': owner_id}, {'_id': 0, 'name': 1})
+            activity['owner_name'] = owner['name'] if owner else None
+        else:
+            activity['owner_name'] = activity.get('user_name')
     
     return activities
 
