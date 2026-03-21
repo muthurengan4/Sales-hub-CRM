@@ -2952,7 +2952,7 @@ async def get_ai_call_full_details(call_id: str, user: dict = Depends(get_curren
     }
 
 @api_router.get("/ai-calls/{call_id}/audio")
-async def get_ai_call_audio(call_id: str, user: dict = Depends(get_current_user)):
+async def get_ai_call_audio(call_id: str, token: Optional[str] = None, user: dict = Depends(get_current_user)):
     """Stream the audio recording of an AI call"""
     from ai_services import download_conversation_audio
     from fastapi.responses import StreamingResponse
@@ -2975,14 +2975,42 @@ async def get_ai_call_audio(call_id: str, user: dict = Depends(get_current_user)
     if not audio_data:
         raise HTTPException(status_code=404, detail="Audio recording not available")
     
-    # Return audio as streaming response
+    # Return audio as streaming response with CORS headers
     return StreamingResponse(
         io.BytesIO(audio_data),
         media_type="audio/mpeg",
         headers={
-            "Content-Disposition": f"inline; filename=call_{call_id}.mp3"
+            "Content-Disposition": f"inline; filename=call_{call_id}.mp3",
+            "Accept-Ranges": "bytes",
+            "Cache-Control": "no-cache"
         }
     )
+
+class CallInterestUpdate(BaseModel):
+    interest_level: str  # interested, not_interested, maybe, follow_up_needed
+    notes: Optional[str] = None
+
+@api_router.put("/ai-calls/{call_id}/interest")
+async def update_call_interest(call_id: str, data: CallInterestUpdate, user: dict = Depends(get_current_user)):
+    """Update the interest level for an AI call"""
+    call = await db.ai_calls.find_one(
+        {'id': call_id, 'organization_id': user.get('organization_id')},
+        {'_id': 0}
+    )
+    if not call:
+        raise HTTPException(status_code=404, detail="Call not found")
+    
+    update_data = {
+        'interest_level': data.interest_level,
+        'interest_notes': data.notes,
+        'interest_updated_by': user['id'],
+        'interest_updated_at': datetime.now(timezone.utc).isoformat(),
+        'updated_at': datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.ai_calls.update_one({'id': call_id}, {'$set': update_data})
+    
+    return {"success": True, "interest_level": data.interest_level}
 
 @api_router.get("/ai-calls/lead/{lead_id}")
 async def get_lead_ai_calls(lead_id: str, user: dict = Depends(get_current_user)):

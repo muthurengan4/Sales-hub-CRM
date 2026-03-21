@@ -1588,13 +1588,49 @@ export default function LeadDetailPage() {
               {callDetailsModal.call.recording_url && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-2">Call Recording</p>
-                  <audio 
-                    controls 
-                    className="w-full" 
-                    src={callDetailsModal.call.recording_url}
-                  >
-                    Your browser does not support the audio element.
-                  </audio>
+                  <div className="flex items-center gap-2">
+                    <audio 
+                      controls 
+                      className="flex-1" 
+                      crossOrigin="use-credentials"
+                      onError={(e) => {
+                        console.log('Audio error, trying fetch approach');
+                        // If direct audio fails, try fetching with auth
+                        const audioEl = e.target;
+                        fetch(callDetailsModal.call.recording_url, {
+                          headers: { Authorization: `Bearer ${token}` }
+                        })
+                        .then(res => res.blob())
+                        .then(blob => {
+                          audioEl.src = URL.createObjectURL(blob);
+                        })
+                        .catch(err => console.error('Failed to load audio:', err));
+                      }}
+                    >
+                      Your browser does not support the audio element.
+                    </audio>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(callDetailsModal.call.recording_url, {
+                            headers: { Authorization: `Bearer ${token}` }
+                          });
+                          const blob = await response.blob();
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `call_${callDetailsModal.call.id}.mp3`;
+                          a.click();
+                        } catch (err) {
+                          console.error('Download failed:', err);
+                        }
+                      }}
+                      className="p-2 hover:bg-secondary rounded"
+                      title="Download Recording"
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -1604,6 +1640,59 @@ export default function LeadDetailPage() {
                   Recording not available for this call.
                 </div>
               )}
+
+              {/* Client Interest Level */}
+              <div>
+                <p className="text-xs text-muted-foreground mb-2">Client Interest Level</p>
+                <div className="flex flex-wrap gap-2">
+                  {['interested', 'not_interested', 'maybe', 'follow_up_needed'].map((level) => {
+                    const isSelected = callDetailsModal.call.interest_level === level;
+                    const config = {
+                      interested: { label: 'Interested', class: 'bg-green-500/20 text-green-500 border-green-500/30' },
+                      not_interested: { label: 'Not Interested', class: 'bg-red-500/20 text-red-500 border-red-500/30' },
+                      maybe: { label: 'Maybe', class: 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30' },
+                      follow_up_needed: { label: 'Follow-up Needed', class: 'bg-blue-500/20 text-blue-500 border-blue-500/30' }
+                    };
+                    return (
+                      <button
+                        key={level}
+                        onClick={async () => {
+                          try {
+                            const response = await fetch(`${API}/api/ai-calls/${callDetailsModal.call.id}/interest`, {
+                              method: 'PUT',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${token}`
+                              },
+                              body: JSON.stringify({ interest_level: level })
+                            });
+                            if (response.ok) {
+                              setCallDetailsModal(prev => ({
+                                ...prev,
+                                call: { ...prev.call, interest_level: level }
+                              }));
+                            }
+                          } catch (err) {
+                            console.error('Failed to update interest:', err);
+                          }
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                          isSelected 
+                            ? config[level].class + ' ring-2 ring-offset-1 ring-offset-background' 
+                            : 'bg-secondary/50 text-muted-foreground border-border hover:bg-secondary'
+                        }`}
+                      >
+                        {config[level].label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {callDetailsModal.call.interest_level && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Current status: <span className="font-medium text-foreground">{callDetailsModal.call.interest_level.replace('_', ' ')}</span>
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="elstar-modal-footer">
