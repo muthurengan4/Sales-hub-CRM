@@ -267,12 +267,22 @@ async def initiate_ai_call(
                     "deal_name": deal_name,
                     "deal_value": f"RM {deal_info.get('value', 0):,.2f}" if deal_info else '',
                     "call_purpose": call_purpose
+                },
+                # Override the agent's prompt with the CRM knowledge base and context
+                "conversation_config_override": {
+                    "agent": {
+                        "prompt": {
+                            "prompt": script
+                        },
+                        "first_message": f"Hello, am I speaking with {customer_name}? This is your AI assistant calling regarding {deal_name or 'your inquiry'}."
+                    }
                 }
             }
         }
         
         logger.info(f"Initiating ElevenLabs outbound call to {formatted_phone}")
         logger.info(f"Agent ID: {agent_id}, Phone Number ID: {phone_number_id}")
+        logger.info(f"Using custom prompt with knowledge base: {bool(knowledge_base)}")
         
         async with httpx.AsyncClient() as client:
             response = await client.post(

@@ -384,6 +384,7 @@ class DealCreate(BaseModel):
     expected_close_date: Optional[str] = None
     notes: Optional[str] = None
     probability: Optional[int] = None
+    knowledge_base_content: Optional[str] = None  # AI knowledge base for calls
     # New: linked companies (list of lead/customer IDs)
     linked_company_ids: List[str] = []
 
@@ -396,6 +397,7 @@ class DealUpdate(BaseModel):
     probability: Optional[int] = None
     assigned_to: Optional[str] = None
     linked_company_ids: Optional[List[str]] = None
+    knowledge_base_content: Optional[str] = None  # AI knowledge base for calls
 
 class LinkedCompany(BaseModel):
     id: str
@@ -418,6 +420,7 @@ class DealResponse(BaseModel):
     expected_close_date: Optional[str] = None
     notes: Optional[str] = None
     probability: Optional[int] = None
+    knowledge_base_content: Optional[str] = None  # AI knowledge base for calls
     ai_health_score: int
     organization_id: Optional[str] = None  # Optional for legacy deals
     owner_id: Optional[str] = None  # Made optional for deals created without owner
@@ -2127,6 +2130,44 @@ async def delete_deal(deal_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Deal not found")
     
     return {"message": "Deal deleted"}
+
+class KnowledgeBaseUpdate(BaseModel):
+    knowledge_base_content: str
+
+@api_router.put("/deals/{deal_id}/knowledge-base")
+async def update_deal_knowledge_base(deal_id: str, kb_data: KnowledgeBaseUpdate, user: dict = Depends(get_current_user)):
+    """Update the knowledge base content for a deal - used by AI calling"""
+    query = get_data_filter(user, Permission.MANAGE_ALL_DEALS, Permission.MANAGE_OWN_DEALS)
+    query['id'] = deal_id
+    
+    deal = await db.deals.find_one(query)
+    if not deal:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    
+    update_data = {
+        'knowledge_base_content': kb_data.knowledge_base_content,
+        'updated_at': datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.deals.update_one({'id': deal_id}, {'$set': update_data})
+    
+    return {"success": True, "message": "Knowledge base updated", "deal_id": deal_id}
+
+@api_router.get("/deals/{deal_id}/knowledge-base")
+async def get_deal_knowledge_base(deal_id: str, user: dict = Depends(get_current_user)):
+    """Get the knowledge base content for a deal"""
+    query = get_data_filter(user, Permission.VIEW_ALL_DEALS, Permission.VIEW_OWN_DEALS)
+    query['id'] = deal_id
+    
+    deal = await db.deals.find_one(query, {'_id': 0, 'id': 1, 'title': 1, 'knowledge_base_content': 1})
+    if not deal:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    
+    return {
+        "deal_id": deal['id'],
+        "title": deal['title'],
+        "knowledge_base_content": deal.get('knowledge_base_content', '')
+    }
 
 # ============= LEAD-DEAL LINKAGE ROUTES =============
 # These track the pipeline status per lead-deal combination
