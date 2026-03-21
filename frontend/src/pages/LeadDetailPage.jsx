@@ -7,7 +7,8 @@ import SlideInPanel from '../components/SlideInPanel';
 import { 
   ArrowLeft, Edit, UserCheck, Phone, Mail, MessageCircle, Calendar,
   Building2, MapPin, Globe, Sparkles, Clock, CheckSquare, Send,
-  PhoneCall, Video, FileText, Plus, Loader2, X, User, Activity, Check
+  PhoneCall, Video, FileText, Plus, Loader2, X, User, Activity, Check,
+  Download, Play, Pause, Volume2
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -72,6 +73,15 @@ export default function LeadDetailPage() {
   // AI Agents - fetched from settings
   const [aiAgents, setAiAgents] = useState([]);
   const [selectedAgent, setSelectedAgent] = useState(null);
+
+  // Audio player state for call recordings
+  const [audioState, setAudioState] = useState({
+    isLoading: false,
+    blobUrl: null,
+    isPlaying: false,
+    error: null
+  });
+  const audioRef = useRef(null);
 
   // Default agents if none configured
   const DEFAULT_AGENTS = [
@@ -224,6 +234,55 @@ export default function LeadDetailPage() {
       console.error('Failed to fetch AI agents');
       setAiAgents(DEFAULT_AGENTS);
       setSelectedAgent(DEFAULT_AGENTS[0]);
+    }
+  };
+
+  // Load audio with authentication when modal opens with a call that has recording
+  const loadAudioWithAuth = async (recordingUrl) => {
+    if (!recordingUrl) return;
+    
+    setAudioState(prev => ({ ...prev, isLoading: true, error: null }));
+    try {
+      const response = await fetch(recordingUrl, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to load audio');
+      }
+      
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      setAudioState(prev => ({ ...prev, isLoading: false, blobUrl, error: null }));
+    } catch (error) {
+      console.error('Failed to load audio:', error);
+      setAudioState(prev => ({ ...prev, isLoading: false, error: 'Failed to load recording' }));
+    }
+  };
+
+  // Reset audio state when modal closes
+  useEffect(() => {
+    if (!callDetailsModal.isOpen) {
+      // Clean up blob URL to prevent memory leaks
+      if (audioState.blobUrl) {
+        URL.revokeObjectURL(audioState.blobUrl);
+      }
+      setAudioState({ isLoading: false, blobUrl: null, isPlaying: false, error: null });
+    } else if (callDetailsModal.call?.recording_url) {
+      // Load audio when modal opens
+      loadAudioWithAuth(callDetailsModal.call.recording_url);
+    }
+  }, [callDetailsModal.isOpen, callDetailsModal.call?.recording_url]);
+
+  // Handle play/pause
+  const togglePlayPause = () => {
+    if (audioRef.current) {
+      if (audioState.isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setAudioState(prev => ({ ...prev, isPlaying: !prev.isPlaying }));
     }
   };
 
@@ -1588,48 +1647,70 @@ export default function LeadDetailPage() {
               {callDetailsModal.call.recording_url && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-2">Call Recording</p>
-                  <div className="flex items-center gap-2">
-                    <audio 
-                      controls 
-                      className="flex-1" 
-                      crossOrigin="use-credentials"
-                      onError={(e) => {
-                        console.log('Audio error, trying fetch approach');
-                        // If direct audio fails, try fetching with auth
-                        const audioEl = e.target;
-                        fetch(callDetailsModal.call.recording_url, {
-                          headers: { Authorization: `Bearer ${token}` }
-                        })
-                        .then(res => res.blob())
-                        .then(blob => {
-                          audioEl.src = URL.createObjectURL(blob);
-                        })
-                        .catch(err => console.error('Failed to load audio:', err));
-                      }}
-                    >
-                      Your browser does not support the audio element.
-                    </audio>
-                    <button
-                      onClick={async () => {
-                        try {
-                          const response = await fetch(callDetailsModal.call.recording_url, {
-                            headers: { Authorization: `Bearer ${token}` }
-                          });
-                          const blob = await response.blob();
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = `call_${callDetailsModal.call.id}.mp3`;
-                          a.click();
-                        } catch (err) {
-                          console.error('Download failed:', err);
-                        }
-                      }}
-                      className="p-2 hover:bg-secondary rounded"
-                      title="Download Recording"
-                    >
-                      <Download className="w-4 h-4" />
-                    </button>
+                  <div className="p-3 rounded-lg bg-secondary/50 border border-border">
+                    {audioState.isLoading ? (
+                      <div className="flex items-center justify-center py-4 gap-2">
+                        <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                        <span className="text-sm text-muted-foreground">Loading recording...</span>
+                      </div>
+                    ) : audioState.error ? (
+                      <div className="flex items-center justify-center py-4 text-red-500 text-sm">
+                        {audioState.error}
+                      </div>
+                    ) : audioState.blobUrl ? (
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={togglePlayPause}
+                          className="w-10 h-10 rounded-full bg-primary hover:bg-primary/90 text-white flex items-center justify-center transition-colors"
+                          data-testid="audio-play-btn"
+                        >
+                          {audioState.isPlaying ? (
+                            <Pause className="w-5 h-5" />
+                          ) : (
+                            <Play className="w-5 h-5 ml-0.5" />
+                          )}
+                        </button>
+                        <div className="flex-1">
+                          <audio 
+                            ref={audioRef}
+                            src={audioState.blobUrl}
+                            onEnded={() => setAudioState(prev => ({ ...prev, isPlaying: false }))}
+                            onPause={() => setAudioState(prev => ({ ...prev, isPlaying: false }))}
+                            onPlay={() => setAudioState(prev => ({ ...prev, isPlaying: true }))}
+                            className="w-full h-8"
+                            controls
+                          />
+                        </div>
+                        <button
+                          onClick={async () => {
+                            try {
+                              const a = document.createElement('a');
+                              a.href = audioState.blobUrl;
+                              a.download = `call_${callDetailsModal.call.id}.mp3`;
+                              a.click();
+                              toast.success('Download started');
+                            } catch (err) {
+                              console.error('Download failed:', err);
+                              toast.error('Failed to download');
+                            }
+                          }}
+                          className="p-2 hover:bg-secondary rounded transition-colors"
+                          title="Download Recording"
+                          data-testid="audio-download-btn"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center py-4">
+                        <button
+                          onClick={() => loadAudioWithAuth(callDetailsModal.call.recording_url)}
+                          className="text-sm text-primary hover:underline"
+                        >
+                          Click to load recording
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

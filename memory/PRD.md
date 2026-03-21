@@ -100,7 +100,26 @@ The system now supports **per-lead pipeline status** for deals:
   - **Lead Status filter now shows Pipeline stages** (Lead, Qualified, Proposal, Negotiation, Sales Closed, Lost) - matching Pipeline page tabs
 - **Leads Page Filter Fixed** - Status filter now correctly filters by `pipeline_status` field
 
+### Recent Updates (March 21, 2026)
+- **AI Call Audio Player Fixed** ✅
+  - Fixed audio playback issue where browser `<audio>` tags couldn't send JWT headers
+  - Implemented blob-based audio loading with fetch + Authorization header
+  - Added Play/Pause button, progress indicator, volume control, and download button
+  - Audio successfully loads and plays from ElevenLabs recordings
+- **Client Interest Level Feature** ✅
+  - Added interest level tracking for AI calls (Interested, Not Interested, Maybe, Follow-up Needed)
+  - Interest level buttons in Call Details modal with visual selection feedback
+  - Backend endpoint `PUT /api/ai-calls/{call_id}/interest` stores interest data
+  - Interest level persisted in database with timestamps and user attribution
+
 ## API Endpoints
+
+### AI Calls
+- `POST /api/ai-calls/initiate` - Start AI call with ElevenLabs
+- `GET /api/ai-calls/lead/{lead_id}` - Get all AI calls for a lead
+- `GET /api/ai-calls/{call_id}/details` - Get call details with transcript and summary
+- `GET /api/ai-calls/{call_id}/audio` - Stream audio recording (requires JWT auth)
+- `PUT /api/ai-calls/{call_id}/interest` - Update client interest level
 
 ### Lead-Deal Linkages (NEW)
 - `GET /api/lead-deal-linkages` - Get all linkages (filter by lead_id, deal_id)
@@ -129,7 +148,7 @@ The system now supports **per-lead pipeline status** for deals:
 - [ ] ElevenLabs Conversational AI dashboard setup (requires ElevenLabs account configuration)
 
 ### P2 - Medium Priority
-- [ ] Populate AI Call Detail modal with real data
+- [x] Populate AI Call Detail modal with real data ✅ DONE
 - [ ] Export to CSV functionality
 - [ ] Custom report builder
 
