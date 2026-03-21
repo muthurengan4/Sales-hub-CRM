@@ -982,19 +982,51 @@ export default function LeadDetailPage() {
                           <div 
                             key={activity.id || idx} 
                             className={`flex gap-3 ${isAiCall ? 'cursor-pointer hover:bg-secondary/50 p-2 -m-2 rounded-lg transition-colors' : ''}`}
-                            onClick={() => {
+                            onClick={async () => {
                               if (isAiCall && activity.call_id) {
-                                // Find the call details and open modal
-                                const call = aiCalls.find(c => c.id === activity.call_id) || {
-                                  id: activity.call_id,
-                                  agent_name: activity.metadata?.agent_name || 'AI Agent',
-                                  created_at: activity.created_at,
-                                  direction: 'outbound',
-                                  source: 'AI Call',
-                                  summary: activity.description,
-                                  deal_title: activity.metadata?.deal_title
-                                };
-                                setCallDetailsModal({ isOpen: true, call });
+                                // Fetch full call details from API
+                                try {
+                                  const response = await fetch(`${API}/api/ai-calls/${activity.call_id}/details`, {
+                                    headers: { Authorization: `Bearer ${token}` }
+                                  });
+                                  if (response.ok) {
+                                    const data = await response.json();
+                                    const call = {
+                                      ...data.call,
+                                      transcript: data.call?.transcript || data.elevenlabs_details?.transcript,
+                                      recording_url: data.audio_url ? `${API}${data.audio_url}` : null,
+                                      has_audio: data.has_audio,
+                                      has_transcript: data.has_transcript,
+                                      duration: data.call?.duration || data.elevenlabs_details?.duration_seconds
+                                    };
+                                    setCallDetailsModal({ isOpen: true, call });
+                                  } else {
+                                    // Fallback to local data
+                                    const call = aiCalls.find(c => c.id === activity.call_id) || {
+                                      id: activity.call_id,
+                                      agent_name: activity.metadata?.agent_name || 'AI Agent',
+                                      created_at: activity.created_at,
+                                      direction: 'outbound',
+                                      source: 'AI Call',
+                                      summary: activity.description,
+                                      deal_title: activity.metadata?.deal_title
+                                    };
+                                    setCallDetailsModal({ isOpen: true, call });
+                                  }
+                                } catch (error) {
+                                  console.error('Error fetching call details:', error);
+                                  // Fallback to local data
+                                  const call = aiCalls.find(c => c.id === activity.call_id) || {
+                                    id: activity.call_id,
+                                    agent_name: activity.metadata?.agent_name || 'AI Agent',
+                                    created_at: activity.created_at,
+                                    direction: 'outbound',
+                                    source: 'AI Call',
+                                    summary: activity.description,
+                                    deal_title: activity.metadata?.deal_title
+                                  };
+                                  setCallDetailsModal({ isOpen: true, call });
+                                }
                               }
                             }}
                           >
@@ -1506,8 +1538,32 @@ export default function LeadDetailPage() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Duration</p>
-                  <p className="font-medium">{callDetailsModal.call.duration || '0:00'}</p>
+                  <p className="font-medium">
+                    {callDetailsModal.call.duration 
+                      ? typeof callDetailsModal.call.duration === 'number' 
+                        ? `${Math.floor(callDetailsModal.call.duration / 60)}:${String(callDetailsModal.call.duration % 60).padStart(2, '0')}`
+                        : callDetailsModal.call.duration
+                      : 'N/A'}
+                  </p>
                 </div>
+                {callDetailsModal.call.call_status && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Status</p>
+                    <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
+                      callDetailsModal.call.call_status === 'done' ? 'bg-green-500/20 text-green-500' : 
+                      callDetailsModal.call.call_status === 'failed' ? 'bg-red-500/20 text-red-500' :
+                      'bg-yellow-500/20 text-yellow-500'
+                    }`}>
+                      {callDetailsModal.call.call_status}
+                    </span>
+                  </div>
+                )}
+                {callDetailsModal.call.phone && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Phone</p>
+                    <p className="font-medium">{callDetailsModal.call.phone}</p>
+                  </div>
+                )}
               </div>
 
               {/* Summary */}
@@ -1518,13 +1574,34 @@ export default function LeadDetailPage() {
                 </div>
               </div>
 
+              {/* Transcript */}
+              {callDetailsModal.call.transcript && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Call Transcript</p>
+                  <div className="p-3 rounded-lg bg-secondary/50 border border-border max-h-60 overflow-y-auto">
+                    <pre className="text-sm whitespace-pre-wrap font-sans">{callDetailsModal.call.transcript}</pre>
+                  </div>
+                </div>
+              )}
+
               {/* Recording */}
               {callDetailsModal.call.recording_url && (
                 <div>
-                  <p className="text-xs text-muted-foreground mb-2">Recording</p>
-                  <audio controls className="w-full" src={callDetailsModal.call.recording_url}>
+                  <p className="text-xs text-muted-foreground mb-2">Call Recording</p>
+                  <audio 
+                    controls 
+                    className="w-full" 
+                    src={callDetailsModal.call.recording_url}
+                  >
                     Your browser does not support the audio element.
                   </audio>
+                </div>
+              )}
+
+              {/* No recording available message */}
+              {!callDetailsModal.call.recording_url && callDetailsModal.call.has_audio === false && (
+                <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 text-sm">
+                  Recording not available for this call.
                 </div>
               )}
             </div>

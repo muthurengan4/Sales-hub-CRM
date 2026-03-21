@@ -345,6 +345,90 @@ async def get_call_transcript(call_id: str) -> Optional[Dict]:
     }
 
 
+async def get_conversation_details(conversation_id: str) -> Optional[Dict]:
+    """Get full conversation details from ElevenLabs including transcript"""
+    if not ELEVENLABS_API_KEY or not conversation_id:
+        return None
+    
+    try:
+        api_url = f"https://api.elevenlabs.io/v1/convai/conversations/{conversation_id}"
+        headers = {
+            "xi-api-key": ELEVENLABS_API_KEY,
+            "Content-Type": "application/json"
+        }
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.get(api_url, headers=headers, timeout=30.0)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Extract transcript from the conversation data
+                transcript_text = ""
+                if data.get("transcript"):
+                    # Transcript is usually a list of turns
+                    for turn in data.get("transcript", []):
+                        role = turn.get("role", "unknown")
+                        message = turn.get("message", "")
+                        transcript_text += f"{role.capitalize()}: {message}\n\n"
+                
+                return {
+                    "conversation_id": conversation_id,
+                    "status": data.get("status", "unknown"),
+                    "agent_id": data.get("agent_id"),
+                    "start_time": data.get("start_time_unix_secs"),
+                    "end_time": data.get("end_time_unix_secs"),
+                    "duration_seconds": data.get("call_duration_secs"),
+                    "has_audio": data.get("has_audio", False),
+                    "transcript": transcript_text or data.get("transcript"),
+                    "metadata": data.get("metadata"),
+                    "analysis": data.get("analysis"),
+                    "raw_data": data
+                }
+            else:
+                logger.error(f"Failed to get conversation details: {response.status_code} - {response.text}")
+                return None
+                
+    except Exception as e:
+        logger.error(f"Error fetching conversation details: {e}")
+        return None
+
+
+async def get_conversation_audio_url(conversation_id: str) -> Optional[str]:
+    """Get the audio recording URL for a conversation"""
+    if not ELEVENLABS_API_KEY or not conversation_id:
+        return None
+    
+    # The audio endpoint returns the audio file directly
+    # We return the URL that can be used to stream/download the audio
+    return f"https://api.elevenlabs.io/v1/convai/conversations/{conversation_id}/audio"
+
+
+async def download_conversation_audio(conversation_id: str) -> Optional[bytes]:
+    """Download the audio recording for a conversation"""
+    if not ELEVENLABS_API_KEY or not conversation_id:
+        return None
+    
+    try:
+        api_url = f"https://api.elevenlabs.io/v1/convai/conversations/{conversation_id}/audio"
+        headers = {
+            "xi-api-key": ELEVENLABS_API_KEY
+        }
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.get(api_url, headers=headers, timeout=60.0)
+            
+            if response.status_code == 200:
+                return response.content
+            else:
+                logger.error(f"Failed to download audio: {response.status_code}")
+                return None
+                
+    except Exception as e:
+        logger.error(f"Error downloading conversation audio: {e}")
+        return None
+
+
 # ============================================
 # Twilio WhatsApp Functions
 # ============================================

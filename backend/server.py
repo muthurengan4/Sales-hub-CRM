@@ -2907,6 +2907,83 @@ async def get_ai_call(call_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Call not found")
     return call
 
+@api_router.get("/ai-calls/{call_id}/details")
+async def get_ai_call_full_details(call_id: str, user: dict = Depends(get_current_user)):
+    """Get AI call details including transcript and recording info from ElevenLabs"""
+    from ai_services import get_conversation_details, get_conversation_audio_url, ELEVENLABS_API_KEY
+    
+    # Get call from database
+    call = await db.ai_calls.find_one(
+        {'id': call_id, 'organization_id': user.get('organization_id')},
+        {'_id': 0}
+    )
+    if not call:
+        raise HTTPException(status_code=404, detail="Call not found")
+    
+    # Get conversation details from ElevenLabs if we have a conversation_id
+    conversation_id = call.get('conversation_id')
+    elevenlabs_details = None
+    audio_url = None
+    
+    if conversation_id:
+        elevenlabs_details = await get_conversation_details(conversation_id)
+        if elevenlabs_details and elevenlabs_details.get('has_audio'):
+            # Create a proxied audio URL (we'll proxy through our backend for auth)
+            audio_url = f"/api/ai-calls/{call_id}/audio"
+        
+        # Update call record with latest details
+        if elevenlabs_details:
+            update_data = {
+                'transcript': elevenlabs_details.get('transcript'),
+                'duration': elevenlabs_details.get('duration_seconds'),
+                'call_status': elevenlabs_details.get('status'),
+                'has_audio': elevenlabs_details.get('has_audio', False),
+                'updated_at': datetime.now(timezone.utc).isoformat()
+            }
+            await db.ai_calls.update_one({'id': call_id}, {'$set': update_data})
+            call.update(update_data)
+    
+    return {
+        "call": call,
+        "elevenlabs_details": elevenlabs_details,
+        "audio_url": audio_url,
+        "has_transcript": bool(call.get('transcript') or (elevenlabs_details and elevenlabs_details.get('transcript'))),
+        "has_audio": call.get('has_audio', False) or (elevenlabs_details and elevenlabs_details.get('has_audio', False))
+    }
+
+@api_router.get("/ai-calls/{call_id}/audio")
+async def get_ai_call_audio(call_id: str, user: dict = Depends(get_current_user)):
+    """Stream the audio recording of an AI call"""
+    from ai_services import download_conversation_audio
+    from fastapi.responses import StreamingResponse
+    import io
+    
+    # Get call from database
+    call = await db.ai_calls.find_one(
+        {'id': call_id, 'organization_id': user.get('organization_id')},
+        {'_id': 0}
+    )
+    if not call:
+        raise HTTPException(status_code=404, detail="Call not found")
+    
+    conversation_id = call.get('conversation_id')
+    if not conversation_id:
+        raise HTTPException(status_code=404, detail="No conversation ID found for this call")
+    
+    # Download audio from ElevenLabs
+    audio_data = await download_conversation_audio(conversation_id)
+    if not audio_data:
+        raise HTTPException(status_code=404, detail="Audio recording not available")
+    
+    # Return audio as streaming response
+    return StreamingResponse(
+        io.BytesIO(audio_data),
+        media_type="audio/mpeg",
+        headers={
+            "Content-Disposition": f"inline; filename=call_{call_id}.mp3"
+        }
+    )
+
 @api_router.get("/ai-calls/lead/{lead_id}")
 async def get_lead_ai_calls(lead_id: str, user: dict = Depends(get_current_user)):
     """Get all AI calls for a specific lead"""
@@ -2972,6 +3049,10 @@ async def initiate_ai_call_endpoint(call_data: AiCallInitiate, user: dict = Depe
     call_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     
+    # Extract conversation_id and call_sid from ElevenLabs response
+    conversation_id = result.get('conversation_id') or result.get('call_data', {}).get('conversation_id')
+    call_sid = result.get('call_sid') or result.get('call_data', {}).get('call_sid')
+    
     # Create AI call record
     call_doc = {
         'id': call_id,
@@ -2988,6 +3069,8 @@ async def initiate_ai_call_endpoint(call_data: AiCallInitiate, user: dict = Depe
         'summary': f'AI call initiated to discuss {deal.get("title")}. Agent: {call_data.agent_name}',
         'recording_url': None,
         'transcript': None,
+        'conversation_id': conversation_id,  # Store ElevenLabs conversation ID
+        'call_sid': call_sid,  # Store Twilio call SID
         'call_purpose': call_data.call_purpose or "follow_up",
         'ai_script': result.get('call_data', {}).get('script'),
         'organization_id': user['organization_id'],
