@@ -2169,6 +2169,149 @@ async def get_deal_knowledge_base(deal_id: str, user: dict = Depends(get_current
         "knowledge_base_content": deal.get('knowledge_base_content', '')
     }
 
+def extract_text_from_file(file_content: bytes, filename: str) -> str:
+    """Extract text content from various file formats"""
+    import io
+    filename_lower = filename.lower()
+    
+    try:
+        # PDF files
+        if filename_lower.endswith('.pdf'):
+            from PyPDF2 import PdfReader
+            pdf_file = io.BytesIO(file_content)
+            reader = PdfReader(pdf_file)
+            text_parts = []
+            for page in reader.pages:
+                text = page.extract_text()
+                if text:
+                    text_parts.append(text)
+            return '\n\n'.join(text_parts)
+        
+        # Word documents (.docx)
+        elif filename_lower.endswith('.docx'):
+            from docx import Document
+            doc_file = io.BytesIO(file_content)
+            doc = Document(doc_file)
+            text_parts = []
+            for para in doc.paragraphs:
+                if para.text.strip():
+                    text_parts.append(para.text)
+            # Also extract from tables
+            for table in doc.tables:
+                for row in table.rows:
+                    row_text = ' | '.join(cell.text.strip() for cell in row.cells if cell.text.strip())
+                    if row_text:
+                        text_parts.append(row_text)
+            return '\n\n'.join(text_parts)
+        
+        # PowerPoint files (.pptx)
+        elif filename_lower.endswith('.pptx'):
+            from pptx import Presentation
+            pptx_file = io.BytesIO(file_content)
+            prs = Presentation(pptx_file)
+            text_parts = []
+            for slide_num, slide in enumerate(prs.slides, 1):
+                slide_text = [f"--- Slide {slide_num} ---"]
+                for shape in slide.shapes:
+                    if hasattr(shape, "text") and shape.text.strip():
+                        slide_text.append(shape.text)
+                if len(slide_text) > 1:
+                    text_parts.append('\n'.join(slide_text))
+            return '\n\n'.join(text_parts)
+        
+        # Excel files (.xlsx)
+        elif filename_lower.endswith('.xlsx'):
+            from openpyxl import load_workbook
+            xlsx_file = io.BytesIO(file_content)
+            wb = load_workbook(xlsx_file, read_only=True)
+            text_parts = []
+            for sheet_name in wb.sheetnames:
+                sheet = wb[sheet_name]
+                sheet_text = [f"--- Sheet: {sheet_name} ---"]
+                for row in sheet.iter_rows(values_only=True):
+                    row_text = ' | '.join(str(cell) for cell in row if cell is not None)
+                    if row_text:
+                        sheet_text.append(row_text)
+                if len(sheet_text) > 1:
+                    text_parts.append('\n'.join(sheet_text))
+            return '\n\n'.join(text_parts)
+        
+        # Plain text files (.txt, .md, .csv)
+        elif filename_lower.endswith(('.txt', '.md', '.csv', '.json')):
+            return file_content.decode('utf-8')
+        
+        else:
+            # Try to decode as text
+            try:
+                return file_content.decode('utf-8')
+            except:
+                raise ValueError(f"Unsupported file format: {filename}")
+    
+    except Exception as e:
+        raise ValueError(f"Error extracting text from {filename}: {str(e)}")
+
+@api_router.post("/deals/{deal_id}/knowledge-base/upload")
+async def upload_deal_knowledge_base(
+    deal_id: str, 
+    file: UploadFile = File(...),
+    user: dict = Depends(get_current_user)
+):
+    """Upload a knowledge base file (PDF, Word, PowerPoint, Excel, Text) for a deal"""
+    query = get_data_filter(user, Permission.MANAGE_ALL_DEALS, Permission.MANAGE_OWN_DEALS)
+    query['id'] = deal_id
+    
+    deal = await db.deals.find_one(query)
+    if not deal:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    
+    # Supported file types
+    supported_extensions = ['.pdf', '.docx', '.pptx', '.xlsx', '.txt', '.md', '.csv', '.json']
+    filename = file.filename.lower()
+    
+    if not any(filename.endswith(ext) for ext in supported_extensions):
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Unsupported file type. Supported formats: {', '.join(supported_extensions)}"
+        )
+    
+    # Read file content
+    file_content = await file.read()
+    
+    # Check file size (max 10MB)
+    if len(file_content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large. Maximum size is 10MB.")
+    
+    try:
+        # Extract text from file
+        extracted_text = extract_text_from_file(file_content, file.filename)
+        
+        if not extracted_text.strip():
+            raise HTTPException(status_code=400, detail="Could not extract any text from the file.")
+        
+        # Update deal with knowledge base content
+        update_data = {
+            'knowledge_base_content': extracted_text,
+            'knowledge_base_filename': file.filename,
+            'knowledge_base_uploaded_at': datetime.now(timezone.utc).isoformat(),
+            'updated_at': datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.deals.update_one({'id': deal_id}, {'$set': update_data})
+        
+        return {
+            "success": True, 
+            "message": f"Knowledge base uploaded from {file.filename}",
+            "deal_id": deal_id,
+            "filename": file.filename,
+            "extracted_length": len(extracted_text),
+            "preview": extracted_text[:500] + "..." if len(extracted_text) > 500 else extracted_text
+        }
+    
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
+
 # ============= LEAD-DEAL LINKAGE ROUTES =============
 # These track the pipeline status per lead-deal combination
 
