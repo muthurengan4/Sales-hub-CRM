@@ -255,26 +255,30 @@ async def initiate_ai_call(
         company_name = lead_info.get('company', '')
         deal_name = deal_info.get('title', '') if deal_info else ''
         
+        # Create the first message that will be spoken immediately when call connects
+        first_message = f"Hello! Am I speaking with {customer_name}? This is your AI sales assistant calling about {deal_name or 'an exciting opportunity'}. How are you doing today?"
+        
         # Prepare the payload for ElevenLabs Twilio outbound call
+        # The first_message should be at the top level for immediate speaking
         payload = {
             "agent_id": agent_id,
             "agent_phone_number_id": phone_number_id,
             "to_number": formatted_phone,
+            "first_message": first_message,  # Top level first_message for immediate speaking
             "conversation_initiation_client_data": {
                 "dynamic_variables": {
                     "customer_name": customer_name,
                     "company_name": company_name,
                     "deal_name": deal_name,
                     "deal_value": f"RM {deal_info.get('value', 0):,.2f}" if deal_info else '',
-                    "call_purpose": call_purpose
+                    "call_purpose": call_purpose,
+                    "knowledge_base": knowledge_base or "No specific knowledge base provided."
                 },
-                # Override the agent's prompt with the CRM knowledge base and context
                 "conversation_config_override": {
                     "agent": {
                         "prompt": {
                             "prompt": script
-                        },
-                        "first_message": f"Hello, am I speaking with {customer_name}? This is your AI assistant calling regarding {deal_name or 'your inquiry'}."
+                        }
                     }
                 }
             }
