@@ -1679,27 +1679,9 @@ export default function LeadDetailPage() {
                             onPlay={() => setAudioState(prev => ({ ...prev, isPlaying: true }))}
                             className="w-full h-8"
                             controls
+                            controlsList="nodownload"
                           />
                         </div>
-                        <button
-                          onClick={async () => {
-                            try {
-                              const a = document.createElement('a');
-                              a.href = audioState.blobUrl;
-                              a.download = `call_${callDetailsModal.call.id}.mp3`;
-                              a.click();
-                              toast.success('Download started');
-                            } catch (err) {
-                              console.error('Download failed:', err);
-                              toast.error('Failed to download');
-                            }
-                          }}
-                          className="p-2 hover:bg-secondary rounded transition-colors"
-                          title="Download Recording"
-                          data-testid="audio-download-btn"
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
                       </div>
                     ) : (
                       <div className="flex items-center justify-center py-4">
