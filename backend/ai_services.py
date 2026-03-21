@@ -254,26 +254,33 @@ async def initiate_ai_call(
         customer_name = lead_info.get('pic_name') or lead_info.get('name', 'Customer')
         company_name = lead_info.get('company', '')
         deal_name = deal_info.get('title', '') if deal_info else ''
+        deal_value = f"RM {deal_info.get('value', 0):,.2f}" if deal_info else ''
         
-        # Try MINIMAL payload first - let the agent use its default settings
-        # The agent should have first_message configured in ElevenLabs dashboard
+        # Prepare knowledge base content - truncate if too long
+        kb_content = knowledge_base[:4000] if knowledge_base else "No specific product information available."
+        
+        # Build the payload with dynamic variables
+        # These variables can be used in the ElevenLabs agent prompt as {{variable_name}}
         payload = {
             "agent_id": agent_id,
             "agent_phone_number_id": phone_number_id,
-            "to_number": formatted_phone
-        }
-        
-        # Only add custom data if we have knowledge base
-        if knowledge_base or script:
-            payload["conversation_initiation_client_data"] = {
+            "to_number": formatted_phone,
+            "conversation_initiation_client_data": {
                 "dynamic_variables": {
                     "customer_name": customer_name,
                     "company_name": company_name,
                     "deal_name": deal_name,
-                    "deal_value": f"RM {deal_info.get('value', 0):,.2f}" if deal_info else '',
-                    "knowledge_base": knowledge_base[:2000] if knowledge_base else ""
+                    "deal_value": deal_value,
+                    "call_purpose": call_purpose,
+                    "knowledge_base": kb_content,
+                    "product_info": kb_content  # Alternative variable name
                 }
             }
+        }
+        
+        logger.info(f"Initiating ElevenLabs outbound call to {formatted_phone}")
+        logger.info(f"Agent ID: {agent_id}, Phone Number ID: {phone_number_id}")
+        logger.info(f"Knowledge base length: {len(kb_content)} chars")
         
         logger.info(f"Initiating ElevenLabs outbound call to {formatted_phone}")
         logger.info(f"Agent ID: {agent_id}, Phone Number ID: {phone_number_id}")
