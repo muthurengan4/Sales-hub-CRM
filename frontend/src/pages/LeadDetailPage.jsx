@@ -83,6 +83,21 @@ export default function LeadDetailPage() {
   });
   const audioRef = useRef(null);
 
+  // Meeting scheduling states
+  const [meetingModal, setMeetingModal] = useState(false);
+  const [meetingForm, setMeetingForm] = useState({
+    title: '',
+    description: '',
+    meeting_type: 'online',
+    date: '',
+    start_time: '10:00',
+    duration_minutes: 30,
+    location: '',
+    send_invite: true
+  });
+  const [schedulingMeeting, setSchedulingMeeting] = useState(false);
+  const [meetings, setMeetings] = useState([]);
+
   // Default agents if none configured
   const DEFAULT_AGENTS = [
     { id: 'sarah', name: 'Sarah', agent_id: 'default', description: 'Professional sales assistant' },
@@ -97,6 +112,7 @@ export default function LeadDetailPage() {
     fetchAllDeals();
     fetchAiCalls();
     fetchAiAgents();
+    fetchMeetings();
   }, [id]);
 
   useEffect(() => {
@@ -235,6 +251,91 @@ export default function LeadDetailPage() {
       setAiAgents(DEFAULT_AGENTS);
       setSelectedAgent(DEFAULT_AGENTS[0]);
     }
+  };
+
+  const fetchMeetings = async () => {
+    try {
+      const response = await fetch(`${API}/api/meetings/lead/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setMeetings(data.meetings || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch meetings');
+    }
+  };
+
+  const handleScheduleMeeting = async (e) => {
+    e.preventDefault();
+    if (!meetingForm.title || !meetingForm.date || !meetingForm.start_time) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    setSchedulingMeeting(true);
+    try {
+      const response = await fetch(`${API}/api/meetings/schedule`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          lead_id: id,
+          ...meetingForm
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.invite_sent) {
+          toast.success(`Meeting scheduled! Invite sent to ${data.invite_sent_to}`);
+        } else {
+          toast.success('Meeting scheduled successfully');
+        }
+        setMeetingModal(false);
+        setMeetingForm({
+          title: '',
+          description: '',
+          meeting_type: 'online',
+          date: '',
+          start_time: '10:00',
+          duration_minutes: 30,
+          location: '',
+          send_invite: true
+        });
+        fetchMeetings();
+        fetchActivities();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Failed to schedule meeting');
+      }
+    } catch (error) {
+      toast.error('Failed to schedule meeting');
+    } finally {
+      setSchedulingMeeting(false);
+    }
+  };
+
+  const openScheduleMeetingModal = () => {
+    // Pre-fill with default values
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dateStr = tomorrow.toISOString().split('T')[0];
+    
+    setMeetingForm({
+      title: `Meeting with ${lead?.pic_name || lead?.name || 'Client'}`,
+      description: '',
+      meeting_type: 'online',
+      date: dateStr,
+      start_time: '10:00',
+      duration_minutes: 30,
+      location: '',
+      send_invite: true
+    });
+    setMeetingModal(true);
   };
 
   // Load audio with authentication when modal opens with a call that has recording
@@ -479,6 +580,11 @@ export default function LeadDetailPage() {
       return;
     }
     
+    if (type === 'meeting') {
+      openScheduleMeetingModal();
+      return;
+    }
+    
     setActivityForm({ 
       title: '', 
       description: '', 
@@ -713,6 +819,14 @@ export default function LeadDetailPage() {
           >
             <PhoneCall className="w-4 h-4" />
             <span className="text-xs sm:text-sm">Start AI Calling</span>
+          </button>
+          <button 
+            onClick={openScheduleMeetingModal}
+            className="elstar-btn-ghost flex items-center gap-1 sm:gap-2 text-sm px-2 sm:px-4 text-purple-500 border-purple-500 hover:bg-purple-500/10"
+            data-testid="schedule-meeting-btn"
+          >
+            <Calendar className="w-4 h-4" />
+            <span className="text-xs sm:text-sm">Schedule Meeting</span>
           </button>
           {isCustomer ? (
             <span className="px-2 sm:px-4 py-2 rounded-lg bg-green-500/20 text-green-500 font-medium flex items-center gap-1 sm:gap-2 text-sm">
@@ -1768,6 +1882,185 @@ export default function LeadDetailPage() {
             </div>
           </>
         )}
+      </Modal>
+
+      {/* Schedule Meeting Modal */}
+      <Modal
+        isOpen={meetingModal}
+        onClose={() => setMeetingModal(false)}
+        title="Schedule Meeting"
+        size="lg"
+      >
+        <form onSubmit={handleScheduleMeeting}>
+          <div className="elstar-modal-body space-y-4">
+            {/* Meeting Title */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Meeting Title *</label>
+              <input
+                type="text"
+                className="elstar-input w-full"
+                value={meetingForm.title}
+                onChange={(e) => setMeetingForm(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="e.g., Product Demo with Client"
+                required
+                data-testid="meeting-title-input"
+              />
+            </div>
+
+            {/* Meeting Type */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Meeting Type</label>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setMeetingForm(prev => ({ ...prev, meeting_type: 'online', location: '' }))}
+                  className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border transition-all ${
+                    meetingForm.meeting_type === 'online'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <Video className="w-4 h-4" />
+                  <span className="text-sm font-medium">Online</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMeetingForm(prev => ({ ...prev, meeting_type: 'offline' }))}
+                  className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border transition-all ${
+                    meetingForm.meeting_type === 'offline'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <MapPin className="w-4 h-4" />
+                  <span className="text-sm font-medium">In-Person</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Date and Time */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Date *</label>
+                <input
+                  type="date"
+                  className="elstar-input w-full"
+                  value={meetingForm.date}
+                  onChange={(e) => setMeetingForm(prev => ({ ...prev, date: e.target.value }))}
+                  min={new Date().toISOString().split('T')[0]}
+                  required
+                  data-testid="meeting-date-input"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Time *</label>
+                <input
+                  type="time"
+                  className="elstar-input w-full"
+                  value={meetingForm.start_time}
+                  onChange={(e) => setMeetingForm(prev => ({ ...prev, start_time: e.target.value }))}
+                  required
+                  data-testid="meeting-time-input"
+                />
+              </div>
+            </div>
+
+            {/* Duration */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Duration</label>
+              <select
+                className="elstar-select w-full"
+                value={meetingForm.duration_minutes}
+                onChange={(e) => setMeetingForm(prev => ({ ...prev, duration_minutes: parseInt(e.target.value) }))}
+                data-testid="meeting-duration-select"
+              >
+                <option value={15}>15 minutes</option>
+                <option value={30}>30 minutes</option>
+                <option value={45}>45 minutes</option>
+                <option value={60}>1 hour</option>
+                <option value={90}>1.5 hours</option>
+                <option value={120}>2 hours</option>
+              </select>
+            </div>
+
+            {/* Location (for offline meetings) */}
+            {meetingForm.meeting_type === 'offline' && (
+              <div>
+                <label className="block text-sm font-medium mb-2">Location</label>
+                <input
+                  type="text"
+                  className="elstar-input w-full"
+                  value={meetingForm.location}
+                  onChange={(e) => setMeetingForm(prev => ({ ...prev, location: e.target.value }))}
+                  placeholder="e.g., Office address, Room number"
+                  data-testid="meeting-location-input"
+                />
+              </div>
+            )}
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Description / Agenda</label>
+              <textarea
+                className="elstar-input w-full min-h-[80px]"
+                value={meetingForm.description}
+                onChange={(e) => setMeetingForm(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Meeting agenda or notes..."
+                data-testid="meeting-description-input"
+              />
+            </div>
+
+            {/* Send Invite Checkbox */}
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 border border-border">
+              <input
+                type="checkbox"
+                id="send-invite"
+                className="w-4 h-4 rounded border-border"
+                checked={meetingForm.send_invite}
+                onChange={(e) => setMeetingForm(prev => ({ ...prev, send_invite: e.target.checked }))}
+              />
+              <label htmlFor="send-invite" className="flex-1">
+                <p className="text-sm font-medium">Send calendar invite to client</p>
+                <p className="text-xs text-muted-foreground">
+                  {lead?.email 
+                    ? `Invite will be sent to ${lead.email}` 
+                    : 'No email address on file - invite will not be sent'}
+                </p>
+              </label>
+              <Mail className="w-4 h-4 text-muted-foreground" />
+            </div>
+
+            {meetingForm.meeting_type === 'online' && meetingForm.send_invite && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Video className="w-3 h-3" />
+                <span>A Google Meet link will be automatically generated and included in the invite</span>
+              </div>
+            )}
+          </div>
+
+          <div className="elstar-modal-footer">
+            <button
+              type="button"
+              onClick={() => setMeetingModal(false)}
+              className="elstar-btn-ghost"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={schedulingMeeting || !meetingForm.title || !meetingForm.date}
+              className="elstar-btn-primary flex items-center gap-2"
+              data-testid="schedule-meeting-submit-btn"
+            >
+              {schedulingMeeting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Calendar className="w-4 h-4" />
+              )}
+              Schedule Meeting
+            </button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

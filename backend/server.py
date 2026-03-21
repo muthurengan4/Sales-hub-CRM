@@ -4529,6 +4529,281 @@ async def delete_calendar_event(event_id: str, user: dict = Depends(get_current_
     
     return {"message": "Event deleted successfully"}
 
+# ============= MEETING SCHEDULING (GOOGLE CALENDAR + EMAIL INVITES) =============
+
+class MeetingScheduleRequest(BaseModel):
+    lead_id: str
+    title: str
+    description: Optional[str] = None
+    meeting_type: str = "online"  # online, offline
+    date: str  # YYYY-MM-DD
+    start_time: str  # HH:MM
+    duration_minutes: int = 30  # 15, 30, 45, 60, 90, 120
+    location: Optional[str] = None  # For offline meetings or video link
+    send_invite: bool = True
+
+@api_router.post("/meetings/schedule")
+async def schedule_meeting(meeting_data: MeetingScheduleRequest, user: dict = Depends(get_current_user)):
+    """Schedule a meeting with a lead and optionally sync to Google Calendar with email invite"""
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="Please create or join an organization first")
+    
+    # Get lead details
+    lead = await db.leads.find_one(
+        {'id': meeting_data.lead_id, 'organization_id': user['organization_id']},
+        {'_id': 0}
+    )
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    # Get organization settings for Google Calendar
+    settings = await db.organization_settings.find_one(
+        {'organization_id': user['organization_id']},
+        {'_id': 0}
+    )
+    
+    meeting_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Parse date and time
+    start_datetime_str = f"{meeting_data.date}T{meeting_data.start_time}:00"
+    start_dt = datetime.fromisoformat(start_datetime_str)
+    end_dt = start_dt + timedelta(minutes=meeting_data.duration_minutes)
+    
+    # Prepare meeting document
+    meeting_doc = {
+        'id': meeting_id,
+        'lead_id': meeting_data.lead_id,
+        'lead_name': lead.get('pic_name') or lead.get('name'),
+        'lead_email': lead.get('email'),
+        'lead_phone': lead.get('phone'),
+        'company': lead.get('company'),
+        'title': meeting_data.title,
+        'description': meeting_data.description,
+        'meeting_type': meeting_data.meeting_type,
+        'date': meeting_data.date,
+        'start_time': meeting_data.start_time,
+        'end_time': end_dt.strftime('%H:%M'),
+        'duration_minutes': meeting_data.duration_minutes,
+        'location': meeting_data.location,
+        'status': 'scheduled',
+        'organization_id': user['organization_id'],
+        'created_by': user['id'],
+        'created_by_name': user.get('name', user.get('email')),
+        'created_at': now,
+        'updated_at': now,
+        'google_event_id': None,
+        'invite_sent': False,
+        'invite_sent_to': None
+    }
+    
+    google_event_id = None
+    invite_sent = False
+    
+    # Check if Google Calendar is connected and send_invite is true
+    if meeting_data.send_invite and settings and settings.get('google_calendar_access_token'):
+        access_token = settings['google_calendar_access_token']
+        
+        # Prepare Google Calendar event with attendee
+        attendees = []
+        if lead.get('email'):
+            attendees.append({'email': lead['email']})
+        
+        # Set location or conference data
+        event_location = meeting_data.location
+        conference_data = None
+        
+        if meeting_data.meeting_type == 'online' and not meeting_data.location:
+            # Request Google Meet link
+            conference_data = {
+                'createRequest': {
+                    'requestId': meeting_id,
+                    'conferenceSolutionKey': {'type': 'hangoutsMeet'}
+                }
+            }
+        
+        google_event = {
+            'summary': meeting_data.title,
+            'description': meeting_data.description or f"Meeting with {lead.get('pic_name') or lead.get('name')} from {lead.get('company', 'N/A')}",
+            'start': {
+                'dateTime': start_dt.isoformat(),
+                'timeZone': 'Asia/Kuala_Lumpur'
+            },
+            'end': {
+                'dateTime': end_dt.isoformat(),
+                'timeZone': 'Asia/Kuala_Lumpur'
+            },
+            'attendees': attendees,
+            'reminders': {
+                'useDefault': False,
+                'overrides': [
+                    {'method': 'email', 'minutes': 60},
+                    {'method': 'popup', 'minutes': 15}
+                ]
+            },
+            'sendUpdates': 'all'  # This sends email invites to attendees
+        }
+        
+        if event_location:
+            google_event['location'] = event_location
+        
+        if conference_data:
+            google_event['conferenceData'] = conference_data
+        
+        import httpx
+        try:
+            async with httpx.AsyncClient() as client:
+                # Use conferenceDataVersion=1 to enable Google Meet creation
+                url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
+                if conference_data:
+                    url += '?conferenceDataVersion=1'
+                
+                response = await client.post(
+                    url,
+                    headers={'Authorization': f'Bearer {access_token}'},
+                    json=google_event
+                )
+                
+                if response.status_code in [200, 201]:
+                    event_result = response.json()
+                    google_event_id = event_result.get('id')
+                    invite_sent = True
+                    
+                    # Get Google Meet link if created
+                    meet_link = event_result.get('hangoutLink') or event_result.get('conferenceData', {}).get('entryPoints', [{}])[0].get('uri')
+                    if meet_link:
+                        meeting_doc['location'] = meet_link
+                        meeting_doc['google_meet_link'] = meet_link
+                else:
+                    print(f"Google Calendar API error: {response.status_code} - {response.text}")
+        except Exception as e:
+            print(f"Failed to sync to Google Calendar: {e}")
+    
+    # Update meeting document with Google Calendar results
+    meeting_doc['google_event_id'] = google_event_id
+    meeting_doc['invite_sent'] = invite_sent
+    if invite_sent and lead.get('email'):
+        meeting_doc['invite_sent_to'] = lead.get('email')
+    
+    # Save to database
+    await db.meetings.insert_one(meeting_doc)
+    meeting_doc.pop('_id', None)
+    
+    # Also create a calendar event in our system
+    calendar_event = {
+        'id': str(uuid.uuid4()),
+        'title': meeting_data.title,
+        'description': meeting_data.description,
+        'date': meeting_data.date,
+        'start_time': meeting_data.start_time,
+        'end_time': end_dt.strftime('%H:%M'),
+        'location': meeting_doc.get('location'),
+        'color': '#10B981' if meeting_data.meeting_type == 'online' else '#F59E0B',
+        'all_day': False,
+        'attendees': [lead.get('email')] if lead.get('email') else [],
+        'meeting_id': meeting_id,
+        'lead_id': meeting_data.lead_id,
+        'organization_id': user['organization_id'],
+        'created_by': user['id'],
+        'created_at': now,
+        'updated_at': now,
+        'google_event_id': google_event_id
+    }
+    await db.calendar_events.insert_one(calendar_event)
+    
+    # Log activity on the lead
+    activity_doc = {
+        'id': str(uuid.uuid4()),
+        'lead_id': meeting_data.lead_id,
+        'type': 'meeting',
+        'action': 'meeting_scheduled',
+        'description': f"Meeting scheduled: {meeting_data.title}",
+        'notes': f"{meeting_data.meeting_type.capitalize()} meeting on {meeting_data.date} at {meeting_data.start_time} ({meeting_data.duration_minutes} min)" + (f" - Invite sent to {lead.get('email')}" if invite_sent else ""),
+        'user_id': user['id'],
+        'user_name': user.get('name', user.get('email')),
+        'organization_id': user['organization_id'],
+        'meeting_id': meeting_id,
+        'metadata': {
+            'meeting_type': meeting_data.meeting_type,
+            'duration': meeting_data.duration_minutes,
+            'invite_sent': invite_sent
+        },
+        'created_at': now
+    }
+    await db.activities.insert_one(activity_doc)
+    
+    return {
+        "meeting": meeting_doc,
+        "google_calendar_synced": bool(google_event_id),
+        "invite_sent": invite_sent,
+        "invite_sent_to": meeting_doc.get('invite_sent_to')
+    }
+
+@api_router.get("/meetings/lead/{lead_id}")
+async def get_lead_meetings(lead_id: str, user: dict = Depends(get_current_user)):
+    """Get all meetings for a specific lead"""
+    if not user.get('organization_id'):
+        return {"meetings": []}
+    
+    meetings = await db.meetings.find(
+        {'lead_id': lead_id, 'organization_id': user['organization_id']},
+        {'_id': 0}
+    ).sort('date', -1).to_list(100)
+    
+    return {"meetings": meetings}
+
+@api_router.put("/meetings/{meeting_id}/cancel")
+async def cancel_meeting(meeting_id: str, user: dict = Depends(get_current_user)):
+    """Cancel a scheduled meeting"""
+    meeting = await db.meetings.find_one(
+        {'id': meeting_id, 'organization_id': user.get('organization_id')},
+        {'_id': 0}
+    )
+    
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+    
+    # If synced to Google Calendar, delete the event
+    settings = await db.organization_settings.find_one(
+        {'organization_id': user['organization_id']},
+        {'_id': 0}
+    )
+    
+    if meeting.get('google_event_id') and settings and settings.get('google_calendar_access_token'):
+        import httpx
+        try:
+            async with httpx.AsyncClient() as client:
+                await client.delete(
+                    f"https://www.googleapis.com/calendar/v3/calendars/primary/events/{meeting['google_event_id']}?sendUpdates=all",
+                    headers={'Authorization': f'Bearer {settings["google_calendar_access_token"]}'}
+                )
+        except Exception as e:
+            print(f"Failed to delete Google Calendar event: {e}")
+    
+    # Update meeting status
+    now = datetime.now(timezone.utc).isoformat()
+    await db.meetings.update_one(
+        {'id': meeting_id},
+        {'$set': {'status': 'cancelled', 'updated_at': now}}
+    )
+    
+    # Log activity
+    activity_doc = {
+        'id': str(uuid.uuid4()),
+        'lead_id': meeting['lead_id'],
+        'type': 'meeting',
+        'action': 'meeting_cancelled',
+        'description': f"Meeting cancelled: {meeting['title']}",
+        'user_id': user['id'],
+        'user_name': user.get('name', user.get('email')),
+        'organization_id': user['organization_id'],
+        'meeting_id': meeting_id,
+        'created_at': now
+    }
+    await db.activities.insert_one(activity_doc)
+    
+    return {"message": "Meeting cancelled", "meeting_id": meeting_id}
+
 # ============= WHATSAPP MESSAGE ROUTES =============
 
 class WhatsAppMessageSend(BaseModel):

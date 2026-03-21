@@ -104,13 +104,30 @@ The system now supports **per-lead pipeline status** for deals:
 - **AI Call Audio Player Fixed** ✅
   - Fixed audio playback issue where browser `<audio>` tags couldn't send JWT headers
   - Implemented blob-based audio loading with fetch + Authorization header
-  - Added Play/Pause button, progress indicator, volume control, and download button
+  - Added Play/Pause button, progress indicator, volume control
+  - Removed download option per user request
   - Audio successfully loads and plays from ElevenLabs recordings
 - **Client Interest Level Feature** ✅
   - Added interest level tracking for AI calls (Interested, Not Interested, Maybe, Follow-up Needed)
   - Interest level buttons in Call Details modal with visual selection feedback
   - Backend endpoint `PUT /api/ai-calls/{call_id}/interest` stores interest data
   - Interest level persisted in database with timestamps and user attribution
+- **Meeting Scheduling Feature** ✅
+  - Added "Schedule Meeting" button on Lead Detail page header
+  - Full meeting scheduling modal with:
+    - Meeting title (pre-filled with lead name)
+    - Meeting type toggle (Online / In-Person)
+    - Date picker and time selector
+    - Duration dropdown (15min - 2hrs)
+    - Location field for in-person meetings
+    - Description/agenda field
+    - Send calendar invite checkbox
+  - Google Calendar integration:
+    - Creates event in user's Google Calendar
+    - Auto-generates Google Meet link for online meetings
+    - Sends email invite to client (via Gmail/Google Calendar)
+  - Meeting activity logged in lead timeline
+  - Backend endpoints: `POST /api/meetings/schedule`, `GET /api/meetings/lead/{id}`, `PUT /api/meetings/{id}/cancel`
 
 ## API Endpoints
 
@@ -120,6 +137,11 @@ The system now supports **per-lead pipeline status** for deals:
 - `GET /api/ai-calls/{call_id}/details` - Get call details with transcript and summary
 - `GET /api/ai-calls/{call_id}/audio` - Stream audio recording (requires JWT auth)
 - `PUT /api/ai-calls/{call_id}/interest` - Update client interest level
+
+### Meetings
+- `POST /api/meetings/schedule` - Schedule a meeting (Google Calendar + email invite)
+- `GET /api/meetings/lead/{lead_id}` - Get all meetings for a lead
+- `PUT /api/meetings/{meeting_id}/cancel` - Cancel a meeting
 
 ### Lead-Deal Linkages (NEW)
 - `GET /api/lead-deal-linkages` - Get all linkages (filter by lead_id, deal_id)
@@ -143,7 +165,7 @@ The system now supports **per-lead pipeline status** for deals:
 - [x] Twilio WhatsApp Integration ✅ DONE
 
 ### P1 - High Priority
-- [ ] Implement Google Calendar sync logic
+- [x] Implement Google Calendar sync logic ✅ DONE (Meeting scheduling with invites)
 - [ ] Backend for Knowledge Base file processing
 - [ ] ElevenLabs Conversational AI dashboard setup (requires ElevenLabs account configuration)
 
