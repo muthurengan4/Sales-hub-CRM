@@ -66,6 +66,8 @@ export default function LeadDetailPage() {
   // AI Calling states
   const [aiCallModal, setAiCallModal] = useState(false);
   const [aiCallDealId, setAiCallDealId] = useState('');
+  const [useDynamicAgent, setUseDynamicAgent] = useState(false);
+  const [dealAgentConfig, setDealAgentConfig] = useState({ agents: [], selection_mode: 'manual' });
   const [aiCallLoading, setAiCallLoading] = useState(false);
   const [callDetailsModal, setCallDetailsModal] = useState({ isOpen: false, call: null });
   const [aiCalls, setAiCalls] = useState([]);
@@ -404,16 +406,20 @@ export default function LeadDetailPage() {
         body: JSON.stringify({
           lead_id: id,
           deal_id: aiCallDealId,
-          agent_name: selectedAgent.name,
-          phone: lead?.phone
+          agent_name: useDynamicAgent ? null : selectedAgent?.name,
+          agent_id: useDynamicAgent ? null : selectedAgent?.id,
+          phone: lead?.phone,
+          use_dynamic_selection: useDynamicAgent
         })
       });
       
       if (response.ok) {
         const data = await response.json();
-        toast.success(`AI Call initiated with ${selectedAgent.name}`);
+        const agentUsed = data.call?.agent_name || selectedAgent?.name || 'AI Agent';
+        toast.success(`AI Call initiated with ${agentUsed}`);
         setAiCallModal(false);
         setAiCallDealId('');
+        setUseDynamicAgent(false);
         fetchAiCalls();
         fetchActivities();
       } else {
@@ -426,6 +432,32 @@ export default function LeadDetailPage() {
       setAiCallLoading(false);
     }
   };
+
+  // Fetch deal agent configuration when deal is selected
+  const fetchDealAgentConfig = async (dealId) => {
+    if (!dealId) {
+      setDealAgentConfig({ agents: [], selection_mode: 'manual' });
+      return;
+    }
+    try {
+      const response = await fetch(`${API}/api/deals/${dealId}/agents`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setDealAgentConfig(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch deal agent config');
+    }
+  };
+
+  // Effect to fetch deal agents when deal selection changes
+  useEffect(() => {
+    if (aiCallDealId) {
+      fetchDealAgentConfig(aiCallDealId);
+    }
+  }, [aiCallDealId]);
 
   const handleSendWhatsAppMessage = async (e) => {
     e.preventDefault();
@@ -1588,46 +1620,10 @@ export default function LeadDetailPage() {
         isOpen={aiCallModal}
         onClose={() => setAiCallModal(false)}
         title="Start AI Calling"
+        size="lg"
       >
         <div className="elstar-modal-body space-y-4">
-          {/* AI Agent Selection */}
-          <div>
-            <label className="block text-sm font-medium mb-2">AI Agent</label>
-            <div className="space-y-2 max-h-[200px] overflow-y-auto">
-              {aiAgents.map((agent, index) => (
-                <button
-                  key={agent.id}
-                  type="button"
-                  onClick={() => setSelectedAgent(agent)}
-                  className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all ${
-                    selectedAgent?.id === agent.id 
-                      ? 'border-primary bg-primary/10' 
-                      : 'border-border hover:border-primary/50'
-                  }`}
-                >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
-                    ['bg-pink-500', 'bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500'][index % 5]
-                  }`}>
-                    {agent.name.charAt(0)}
-                  </div>
-                  <div className="text-left flex-1">
-                    <p className="font-medium">{agent.name}</p>
-                    <p className="text-xs text-muted-foreground">{agent.description}</p>
-                  </div>
-                  {selectedAgent?.id === agent.id && (
-                    <Check className="w-5 h-5 text-primary" />
-                  )}
-                </button>
-              ))}
-            </div>
-            {aiAgents.length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-4">
-                No agents configured. Add agents in Settings → AI Calling Agents
-              </p>
-            )}
-          </div>
-
-          {/* Deal Selection */}
+          {/* Deal Selection - First so we can show deal's agent config */}
           <div>
             <label className="block text-sm font-medium mb-2">Select Deal to Discuss <span className="text-red-500">*</span></label>
             <select
@@ -1644,6 +1640,81 @@ export default function LeadDetailPage() {
               ))}
             </select>
           </div>
+
+          {/* Dynamic Agent Selection Toggle - Show only if deal has agents configured */}
+          {aiCallDealId && dealAgentConfig.agents.length > 0 && (
+            <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useDynamicAgent}
+                  onChange={(e) => setUseDynamicAgent(e.target.checked)}
+                  className="w-4 h-4 rounded border-border"
+                />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-blue-500">Use Deal's Auto-Selection</p>
+                  <p className="text-xs text-muted-foreground">
+                    {dealAgentConfig.selection_mode === 'round_robin' && 'Rotate through assigned agents in order'}
+                    {dealAgentConfig.selection_mode === 'random' && 'Randomly select from assigned agents'}
+                    {dealAgentConfig.selection_mode === 'manual' && 'Use the first assigned agent'}
+                    {' '}({dealAgentConfig.agents.length} agent{dealAgentConfig.agents.length > 1 ? 's' : ''} configured)
+                  </p>
+                </div>
+              </label>
+            </div>
+          )}
+
+          {/* AI Agent Selection - Show if not using dynamic selection */}
+          {!useDynamicAgent && (
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Select AI Agent
+                {aiCallDealId && dealAgentConfig.agents.length > 0 && (
+                  <span className="text-xs text-muted-foreground ml-2">(or enable auto-selection above)</span>
+                )}
+              </label>
+              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                {aiAgents.map((agent, index) => {
+                  const isAssignedToDeal = dealAgentConfig.agents.some(a => a.id === agent.id);
+                  return (
+                    <button
+                      key={agent.id}
+                      type="button"
+                      onClick={() => setSelectedAgent(agent)}
+                      className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                        selectedAgent?.id === agent.id 
+                          ? 'border-primary bg-primary/10' 
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                    >
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
+                        ['bg-pink-500', 'bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500'][index % 5]
+                      }`}>
+                        {agent.name.charAt(0)}
+                      </div>
+                      <div className="text-left flex-1">
+                        <p className="font-medium">{agent.name}</p>
+                        <p className="text-xs text-muted-foreground">{agent.description}</p>
+                      </div>
+                      {isAssignedToDeal && aiCallDealId && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-500">
+                          Assigned
+                        </span>
+                      )}
+                      {selectedAgent?.id === agent.id && (
+                        <Check className="w-5 h-5 text-primary" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              {aiAgents.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-4">
+                  No agents configured. Add agents in Settings → AI Calling Agents
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Lead Phone */}
           <div>
@@ -1664,12 +1735,12 @@ export default function LeadDetailPage() {
           </button>
           <button 
             onClick={handleStartAiCall} 
-            disabled={aiCallLoading || !aiCallDealId}
+            disabled={aiCallLoading || !aiCallDealId || (!useDynamicAgent && !selectedAgent)}
             className="elstar-btn-primary flex items-center gap-2"
             data-testid="initiate-ai-call-btn"
           >
             {aiCallLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <PhoneCall className="w-4 h-4" />}
-            Start Call
+            {useDynamicAgent ? 'Start Call (Auto-Select Agent)' : 'Start Call'}
           </button>
         </div>
       </Modal>

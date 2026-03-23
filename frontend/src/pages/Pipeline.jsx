@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import SlideInPanel from '../components/SlideInPanel';
 import ActionDropdown from '../components/ActionDropdown';
 import Modal from '../components/Modal';
-import { Plus, Loader2, DollarSign, Calendar, Trash2, Edit, Sparkles, Building2, Search, Eye, X, FileText, Upload } from 'lucide-react';
+import { Plus, Loader2, DollarSign, Calendar, Trash2, Edit, Sparkles, Building2, Search, Eye, X, FileText, Upload, Bot, Shuffle, RotateCcw, User } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -19,6 +19,12 @@ const STAGES = [
   { id: 'lost', label: 'Lost', color: 'bg-gray-600' }
 ];
 
+const SELECTION_MODES = [
+  { id: 'round_robin', label: 'Round Robin', icon: RotateCcw, description: 'Rotate through agents in order' },
+  { id: 'random', label: 'Random', icon: Shuffle, description: 'Randomly select an agent each call' },
+  { id: 'manual', label: 'Manual', icon: User, description: 'Always use the first selected agent' }
+];
+
 const getHealthClass = (score) => {
   if (score >= 80) return 'score-high';
   if (score >= 60) return 'score-medium';
@@ -26,11 +32,11 @@ const getHealthClass = (score) => {
 };
 
 const initialFormData = {
-  title: '', value: '', company: '', contact_name: '', stage: 'lead', expected_close_date: '', notes: '', linked_company_ids: []
+  title: '', value: '', company: '', contact_name: '', stage: 'lead', expected_close_date: '', notes: '', linked_company_ids: [], assigned_agents: [], agent_selection_mode: 'round_robin'
 };
 
 // Deal Form Fields - MOVED OUTSIDE to prevent re-renders
-const DealFormFields = memo(({ data, onChange, isEdit = false, companies = [], companySearch, setCompanySearch, knowledgeBaseFile, setKnowledgeBaseFile }) => (
+const DealFormFields = memo(({ data, onChange, isEdit = false, companies = [], companySearch, setCompanySearch, knowledgeBaseFile, setKnowledgeBaseFile, aiAgents = [] }) => (
   <div className="space-y-6">
     <div>
       <label className="block text-sm font-medium mb-2">Deal Title *</label>
@@ -155,6 +161,82 @@ const DealFormFields = memo(({ data, onChange, isEdit = false, companies = [], c
         )}
       </div>
     </div>
+
+    {/* AI AGENTS Section */}
+    {aiAgents.length > 0 && (
+      <div>
+        <h3 className="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <Bot className="w-4 h-4" />
+          AI CALLING AGENTS
+        </h3>
+        
+        {/* Selection Mode */}
+        <div className="mb-4">
+          <label className="block text-xs text-muted-foreground mb-2">Agent Selection Mode</label>
+          <div className="grid grid-cols-3 gap-2">
+            {SELECTION_MODES.map(mode => {
+              const Icon = mode.icon;
+              return (
+                <button
+                  key={mode.id}
+                  type="button"
+                  onClick={() => onChange('agent_selection_mode', mode.id)}
+                  className={`p-2 rounded-lg border text-center transition-all ${
+                    data.agent_selection_mode === mode.id 
+                      ? 'border-primary bg-primary/10 text-primary' 
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <Icon className="w-4 h-4 mx-auto mb-1" />
+                  <p className="text-xs font-medium">{mode.label}</p>
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            {SELECTION_MODES.find(m => m.id === data.agent_selection_mode)?.description}
+          </p>
+        </div>
+
+        {/* Agent Selection */}
+        <div className="space-y-2 max-h-48 overflow-y-auto">
+          {aiAgents.map(agent => (
+            <label key={agent.id} className="flex items-center gap-3 p-3 hover:bg-secondary cursor-pointer rounded-lg border border-border">
+              <input
+                type="checkbox"
+                checked={(data.assigned_agents || []).includes(agent.id)}
+                onChange={(e) => {
+                  const newIds = e.target.checked 
+                    ? [...(data.assigned_agents || []), agent.id]
+                    : (data.assigned_agents || []).filter(id => id !== agent.id);
+                  onChange('assigned_agents', newIds);
+                }}
+                className="w-4 h-4 rounded border-2 border-border"
+              />
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm">
+                {agent.name?.charAt(0)?.toUpperCase() || 'A'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">{agent.name}</p>
+                {agent.description && (
+                  <p className="text-xs text-muted-foreground truncate">{agent.description}</p>
+                )}
+              </div>
+            </label>
+          ))}
+        </div>
+        {(data.assigned_agents || []).length === 0 && (
+          <p className="text-xs text-muted-foreground mt-2">
+            No agents selected. All configured agents will be used.
+          </p>
+        )}
+        {(data.assigned_agents || []).length > 0 && (
+          <p className="text-xs text-muted-foreground mt-2">
+            {(data.assigned_agents || []).length} agent(s) selected for this deal
+          </p>
+        )}
+      </div>
+    )}
   </div>
 ));
 
@@ -182,8 +264,11 @@ export default function Pipeline() {
   const [isLinkageEditOpen, setIsLinkageEditOpen] = useState(false);
   const [selectedLinkage, setSelectedLinkage] = useState(null);
   const [linkageEditStatus, setLinkageEditStatus] = useState('lead');
+  
+  // AI Agents state
+  const [aiAgents, setAiAgents] = useState([]);
 
-  useEffect(() => { fetchDeals(); fetchLinkages(); fetchCompanies(); }, []);
+  useEffect(() => { fetchDeals(); fetchLinkages(); fetchCompanies(); fetchAiAgents(); }, []);
 
   const fetchDeals = async () => {
     try {
@@ -208,6 +293,16 @@ export default function Pipeline() {
         setCompanies(data.companies || []);
       }
     } catch (error) { console.error('Failed to fetch companies:', error); }
+  };
+
+  const fetchAiAgents = async () => {
+    try {
+      const response = await fetch(`${API}/api/ai-agents`, { headers: { Authorization: `Bearer ${token}` } });
+      if (response.ok) {
+        const data = await response.json();
+        setAiAgents(data.agents || []);
+      }
+    } catch (error) { console.error('Failed to fetch AI agents:', error); }
   };
 
   // Stable callback to prevent re-renders
@@ -503,7 +598,7 @@ export default function Pipeline() {
       {/* Create Deal Slide-in Panel */}
       <SlideInPanel isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create New Deal">
         <form onSubmit={handleCreate}>
-          <DealFormFields data={formData} onChange={handleInputChange} companies={companies} companySearch={companySearch} setCompanySearch={setCompanySearch} knowledgeBaseFile={knowledgeBaseFile} setKnowledgeBaseFile={setKnowledgeBaseFile} />
+          <DealFormFields data={formData} onChange={handleInputChange} companies={companies} companySearch={companySearch} setCompanySearch={setCompanySearch} knowledgeBaseFile={knowledgeBaseFile} setKnowledgeBaseFile={setKnowledgeBaseFile} aiAgents={aiAgents} />
           <div className="flex gap-3 mt-6 pt-4 border-t border-border">
             <button type="submit" disabled={formLoading} className="elstar-btn-primary flex-1 flex items-center justify-center gap-2" data-testid="submit-deal-btn">
               {formLoading && <Loader2 className="w-4 h-4 animate-spin" />} Create Deal
@@ -516,7 +611,7 @@ export default function Pipeline() {
       {/* Edit Deal Slide-in Panel */}
       <SlideInPanel isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} title="Edit Deal">
         <form onSubmit={handleEdit}>
-          <DealFormFields data={formData} onChange={handleInputChange} isEdit companies={companies} companySearch={companySearch} setCompanySearch={setCompanySearch} knowledgeBaseFile={knowledgeBaseFile} setKnowledgeBaseFile={setKnowledgeBaseFile} />
+          <DealFormFields data={formData} onChange={handleInputChange} isEdit companies={companies} companySearch={companySearch} setCompanySearch={setCompanySearch} knowledgeBaseFile={knowledgeBaseFile} setKnowledgeBaseFile={setKnowledgeBaseFile} aiAgents={aiAgents} />
           <div className="flex gap-3 mt-6 pt-4 border-t border-border">
             <button type="submit" disabled={formLoading} className="elstar-btn-primary flex-1 flex items-center justify-center gap-2">
               {formLoading && <Loader2 className="w-4 h-4 animate-spin" />} Update Deal

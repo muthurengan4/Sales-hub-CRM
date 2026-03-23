@@ -129,6 +129,22 @@ The system now supports **per-lead pipeline status** for deals:
   - Meeting activity logged in lead timeline
   - Backend endpoints: `POST /api/meetings/schedule`, `GET /api/meetings/lead/{id}`, `PUT /api/meetings/{id}/cancel`
 
+- **Multi-Agent AI Calling with Dynamic Selection** ✅
+  - Enhanced Deal configuration to assign multiple AI agents
+  - Three selection modes: Round Robin, Random, Manual
+  - Deal form now shows "AI CALLING AGENTS" section to:
+    - Select which agents can be used for the deal
+    - Choose selection mode (how agent is picked)
+  - AI Call modal enhanced:
+    - Shows "Use Deal's Auto-Selection" toggle when deal has agents configured
+    - Displays which agents are assigned to the selected deal
+    - Supports both manual agent selection and dynamic auto-selection
+  - Backend endpoints:
+    - `GET /api/deals/{deal_id}/agents` - Get deal's agent configuration
+    - `PUT /api/deals/{deal_id}/agents` - Update deal's agent assignment
+    - `GET /api/deals/{deal_id}/preview-agent` - Preview which agent would be selected
+  - Round-robin counter persisted per deal for fair agent rotation
+
 ## API Endpoints
 
 ### AI Calls

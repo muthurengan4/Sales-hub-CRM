@@ -387,6 +387,9 @@ class DealCreate(BaseModel):
     knowledge_base_content: Optional[str] = None  # AI knowledge base for calls
     # New: linked companies (list of lead/customer IDs)
     linked_company_ids: List[str] = []
+    # AI Agents configuration for this deal
+    assigned_agents: List[str] = []  # List of agent IDs
+    agent_selection_mode: str = "round_robin"  # round_robin, random, manual, weighted
 
 class DealUpdate(BaseModel):
     title: Optional[str] = None
@@ -398,6 +401,9 @@ class DealUpdate(BaseModel):
     assigned_to: Optional[str] = None
     linked_company_ids: Optional[List[str]] = None
     knowledge_base_content: Optional[str] = None  # AI knowledge base for calls
+    # AI Agents configuration for this deal
+    assigned_agents: Optional[List[str]] = None  # List of agent IDs
+    agent_selection_mode: Optional[str] = None  # round_robin, random, manual, weighted
 
 class LinkedCompany(BaseModel):
     id: str
@@ -3028,9 +3034,79 @@ async def get_lead_ai_calls(lead_id: str, user: dict = Depends(get_current_user)
 class AiCallInitiate(BaseModel):
     lead_id: str
     deal_id: str
-    agent_name: str
+    agent_name: Optional[str] = None  # Made optional - can use dynamic selection
+    agent_id: Optional[str] = None  # Optional - can specify agent by ID
     phone: Optional[str] = None
     call_purpose: Optional[str] = "follow_up"  # follow_up, appointment, qualification, custom
+    use_dynamic_selection: bool = False  # If true, ignore agent_name and use deal's selection mode
+
+async def select_agent_dynamically(deal: dict, organization_id: str) -> dict:
+    """
+    Dynamically select an AI agent for a deal based on the selection mode.
+    Modes: round_robin, random, weighted, manual (returns first agent)
+    """
+    import random
+    
+    assigned_agents = deal.get('assigned_agents', [])
+    selection_mode = deal.get('agent_selection_mode', 'round_robin')
+    
+    if not assigned_agents:
+        # No agents assigned to deal, get all org agents
+        agents = await db.ai_agents.find(
+            {'organization_id': organization_id},
+            {'_id': 0}
+        ).to_list(50)
+        if not agents:
+            return None
+        assigned_agents = [a['id'] for a in agents]
+    
+    # Fetch agent documents
+    agents = await db.ai_agents.find(
+        {'organization_id': organization_id, 'id': {'$in': assigned_agents}},
+        {'_id': 0}
+    ).to_list(50)
+    
+    if not agents:
+        return None
+    
+    if selection_mode == 'random':
+        return random.choice(agents)
+    
+    elif selection_mode == 'round_robin':
+        # Get the last used agent index for this deal
+        deal_agent_counter = await db.deal_agent_counters.find_one(
+            {'deal_id': deal['id']},
+            {'_id': 0}
+        )
+        last_index = deal_agent_counter.get('last_index', -1) if deal_agent_counter else -1
+        next_index = (last_index + 1) % len(agents)
+        
+        # Update counter
+        await db.deal_agent_counters.update_one(
+            {'deal_id': deal['id']},
+            {'$set': {'last_index': next_index, 'updated_at': datetime.now(timezone.utc).isoformat()}},
+            upsert=True
+        )
+        return agents[next_index]
+    
+    elif selection_mode == 'weighted':
+        # Weight based on agent's call success rate (if available)
+        # For now, fall back to round-robin if no weight data
+        deal_agent_counter = await db.deal_agent_counters.find_one(
+            {'deal_id': deal['id']},
+            {'_id': 0}
+        )
+        last_index = deal_agent_counter.get('last_index', -1) if deal_agent_counter else -1
+        next_index = (last_index + 1) % len(agents)
+        await db.deal_agent_counters.update_one(
+            {'deal_id': deal['id']},
+            {'$set': {'last_index': next_index}},
+            upsert=True
+        )
+        return agents[next_index]
+    
+    else:  # 'manual' or default
+        return agents[0]
 
 @api_router.post("/ai-calls/initiate")
 async def initiate_ai_call_endpoint(call_data: AiCallInitiate, user: dict = Depends(get_current_user)):
@@ -3050,11 +3126,32 @@ async def initiate_ai_call_endpoint(call_data: AiCallInitiate, user: dict = Depe
     if not deal:
         raise HTTPException(status_code=404, detail="Deal not found")
     
-    # Get AI agent configuration
-    agent = await db.ai_agents.find_one(
-        {'organization_id': user['organization_id'], 'name': call_data.agent_name},
-        {'_id': 0}
-    )
+    # Determine which agent to use
+    agent = None
+    agent_name = call_data.agent_name
+    
+    if call_data.use_dynamic_selection or (not call_data.agent_name and not call_data.agent_id):
+        # Use dynamic agent selection based on deal's configuration
+        agent = await select_agent_dynamically(deal, user['organization_id'])
+        if agent:
+            agent_name = agent.get('name')
+    elif call_data.agent_id:
+        # Get agent by ID
+        agent = await db.ai_agents.find_one(
+            {'organization_id': user['organization_id'], 'id': call_data.agent_id},
+            {'_id': 0}
+        )
+        if agent:
+            agent_name = agent.get('name')
+    else:
+        # Get agent by name (original behavior)
+        agent = await db.ai_agents.find_one(
+            {'organization_id': user['organization_id'], 'name': call_data.agent_name},
+            {'_id': 0}
+        )
+    
+    if not agent:
+        raise HTTPException(status_code=400, detail="No AI agent available. Please configure agents in Settings.")
     
     # Get knowledge base from deal if available
     knowledge_base = deal.get('knowledge_base_content')
@@ -3086,7 +3183,8 @@ async def initiate_ai_call_endpoint(call_data: AiCallInitiate, user: dict = Depe
         'id': call_id,
         'lead_id': call_data.lead_id,
         'deal_id': call_data.deal_id,
-        'agent_name': call_data.agent_name,
+        'agent_name': agent_name,
+        'agent_id': agent.get('id'),
         'phone': phone_number,
         'lead_name': lead.get('name') or lead.get('company'),
         'deal_title': deal.get('title'),
@@ -3094,13 +3192,14 @@ async def initiate_ai_call_endpoint(call_data: AiCallInitiate, user: dict = Depe
         'direction': 'outbound',
         'source': 'AI Call',
         'duration': None,
-        'summary': f'AI call initiated to discuss {deal.get("title")}. Agent: {call_data.agent_name}',
+        'summary': f'AI call initiated to discuss {deal.get("title")}. Agent: {agent_name}',
         'recording_url': None,
         'transcript': None,
         'conversation_id': conversation_id,  # Store ElevenLabs conversation ID
         'call_sid': call_sid,  # Store Twilio call SID
         'call_purpose': call_data.call_purpose or "follow_up",
         'ai_script': result.get('call_data', {}).get('script'),
+        'selection_mode': deal.get('agent_selection_mode', 'manual') if call_data.use_dynamic_selection else 'manual',
         'organization_id': user['organization_id'],
         'initiated_by': user['id'],
         'created_at': now,
@@ -3117,16 +3216,18 @@ async def initiate_ai_call_endpoint(call_data: AiCallInitiate, user: dict = Depe
         'entity_id': call_data.lead_id,
         'action': 'ai_call',
         'type': 'ai_call',
-        'title': f'AI Call - {call_data.agent_name}',
+        'title': f'AI Call - {agent_name}',
         'description': f'AI call initiated to {lead.get("name") or lead.get("company")} to discuss {deal.get("title")}',
         'user_id': user['id'],
         'user_name': user['name'],
         'call_id': call_id,
         'metadata': {
-            'agent_name': call_data.agent_name,
+            'agent_name': agent_name,
+            'agent_id': agent.get('id'),
             'deal_title': deal.get('title'),
             'phone': phone_number,
-            'call_purpose': call_data.call_purpose
+            'call_purpose': call_data.call_purpose,
+            'selection_mode': deal.get('agent_selection_mode', 'manual') if call_data.use_dynamic_selection else 'manual'
         },
         'created_at': now
     })
@@ -3140,6 +3241,138 @@ class AiAgentCreate(BaseModel):
     name: str
     agent_id: str  # ElevenLabs Agent ID
     description: Optional[str] = None
+
+@api_router.get("/deals/{deal_id}/agents")
+async def get_deal_agents(deal_id: str, user: dict = Depends(get_current_user)):
+    """Get AI agents configured for a specific deal"""
+    if not user.get('organization_id'):
+        return {"agents": [], "selection_mode": "manual"}
+    
+    deal = await db.deals.find_one(
+        {'id': deal_id, 'organization_id': user['organization_id']},
+        {'_id': 0, 'assigned_agents': 1, 'agent_selection_mode': 1}
+    )
+    
+    if not deal:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    
+    assigned_agent_ids = deal.get('assigned_agents', [])
+    selection_mode = deal.get('agent_selection_mode', 'manual')
+    
+    # Fetch agent details
+    agents = []
+    if assigned_agent_ids:
+        agents = await db.ai_agents.find(
+            {'organization_id': user['organization_id'], 'id': {'$in': assigned_agent_ids}},
+            {'_id': 0}
+        ).to_list(50)
+    else:
+        # If no agents assigned, return all org agents
+        agents = await db.ai_agents.find(
+            {'organization_id': user['organization_id']},
+            {'_id': 0}
+        ).to_list(50)
+    
+    return {
+        "agents": agents,
+        "selection_mode": selection_mode,
+        "has_custom_agents": bool(assigned_agent_ids)
+    }
+
+@api_router.get("/deals/{deal_id}/preview-agent")
+async def preview_deal_agent(deal_id: str, user: dict = Depends(get_current_user)):
+    """Preview which agent would be selected for the next call (without updating counter)"""
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="Organization required")
+    
+    deal = await db.deals.find_one(
+        {'id': deal_id, 'organization_id': user['organization_id']},
+        {'_id': 0}
+    )
+    
+    if not deal:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    
+    # Get the agent that would be selected (without updating counter)
+    import random
+    
+    assigned_agents = deal.get('assigned_agents', [])
+    selection_mode = deal.get('agent_selection_mode', 'manual')
+    
+    if not assigned_agents:
+        agents = await db.ai_agents.find(
+            {'organization_id': user['organization_id']},
+            {'_id': 0}
+        ).to_list(50)
+        if not agents:
+            return {"agent": None, "selection_mode": selection_mode, "message": "No agents configured"}
+        assigned_agents = [a['id'] for a in agents]
+    else:
+        agents = await db.ai_agents.find(
+            {'organization_id': user['organization_id'], 'id': {'$in': assigned_agents}},
+            {'_id': 0}
+        ).to_list(50)
+    
+    if not agents:
+        return {"agent": None, "selection_mode": selection_mode, "message": "No agents found"}
+    
+    selected_agent = None
+    if selection_mode == 'random':
+        selected_agent = random.choice(agents)
+    elif selection_mode == 'round_robin':
+        deal_agent_counter = await db.deal_agent_counters.find_one({'deal_id': deal_id}, {'_id': 0})
+        last_index = deal_agent_counter.get('last_index', -1) if deal_agent_counter else -1
+        next_index = (last_index + 1) % len(agents)
+        selected_agent = agents[next_index]
+    else:
+        selected_agent = agents[0]
+    
+    return {
+        "agent": selected_agent,
+        "selection_mode": selection_mode,
+        "total_agents": len(agents)
+    }
+
+class DealAgentConfig(BaseModel):
+    assigned_agents: List[str]
+    agent_selection_mode: str = "round_robin"  # round_robin, random, manual
+
+@api_router.put("/deals/{deal_id}/agents")
+async def update_deal_agents(deal_id: str, config: DealAgentConfig, user: dict = Depends(get_current_user)):
+    """Update AI agent configuration for a deal"""
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="Organization required")
+    
+    deal = await db.deals.find_one(
+        {'id': deal_id, 'organization_id': user['organization_id']},
+        {'_id': 0}
+    )
+    
+    if not deal:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    
+    # Validate that all agent IDs exist
+    if config.assigned_agents:
+        existing_agents = await db.ai_agents.find(
+            {'organization_id': user['organization_id'], 'id': {'$in': config.assigned_agents}},
+            {'_id': 0, 'id': 1}
+        ).to_list(50)
+        existing_ids = {a['id'] for a in existing_agents}
+        invalid_ids = set(config.assigned_agents) - existing_ids
+        if invalid_ids:
+            raise HTTPException(status_code=400, detail=f"Invalid agent IDs: {invalid_ids}")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    await db.deals.update_one(
+        {'id': deal_id},
+        {'$set': {
+            'assigned_agents': config.assigned_agents,
+            'agent_selection_mode': config.agent_selection_mode,
+            'updated_at': now
+        }}
+    )
+    
+    return {"success": True, "message": "Deal agent configuration updated"}
 
 @api_router.get("/ai-agents")
 async def get_ai_agents(user: dict = Depends(get_current_user)):
