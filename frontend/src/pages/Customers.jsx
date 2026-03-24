@@ -351,7 +351,8 @@ export default function Customers() {
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => {
-                                    // Navigate to lead detail if has lead_id, otherwise open preview
+                                    // If customer has a linked lead_id, navigate to lead detail
+                                    // Otherwise open the preview panel
                                     if (customer.lead_id) {
                                       navigate(`/leads/${customer.lead_id}`);
                                     } else {
@@ -429,7 +430,8 @@ export default function Customers() {
                                 </div>
                                 <button onClick={() => { 
                                   closeDropdown();
-                                  // Navigate to lead detail if has lead_id, otherwise customer profile
+                                  // If customer has a linked lead_id, navigate to lead detail
+                                  // Otherwise open the preview panel
                                   if (customer.lead_id) {
                                     navigate(`/leads/${customer.lead_id}`);
                                   } else {
@@ -612,18 +614,18 @@ export default function Customers() {
               <button
                 onClick={() => {
                   setIsPreviewOpen(false);
-                  // If customer has a lead_id, navigate to the lead detail page
-                  // Otherwise navigate to customer profile
+                  // If customer has a linked lead_id, navigate to lead detail
+                  // Otherwise show message that this is a customer-only record
                   if (selectedCustomer.lead_id) {
                     navigate(`/leads/${selectedCustomer.lead_id}`);
                   } else {
-                    navigate(`/customer/${selectedCustomer.id}`);
+                    toast.info('This is a customer record. Edit details from the preview panel.');
                   }
                   setSelectedCustomer(null);
                 }}
                 className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 rounded-lg text-sm font-medium transition-colors"
               >
-                Open Full Profile
+                {selectedCustomer?.lead_id ? 'Open Full Profile' : 'Edit in Preview'}
               </button>
               <button
                 onClick={() => { setIsPreviewOpen(false); setSelectedCustomer(null); }}
