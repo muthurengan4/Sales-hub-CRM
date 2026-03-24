@@ -273,6 +273,9 @@ class ContactResponse(BaseModel):
     organization_id: Optional[str] = None
     owner_id: str
     owner_name: Optional[str] = None
+    lead_id: Optional[str] = None  # Link to lead for detail page
+    industry: Optional[str] = None
+    website: Optional[str] = None
     created_at: str
     updated_at: str
 
@@ -1712,18 +1715,48 @@ async def get_customers(
 
 @api_router.post("/customers", response_model=ContactResponse)
 async def create_customer(contact_data: ContactCreate, user: dict = Depends(get_current_user)):
-    """Create a new customer (contact)"""
+    """Create a new customer (contact) and a corresponding lead record for the detail page"""
     check_permission(user, Permission.MANAGE_CONTACTS)
     
     if not user.get('organization_id'):
         raise HTTPException(status_code=400, detail="Please create or join an organization first. Go to Organization settings to get started.")
     
     contact_id = str(uuid.uuid4())
+    lead_id = str(uuid.uuid4())  # Create a lead ID for the detail page
     now = datetime.now(timezone.utc).isoformat()
     
+    # Create the lead record first (for the detail page)
+    lead_doc = {
+        'id': lead_id,
+        'company': contact_data.company,
+        'pic_name': f"{contact_data.first_name or ''} {contact_data.last_name or ''}".strip() or contact_data.company,
+        'name': f"{contact_data.first_name or ''} {contact_data.last_name or ''}".strip() or contact_data.company,
+        'email': contact_data.email,
+        'phone': contact_data.phone,
+        'industry': contact_data.industry,
+        'address': contact_data.address,
+        'city': contact_data.city,
+        'state': contact_data.state,
+        'postcode': contact_data.postcode,
+        'country': contact_data.country,
+        'website': contact_data.website,
+        'status': 'customer',  # Mark as customer
+        'pipeline_status': 'sales_closed',  # Customers are closed deals
+        'source': 'Customer Import',
+        'organization_id': user['organization_id'],
+        'owner_id': user['id'],
+        'assigned_to': user['id'],
+        'customer_id': contact_id,  # Link back to customer
+        'created_at': now,
+        'updated_at': now
+    }
+    await db.leads.insert_one(lead_doc)
+    
+    # Create the contact/customer record with lead_id reference
     contact_doc = {
         'id': contact_id,
         **contact_data.model_dump(),
+        'lead_id': lead_id,  # Link to the lead for detail page
         'organization_id': user['organization_id'],
         'owner_id': user['id'],
         'created_at': now,
@@ -1780,6 +1813,63 @@ async def delete_customer(customer_id: str, user: dict = Depends(get_current_use
         raise HTTPException(status_code=404, detail="Customer not found")
     
     return {"message": "Customer deleted successfully"}
+
+@api_router.post("/customers/migrate-to-leads")
+async def migrate_customers_to_leads(user: dict = Depends(get_current_user)):
+    """One-time migration: Create lead records for existing customers without lead_id"""
+    if user.get('role') not in [RoleType.ORG_ADMIN.value, RoleType.SUPER_ADMIN.value]:
+        raise HTTPException(status_code=403, detail="Only admins can run migrations")
+    
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="No organization found")
+    
+    # Find customers without lead_id
+    customers = await db.contacts.find(
+        {'organization_id': user['organization_id'], 'lead_id': {'$exists': False}},
+        {'_id': 0}
+    ).to_list(1000)
+    
+    migrated = 0
+    now = datetime.now(timezone.utc).isoformat()
+    
+    for customer in customers:
+        lead_id = str(uuid.uuid4())
+        
+        # Create lead record
+        lead_doc = {
+            'id': lead_id,
+            'company': customer.get('company') or f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip(),
+            'pic_name': f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip(),
+            'name': f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip() or customer.get('company'),
+            'email': customer.get('email'),
+            'phone': customer.get('phone'),
+            'industry': customer.get('industry'),
+            'address': customer.get('address'),
+            'city': customer.get('city'),
+            'state': customer.get('state'),
+            'postcode': customer.get('postcode'),
+            'country': customer.get('country'),
+            'website': customer.get('website'),
+            'status': 'customer',
+            'pipeline_status': 'sales_closed',
+            'source': 'Customer Migration',
+            'organization_id': user['organization_id'],
+            'owner_id': customer.get('owner_id', user['id']),
+            'assigned_to': customer.get('owner_id', user['id']),
+            'customer_id': customer['id'],
+            'created_at': customer.get('created_at', now),
+            'updated_at': now
+        }
+        await db.leads.insert_one(lead_doc)
+        
+        # Update customer with lead_id
+        await db.contacts.update_one(
+            {'id': customer['id']},
+            {'$set': {'lead_id': lead_id, 'updated_at': now}}
+        )
+        migrated += 1
+    
+    return {"success": True, "migrated": migrated, "message": f"Migrated {migrated} customers to leads"}
 
 @api_router.post("/customers/import")
 async def import_customers(file: UploadFile = File(...), user: dict = Depends(get_current_user)):

@@ -351,11 +351,11 @@ export default function Customers() {
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => {
-                                    // If customer has a linked lead_id, navigate to lead detail
-                                    // Otherwise open the preview panel
+                                    // Navigate to lead detail page
                                     if (customer.lead_id) {
                                       navigate(`/leads/${customer.lead_id}`);
                                     } else {
+                                      // For legacy customers without lead_id, open preview
                                       openPreviewPanel(customer);
                                     }
                                   }}
@@ -614,18 +614,17 @@ export default function Customers() {
               <button
                 onClick={() => {
                   setIsPreviewOpen(false);
-                  // If customer has a linked lead_id, navigate to lead detail
-                  // Otherwise show message that this is a customer-only record
+                  // Navigate to lead detail page
                   if (selectedCustomer.lead_id) {
                     navigate(`/leads/${selectedCustomer.lead_id}`);
                   } else {
-                    toast.info('This is a customer record. Edit details from the preview panel.');
+                    toast.info('This customer needs to be migrated. Please contact admin.');
                   }
                   setSelectedCustomer(null);
                 }}
                 className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 rounded-lg text-sm font-medium transition-colors"
               >
-                {selectedCustomer?.lead_id ? 'Open Full Profile' : 'Edit in Preview'}
+                Open Full Profile
               </button>
               <button
                 onClick={() => { setIsPreviewOpen(false); setSelectedCustomer(null); }}
