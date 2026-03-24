@@ -992,7 +992,7 @@ async def get_me(user: dict = Depends(get_current_user)):
         last_login=user.get('last_login')
     )
 
-@api_router.post("/users/invite", response_model=UserResponse)
+@api_router.post("/users/invite")
 async def invite_user(invite_data: UserInvite, user: dict = Depends(get_current_user)):
     """Invite a user to the organization"""
     check_permission(user, Permission.INVITE_USERS)
@@ -1017,24 +1017,37 @@ async def invite_user(invite_data: UserInvite, user: dict = Depends(get_current_
         'organization_id': user['organization_id'],
         'is_active': True,
         'created_at': now,
-        'invited_by': user['id']
+        'invited_by': user['id'],
+        'needs_password_reset': True
     }
     
     await db.users.insert_one(user_doc)
     
+    # Update organization member count
+    await db.organizations.update_one(
+        {'id': user['organization_id']},
+        {'$inc': {'member_count': 1}}
+    )
+    
     permissions = [p.value for p in ROLE_PERMISSIONS.get(invite_data.role, [])]
     
-    return UserResponse(
-        id=user_id,
-        email=invite_data.email,
-        name=invite_data.name,
-        role=invite_data.role,
-        organization_id=user['organization_id'],
-        organization_name=user.get('organization_name'),
-        permissions=permissions,
-        is_active=True,
-        created_at=now
-    )
+    # Return temp password so admin can share it
+    return {
+        "success": True,
+        "message": f"User {invite_data.name} has been invited",
+        "temp_password": temp_password,
+        "user": {
+            "id": user_id,
+            "email": invite_data.email,
+            "name": invite_data.name,
+            "role": invite_data.role.value,
+            "organization_id": user['organization_id'],
+            "organization_name": user.get('organization_name'),
+            "permissions": permissions,
+            "is_active": True,
+            "created_at": now
+        }
+    }
 
 class PaginatedUsersResponse(BaseModel):
     items: List[UserResponse]

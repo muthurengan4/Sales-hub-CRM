@@ -3,7 +3,7 @@ import { useAuth } from '../App';
 import { toast } from 'sonner';
 import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
-import { Plus, Loader2, MoreHorizontal, Trash2, Edit, UserPlus, Shield, Mail, Clock } from 'lucide-react';
+import { Plus, Loader2, MoreHorizontal, Trash2, Edit, UserPlus, Shield, Mail, Clock, Check, Copy } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -36,6 +36,9 @@ export default function Users() {
   const [dropdownOpen, setDropdownOpen] = useState(null);
   const [inviteData, setInviteData] = useState({ email: '', name: '', role: 'sales_rep' });
   const [editData, setEditData] = useState({ role: '', is_active: true });
+  
+  // Credentials modal for showing temp password
+  const [credentialsModal, setCredentialsModal] = useState({ isOpen: false, email: '', password: '', name: '' });
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -91,13 +94,24 @@ export default function Users() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(inviteData)
       });
+      const data = await response.json();
       if (response.ok) {
-        toast.success('User invited successfully');
+        toast.success(data.message || 'User invited successfully');
         setIsInviteOpen(false);
+        
+        // Show credentials modal with temp password
+        if (data.temp_password) {
+          setCredentialsModal({
+            isOpen: true,
+            email: inviteData.email,
+            password: data.temp_password,
+            name: inviteData.name
+          });
+        }
+        
         setInviteData({ email: '', name: '', role: 'sales_rep' });
         fetchUsers();
       } else {
-        const data = await response.json();
         toast.error(data.detail || 'Failed to invite user');
       }
     } catch (error) { toast.error('Failed to invite user'); }
@@ -360,6 +374,81 @@ export default function Users() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Credentials Modal - Shows temp password after invite */}
+      <Modal
+        isOpen={credentialsModal.isOpen}
+        onClose={() => setCredentialsModal({ isOpen: false, email: '', password: '', name: '' })}
+        title="User Created Successfully"
+        size="md"
+      >
+        <div className="elstar-modal-body space-y-4">
+          <div className="text-center py-4">
+            <div className="w-16 h-16 mx-auto rounded-full bg-green-500/20 flex items-center justify-center mb-4">
+              <Check className="w-8 h-8 text-green-500" />
+            </div>
+            <p className="text-lg font-semibold">{credentialsModal.name} has been added!</p>
+            <p className="text-sm text-muted-foreground mt-1">Share these login credentials with the new user</p>
+          </div>
+          
+          <div className="p-4 rounded-lg bg-secondary/50 border border-border space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Email</p>
+                <p className="font-mono text-sm">{credentialsModal.email}</p>
+              </div>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(credentialsModal.email);
+                  toast.success('Email copied');
+                }}
+                className="p-2 hover:bg-secondary rounded"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Temporary Password</p>
+                <p className="font-mono text-lg font-bold text-primary">{credentialsModal.password}</p>
+              </div>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(credentialsModal.password);
+                  toast.success('Password copied');
+                }}
+                className="p-2 hover:bg-secondary rounded"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          
+          <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+            <p className="text-sm text-amber-500">
+              ⚠️ Please save these credentials now. The password cannot be retrieved later.
+            </p>
+          </div>
+          
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(`Email: ${credentialsModal.email}\nPassword: ${credentialsModal.password}`);
+              toast.success('Credentials copied to clipboard');
+            }}
+            className="elstar-btn-ghost w-full flex items-center justify-center gap-2"
+          >
+            <Copy className="w-4 h-4" /> Copy All Credentials
+          </button>
+        </div>
+        <div className="elstar-modal-footer">
+          <button
+            onClick={() => setCredentialsModal({ isOpen: false, email: '', password: '', name: '' })}
+            className="elstar-btn-primary w-full"
+          >
+            Done
+          </button>
+        </div>
       </Modal>
     </div>
   );
