@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../App';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import SlideInPanel from '../components/SlideInPanel';
 import Pagination from '../components/Pagination';
 import ActionDropdown from '../components/ActionDropdown';
+import Modal from '../components/Modal';
 import { 
   Plus, Search, Loader2, 
   Trash2, Edit, CheckCircle, 
-  CalendarPlus
+  CalendarPlus, Eye, ExternalLink
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -38,6 +40,7 @@ const initialFormData = {
 
 export default function Tasks() {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -45,6 +48,9 @@ export default function Tasks() {
   const [selectedTask, setSelectedTask] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
+  
+  // Preview modal state
+  const [previewModal, setPreviewModal] = useState({ isOpen: false, lead: null });
   
   // Data for dropdowns
   const [leads, setLeads] = useState([]);
@@ -261,6 +267,29 @@ export default function Tasks() {
     if (closeDropdown) closeDropdown();
   };
 
+  // Fetch lead details for preview
+  const openLeadPreview = async (leadId) => {
+    if (!leadId) return;
+    try {
+      const response = await fetch(`${API}/api/leads/${leadId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const lead = await response.json();
+        setPreviewModal({ isOpen: true, lead });
+      }
+    } catch (error) {
+      console.error('Failed to fetch lead details');
+    }
+  };
+
+  // Navigate to lead detail page
+  const goToLeadDetail = (leadId) => {
+    if (leadId) {
+      navigate(`/leads/${leadId}`);
+    }
+  };
+
   const openCreatePanel = () => {
     setFormData(initialFormData);
     setSelectedTask(null);
@@ -410,11 +439,28 @@ export default function Tasks() {
                           {String((currentPage - 1) * pageSize + index + 1).padStart(4, '0')}
                         </td>
                         <td className="px-4 py-4">
-                          <div>
-                            <span className="font-medium text-sm">{task.company_name || task.title}</span>
-                            {/* Show PIC on mobile below company name */}
-                            {task.pic_name && (
-                              <p className="text-xs text-muted-foreground lg:hidden mt-0.5">{task.pic_name}</p>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1">
+                              <button 
+                                onClick={() => goToLeadDetail(task.lead_id)}
+                                className="font-medium text-sm text-primary hover:underline cursor-pointer text-left"
+                                title="View full profile"
+                              >
+                                {task.company_name || task.title}
+                              </button>
+                              {/* Show PIC on mobile below company name */}
+                              {task.pic_name && (
+                                <p className="text-xs text-muted-foreground lg:hidden mt-0.5">{task.pic_name}</p>
+                              )}
+                            </div>
+                            {task.lead_id && (
+                              <button
+                                onClick={() => openLeadPreview(task.lead_id)}
+                                className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-primary transition-colors"
+                                title="Quick preview"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
                             )}
                           </div>
                         </td>
@@ -605,6 +651,78 @@ export default function Tasks() {
           </div>
         </form>
       </SlideInPanel>
+
+      {/* Lead Preview Modal */}
+      <Modal
+        isOpen={previewModal.isOpen}
+        onClose={() => setPreviewModal({ isOpen: false, lead: null })}
+        title="Lead Preview"
+        size="md"
+      >
+        {previewModal.lead && (
+          <div className="elstar-modal-body space-y-4">
+            {/* Header */}
+            <div className="flex items-center gap-4 pb-4 border-b border-border">
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center text-white font-bold text-xl">
+                {(previewModal.lead.company || previewModal.lead.pic_name || 'L').charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg">{previewModal.lead.company || previewModal.lead.name}</h3>
+                <p className="text-sm text-muted-foreground">{previewModal.lead.pic_name || 'No PIC'}</p>
+              </div>
+            </div>
+
+            {/* Details Grid */}
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Email</p>
+                <p className="font-medium">{previewModal.lead.email || '-'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Phone</p>
+                <p className="font-medium">{previewModal.lead.phone || '-'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Industry</p>
+                <p className="font-medium">{previewModal.lead.industry || '-'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Status</p>
+                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                  previewModal.lead.status === 'customer' ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'
+                }`}>
+                  {previewModal.lead.status || 'Lead'}
+                </span>
+              </div>
+              <div className="col-span-2">
+                <p className="text-xs text-muted-foreground mb-1">Address</p>
+                <p className="font-medium">
+                  {[previewModal.lead.address, previewModal.lead.city, previewModal.lead.state, previewModal.lead.postcode].filter(Boolean).join(', ') || '-'}
+                </p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="pt-4 border-t border-border flex gap-2">
+              <button
+                onClick={() => {
+                  setPreviewModal({ isOpen: false, lead: null });
+                  goToLeadDetail(previewModal.lead.id);
+                }}
+                className="elstar-btn-primary flex items-center gap-2 flex-1"
+              >
+                <ExternalLink className="w-4 h-4" /> View Full Profile
+              </button>
+              <button
+                onClick={() => setPreviewModal({ isOpen: false, lead: null })}
+                className="elstar-btn-ghost"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

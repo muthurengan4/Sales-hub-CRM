@@ -6,7 +6,7 @@ import Modal from '../components/Modal';
 import SlideInPanel from '../components/SlideInPanel';
 import Pagination from '../components/Pagination';
 import ActionDropdown from '../components/ActionDropdown';
-import { Plus, Search, Loader2, Trash2, Edit, User, Upload, FileSpreadsheet, X, Pencil, ExternalLink } from 'lucide-react';
+import { Plus, Search, Loader2, Trash2, Edit, User, Upload, FileSpreadsheet, X, Pencil, ExternalLink, Eye } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -347,14 +347,30 @@ export default function Customers() {
                             <div className={`w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-lg ${avatarColor.bg} border-2 ${avatarColor.border} flex items-center justify-center text-white font-bold text-sm sm:text-lg`}>
                               {companyName.charAt(0).toUpperCase()}
                             </div>
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
                                 <button
-                                  onClick={() => openPreviewPanel(customer)}
-                                  className="font-medium text-sm text-foreground hover:text-primary hover:underline cursor-pointer transition-colors truncate max-w-[120px] sm:max-w-none"
+                                  onClick={() => {
+                                    // Navigate to lead detail if has lead_id, otherwise open preview
+                                    if (customer.lead_id) {
+                                      navigate(`/leads/${customer.lead_id}`);
+                                    } else {
+                                      openPreviewPanel(customer);
+                                    }
+                                  }}
+                                  className="font-medium text-sm text-primary hover:underline cursor-pointer transition-colors truncate max-w-[120px] sm:max-w-none"
                                   data-testid={`company-name-${customer.id}`}
+                                  title="View full profile"
                                 >
                                   {companyName}
+                                </button>
+                                {/* Preview Icon */}
+                                <button
+                                  onClick={() => openPreviewPanel(customer)}
+                                  className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-primary transition-colors"
+                                  title="Quick preview"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
                                 </button>
                               </div>
                               <p className="text-xs text-muted-foreground mt-0.5 truncate">{industry} - {country}</p>
