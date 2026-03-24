@@ -268,6 +268,10 @@ export default function Pipeline() {
   // AI Agents state
   const [aiAgents, setAiAgents] = useState([]);
 
+  // Manage Deals state - for combined view/edit/create panel
+  const [manageDealMode, setManageDealMode] = useState('new'); // 'new' or 'edit'
+  const [selectedExistingDeal, setSelectedExistingDeal] = useState(null);
+
   useEffect(() => { fetchDeals(); fetchLinkages(); fetchCompanies(); fetchAiAgents(); }, []);
 
   const fetchDeals = async () => {
@@ -320,17 +324,40 @@ export default function Pipeline() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ ...formData, value: parseFloat(formData.value) })
       });
-      if (response.ok) { toast.success('Deal created'); setIsCreateOpen(false); setFormData(initialFormData); fetchDeals(); }
+      if (response.ok) {
+        const newDeal = await response.json();
+        
+        // Upload knowledge base file if provided
+        if (knowledgeBaseFile && newDeal.id) {
+          const kbFormData = new FormData();
+          kbFormData.append('file', knowledgeBaseFile);
+          await fetch(`${API}/api/deals/${newDeal.id}/knowledge-base/upload`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: kbFormData
+          });
+        }
+        
+        toast.success('Deal created');
+        setIsCreateOpen(false);
+        setFormData(initialFormData);
+        setKnowledgeBaseFile(null);
+        setManageDealMode('new');
+        setSelectedExistingDeal(null);
+        fetchDeals();
+      }
     } catch (error) { toast.error('Failed to create deal'); }
     finally { setFormLoading(false); }
   };
 
   const handleEdit = async (e) => {
     e.preventDefault();
-    if (!selectedDeal) return;
+    // Use selectedExistingDeal for the manage panel, or selectedDeal for the old edit panel
+    const dealToEdit = selectedExistingDeal || selectedDeal;
+    if (!dealToEdit) return;
     setFormLoading(true);
     try {
-      const response = await fetch(`${API}/api/deals/${selectedDeal.id}`, {
+      const response = await fetch(`${API}/api/deals/${dealToEdit.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ ...formData, value: parseFloat(formData.value) })
@@ -338,23 +365,60 @@ export default function Pipeline() {
       
       if (response.ok) {
         // If this was opened from a specific linkage, also update that linkage's pipeline_status
-        if (selectedDeal._linkage_id && formData.stage) {
-          await fetch(`${API}/api/lead-deal-linkages/${selectedDeal._linkage_id}`, {
+        if (dealToEdit._linkage_id && formData.stage) {
+          await fetch(`${API}/api/lead-deal-linkages/${dealToEdit._linkage_id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify({ pipeline_status: formData.stage })
           });
         }
         
+        // Upload knowledge base file if provided
+        if (knowledgeBaseFile) {
+          const kbFormData = new FormData();
+          kbFormData.append('file', knowledgeBaseFile);
+          await fetch(`${API}/api/deals/${dealToEdit.id}/knowledge-base/upload`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: kbFormData
+          });
+        }
+        
         toast.success('Deal updated'); 
-        setIsEditOpen(false); 
-        setSelectedDeal(null); 
-        setFormData(initialFormData); 
+        setIsEditOpen(false);
+        setIsCreateOpen(false);
+        setSelectedDeal(null);
+        setSelectedExistingDeal(null);
+        setManageDealMode('new');
+        setFormData(initialFormData);
+        setKnowledgeBaseFile(null);
         fetchDeals();
         fetchLinkages();
       }
     } catch (error) { toast.error('Failed to update deal'); }
     finally { setFormLoading(false); }
+  };
+
+  const handleDeleteDeal = async (dealId) => {
+    try {
+      const response = await fetch(`${API}/api/deals/${dealId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        toast.success('Deal deleted');
+        setIsCreateOpen(false);
+        setSelectedExistingDeal(null);
+        setManageDealMode('new');
+        setFormData(initialFormData);
+        fetchDeals();
+        fetchLinkages();
+      } else {
+        toast.error('Failed to delete deal');
+      }
+    } catch (error) {
+      toast.error('Failed to delete deal');
+    }
   };
 
   const handleDelete = async (dealId) => {
@@ -595,17 +659,151 @@ export default function Pipeline() {
         </div>
       </div>
 
-      {/* Create Deal Slide-in Panel */}
-      <SlideInPanel isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create New Deal">
-        <form onSubmit={handleCreate}>
-          <DealFormFields data={formData} onChange={handleInputChange} companies={companies} companySearch={companySearch} setCompanySearch={setCompanySearch} knowledgeBaseFile={knowledgeBaseFile} setKnowledgeBaseFile={setKnowledgeBaseFile} aiAgents={aiAgents} />
-          <div className="flex gap-3 mt-6 pt-4 border-t border-border">
-            <button type="submit" disabled={formLoading} className="elstar-btn-primary flex-1 flex items-center justify-center gap-2" data-testid="submit-deal-btn">
-              {formLoading && <Loader2 className="w-4 h-4 animate-spin" />} Create Deal
-            </button>
-            <button type="button" onClick={() => setIsCreateOpen(false)} className="elstar-btn-ghost">Cancel</button>
+      {/* Manage Deals Slide-in Panel - View/Edit existing or Create new */}
+      <SlideInPanel isOpen={isCreateOpen} onClose={() => { setIsCreateOpen(false); setManageDealMode('new'); setSelectedExistingDeal(null); }} title="Manage Deals">
+        <div className="space-y-4">
+          {/* Deal Selector - Choose existing or create new */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Select Deal</label>
+            <select
+              className="elstar-select w-full"
+              value={selectedExistingDeal?.id || 'new'}
+              onChange={(e) => {
+                if (e.target.value === 'new') {
+                  setManageDealMode('new');
+                  setSelectedExistingDeal(null);
+                  setFormData(initialFormData);
+                  setKnowledgeBaseFile(null);
+                } else {
+                  const deal = deals.find(d => d.id === e.target.value);
+                  if (deal) {
+                    setManageDealMode('edit');
+                    setSelectedExistingDeal(deal);
+                    setFormData({
+                      title: deal.title || '',
+                      value: deal.value || '',
+                      stage: deal.stage || 'lead',
+                      expected_close_date: deal.expected_close_date || '',
+                      notes: deal.notes || '',
+                      linked_company_ids: deal.linked_company_ids || [],
+                      assigned_agents: deal.assigned_agents || [],
+                      agent_selection_mode: deal.agent_selection_mode || 'round_robin'
+                    });
+                    setKnowledgeBaseFile(null);
+                  }
+                }
+              }}
+              data-testid="deal-selector"
+            >
+              <option value="new">➕ Create New Deal</option>
+              <optgroup label="Existing Deals">
+                {deals.map(deal => (
+                  <option key={deal.id} value={deal.id}>
+                    {deal.title} - RM {(deal.value || 0).toLocaleString()}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
           </div>
-        </form>
+
+          {/* Show existing deal summary when selected */}
+          {manageDealMode === 'edit' && selectedExistingDeal && (
+            <div className="p-4 rounded-lg bg-secondary/50 border border-border space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-primary">Deal Summary</h4>
+                <span className={`text-xs px-2 py-1 rounded-full ${
+                  selectedExistingDeal.stage === 'sales_closed' ? 'bg-green-500/20 text-green-500' :
+                  selectedExistingDeal.stage === 'lost' ? 'bg-red-500/20 text-red-500' :
+                  'bg-amber-500/20 text-amber-500'
+                }`}>
+                  {STAGES.find(s => s.id === selectedExistingDeal.stage)?.label || selectedExistingDeal.stage}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-muted-foreground">Value</p>
+                  <p className="font-medium">RM {(selectedExistingDeal.value || 0).toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Expected Close</p>
+                  <p className="font-medium">{selectedExistingDeal.expected_close_date || 'Not set'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Created</p>
+                  <p className="font-medium">{selectedExistingDeal.created_at ? new Date(selectedExistingDeal.created_at).toLocaleDateString() : 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Linked Companies</p>
+                  <p className="font-medium">{(selectedExistingDeal.linked_company_ids || []).length} companies</p>
+                </div>
+              </div>
+              {/* Knowledge Base Status */}
+              <div className="pt-2 border-t border-border">
+                <p className="text-xs text-muted-foreground mb-1">Knowledge Base</p>
+                {selectedExistingDeal.knowledge_base_content ? (
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-green-500" />
+                    <span className="text-sm text-green-500">✓ Uploaded ({selectedExistingDeal.knowledge_base_content.length} characters)</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">No knowledge base uploaded</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Divider */}
+          <div className="border-t border-border pt-4">
+            <h4 className="text-sm font-medium mb-3">
+              {manageDealMode === 'new' ? '📝 New Deal Details' : '✏️ Edit Deal Details'}
+            </h4>
+          </div>
+
+          {/* Deal Form */}
+          <form onSubmit={manageDealMode === 'new' ? handleCreate : handleEdit}>
+            <DealFormFields 
+              data={formData} 
+              onChange={handleInputChange} 
+              isEdit={manageDealMode === 'edit'}
+              companies={companies} 
+              companySearch={companySearch} 
+              setCompanySearch={setCompanySearch} 
+              knowledgeBaseFile={knowledgeBaseFile} 
+              setKnowledgeBaseFile={setKnowledgeBaseFile} 
+              aiAgents={aiAgents} 
+            />
+            <div className="flex gap-3 mt-6 pt-4 border-t border-border">
+              {manageDealMode === 'new' ? (
+                <button type="submit" disabled={formLoading} className="elstar-btn-primary flex-1 flex items-center justify-center gap-2" data-testid="submit-deal-btn">
+                  {formLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <Plus className="w-4 h-4" /> Create Deal
+                </button>
+              ) : (
+                <>
+                  <button type="submit" disabled={formLoading} className="elstar-btn-primary flex-1 flex items-center justify-center gap-2">
+                    {formLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                    <Edit className="w-4 h-4" /> Update Deal
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      if (window.confirm('Are you sure you want to delete this deal?')) {
+                        handleDeleteDeal(selectedExistingDeal.id);
+                      }
+                    }}
+                    className="elstar-btn-ghost text-red-500 hover:bg-red-500/10"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+              <button type="button" onClick={() => { setIsCreateOpen(false); setManageDealMode('new'); setSelectedExistingDeal(null); }} className="elstar-btn-ghost">Cancel</button>
+            </div>
+          </form>
+        </div>
       </SlideInPanel>
 
       {/* Edit Deal Slide-in Panel */}
