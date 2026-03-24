@@ -3,20 +3,29 @@ import { useAuth } from '../App';
 import { toast } from 'sonner';
 import Modal from '../components/Modal';
 import AssignmentSettings from '../components/AssignmentSettings';
-import { Loader2, Building2, Users, Globe, Briefcase, Save, Plus, Check } from 'lucide-react';
+import { Loader2, Building2, Users, Globe, Briefcase, Save, Plus, Check, Mail, UserPlus, LogIn, Trash2, Phone, BarChart3, X } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
 export default function Organization() {
-  const { token, user, hasPermission, refreshUser } = useAuth();
+  const { token, user, hasPermission, refreshUser, login } = useAuth();
   const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', domain: '', industry: '', size: '' });
   const [editData, setEditData] = useState({ name: '', domain: '', industry: '', size: '' });
+  
+  // Team management state
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [loadingTeam, setLoadingTeam] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteName, setInviteName] = useState('');
+  const [inviting, setInviting] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [newUserCredentials, setNewUserCredentials] = useState(null);
 
-  useEffect(() => { fetchOrganizations(); }, []);
+  useEffect(() => { fetchOrganizations(); fetchTeamMembers(); }, []);
 
   const fetchOrganizations = async () => {
     try {
@@ -33,6 +42,111 @@ export default function Organization() {
       }
     } catch (error) { toast.error('Failed to fetch organizations'); }
     finally { setLoading(false); }
+  };
+
+  // Fetch team members
+  const fetchTeamMembers = async () => {
+    setLoadingTeam(true);
+    try {
+      const response = await fetch(`${API}/api/organization/team`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setTeamMembers(data.members || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch team members');
+    } finally {
+      setLoadingTeam(false);
+    }
+  };
+
+  // Invite team member
+  const handleInvite = async (e) => {
+    e.preventDefault();
+    if (!inviteEmail) {
+      toast.error('Email is required');
+      return;
+    }
+    setInviting(true);
+    try {
+      const response = await fetch(`${API}/api/organization/team/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ email: inviteEmail, name: inviteName || null })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast.success(data.message);
+        if (data.is_new && data.temp_password) {
+          setNewUserCredentials({
+            email: inviteEmail,
+            password: data.temp_password
+          });
+        }
+        setInviteEmail('');
+        setInviteName('');
+        setShowInviteModal(false);
+        fetchTeamMembers();
+      } else {
+        toast.error(data.detail || 'Failed to invite user');
+      }
+    } catch (error) {
+      toast.error('Failed to invite user');
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  // Impersonate (login as) team member
+  const handleImpersonate = async (memberId, memberName) => {
+    if (!window.confirm(`You will be logged in as ${memberName}. Continue?`)) return;
+    
+    try {
+      const response = await fetch(`${API}/api/organization/team/${memberId}/impersonate`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        // Store original admin info for "Return to Admin" feature
+        localStorage.setItem('impersonation_original_token', token);
+        localStorage.setItem('impersonation_info', JSON.stringify(data.impersonation));
+        
+        // Login as the team member
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        toast.success(`Now viewing as ${memberName}`);
+        window.location.href = '/'; // Refresh to dashboard
+      } else {
+        toast.error(data.detail || 'Failed to impersonate');
+      }
+    } catch (error) {
+      toast.error('Failed to impersonate user');
+    }
+  };
+
+  // Remove team member
+  const handleRemoveMember = async (memberId, memberName) => {
+    if (!window.confirm(`Remove ${memberName} from the organization?`)) return;
+    
+    try {
+      const response = await fetch(`${API}/api/organization/team/${memberId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast.success(data.message);
+        fetchTeamMembers();
+      } else {
+        toast.error(data.detail || 'Failed to remove member');
+      }
+    } catch (error) {
+      toast.error('Failed to remove member');
+    }
   };
 
   // Stable callback to prevent re-renders
@@ -314,6 +428,226 @@ export default function Organization() {
           <AssignmentSettings />
         </div>
       )}
+
+      {/* Team Management - Only show for admins */}
+      {user?.organization_id && hasPermission('manage_organization') && (
+        <div className="elstar-card p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="font-semibold text-lg">Sales Team</h3>
+              <p className="text-sm text-muted-foreground">Manage your organization's team members</p>
+            </div>
+            <button
+              onClick={() => setShowInviteModal(true)}
+              className="elstar-btn-primary flex items-center gap-2"
+            >
+              <UserPlus className="w-4 h-4" /> Add Team Member
+            </button>
+          </div>
+
+          {loadingTeam ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : teamMembers.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>No team members yet</p>
+              <p className="text-sm">Invite your sales team to get started</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {teamMembers.map((member) => (
+                <div 
+                  key={member.id} 
+                  className={`p-4 rounded-lg border ${member.is_current_user ? 'border-primary bg-primary/5' : 'border-border'} hover:bg-secondary/30 transition-colors`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      {/* Avatar */}
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg ${
+                        member.role === 'org_admin' ? 'bg-gradient-to-br from-amber-500 to-orange-500' :
+                        member.role === 'manager' ? 'bg-gradient-to-br from-blue-500 to-purple-500' :
+                        'bg-gradient-to-br from-green-500 to-teal-500'
+                      }`}>
+                        {(member.name || member.email).charAt(0).toUpperCase()}
+                      </div>
+                      
+                      {/* Info */}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{member.name || member.email.split('@')[0]}</p>
+                          {member.is_current_user && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary">You</span>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{member.email}</p>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Users className="w-3 h-3" /> {member.stats?.leads || 0} leads
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Phone className="w-3 h-3" /> {member.stats?.ai_calls || 0} calls
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <BarChart3 className="w-3 h-3" /> {member.stats?.tasks || 0} tasks
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Actions */}
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs px-2 py-1 rounded-full ${
+                        member.role === 'org_admin' ? 'bg-amber-500/20 text-amber-500' :
+                        member.role === 'manager' ? 'bg-blue-500/20 text-blue-500' :
+                        'bg-green-500/20 text-green-500'
+                      }`}>
+                        {member.role?.replace('_', ' ')}
+                      </span>
+                      
+                      {!member.is_current_user && (
+                        <>
+                          <button
+                            onClick={() => handleImpersonate(member.id, member.name || member.email)}
+                            className="p-2 hover:bg-primary/10 rounded-lg text-primary transition-colors"
+                            title="Login as this user"
+                          >
+                            <LogIn className="w-4 h-4" />
+                          </button>
+                          {member.role !== 'org_admin' && (
+                            <button
+                              onClick={() => handleRemoveMember(member.id, member.name || member.email)}
+                              className="p-2 hover:bg-red-500/10 rounded-lg text-red-500 transition-colors"
+                              title="Remove from organization"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Invite Team Member Modal */}
+      <Modal
+        isOpen={showInviteModal}
+        onClose={() => { setShowInviteModal(false); setInviteEmail(''); setInviteName(''); }}
+        title="Add Team Member"
+        size="md"
+      >
+        <form onSubmit={handleInvite}>
+          <div className="elstar-modal-body space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Email Address *</label>
+              <input
+                type="email"
+                className="elstar-input w-full"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="teammate@company.com"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Name (Optional)</label>
+              <input
+                type="text"
+                className="elstar-input w-full"
+                value={inviteName}
+                onChange={(e) => setInviteName(e.target.value)}
+                placeholder="John Doe"
+              />
+            </div>
+            <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30 text-sm">
+              <p className="text-blue-500 font-medium">What happens next?</p>
+              <ul className="text-muted-foreground mt-1 space-y-1">
+                <li>• A new account will be created for this email</li>
+                <li>• They will get access to all AI agents in your organization</li>
+                <li>• You'll receive their temporary login credentials</li>
+              </ul>
+            </div>
+          </div>
+          <div className="elstar-modal-footer">
+            <button
+              type="button"
+              onClick={() => setShowInviteModal(false)}
+              className="elstar-btn-ghost"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={inviting || !inviteEmail}
+              className="elstar-btn-primary flex items-center gap-2"
+            >
+              {inviting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+              Send Invitation
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* New User Credentials Modal */}
+      <Modal
+        isOpen={!!newUserCredentials}
+        onClose={() => setNewUserCredentials(null)}
+        title="New Team Member Added"
+        size="md"
+      >
+        {newUserCredentials && (
+          <div className="elstar-modal-body space-y-4">
+            <div className="text-center py-4">
+              <div className="w-16 h-16 mx-auto rounded-full bg-green-500/20 flex items-center justify-center mb-4">
+                <Check className="w-8 h-8 text-green-500" />
+              </div>
+              <p className="text-lg font-semibold">Account Created Successfully!</p>
+              <p className="text-sm text-muted-foreground mt-1">Share these credentials with your team member</p>
+            </div>
+            
+            <div className="p-4 rounded-lg bg-secondary/50 border border-border space-y-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Email</p>
+                <p className="font-mono text-sm">{newUserCredentials.email}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Temporary Password</p>
+                <p className="font-mono text-sm font-bold text-primary">{newUserCredentials.password}</p>
+              </div>
+            </div>
+            
+            <p className="text-xs text-muted-foreground text-center">
+              ⚠️ Please save these credentials. The password cannot be retrieved later.
+            </p>
+            
+            <div className="flex justify-center">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(`Email: ${newUserCredentials.email}\nPassword: ${newUserCredentials.password}`);
+                  toast.success('Credentials copied to clipboard');
+                }}
+                className="elstar-btn-ghost text-sm"
+              >
+                Copy to Clipboard
+              </button>
+            </div>
+          </div>
+        )}
+        <div className="elstar-modal-footer">
+          <button
+            onClick={() => setNewUserCredentials(null)}
+            className="elstar-btn-primary w-full"
+          >
+            Done
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

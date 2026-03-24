@@ -1099,6 +1099,242 @@ async def get_users(
         total_pages=total_pages
     )
 
+# ============= TEAM MANAGEMENT & ADMIN IMPERSONATION =============
+
+class SimpleInvite(BaseModel):
+    email: str
+    name: Optional[str] = None
+
+@api_router.post("/organization/team/invite")
+async def invite_team_member(invite_data: SimpleInvite, user: dict = Depends(get_current_user)):
+    """Simple invite - just add email to organization. Creates account if not exists."""
+    # Only org admin can invite
+    if user.get('role') not in [RoleType.ORG_ADMIN.value, RoleType.SUPER_ADMIN.value]:
+        raise HTTPException(status_code=403, detail="Only organization admins can invite team members")
+    
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="Please create an organization first")
+    
+    email = invite_data.email.lower().strip()
+    
+    # Check if user already exists
+    existing = await db.users.find_one({'email': email}, {'_id': 0})
+    
+    if existing:
+        # If user exists and already in this org
+        if existing.get('organization_id') == user['organization_id']:
+            raise HTTPException(status_code=400, detail="User is already a member of your organization")
+        # If user exists but in different org
+        if existing.get('organization_id'):
+            raise HTTPException(status_code=400, detail="User already belongs to another organization")
+        # User exists but no org - add them to this org
+        await db.users.update_one(
+            {'email': email},
+            {'$set': {
+                'organization_id': user['organization_id'],
+                'role': RoleType.SALES_REP.value,
+                'updated_at': datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        return {"success": True, "message": f"{email} has been added to your organization", "is_new": False}
+    
+    # Create new user with temporary password
+    user_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    temp_password = str(uuid.uuid4())[:8]
+    
+    # Use email prefix as name if not provided
+    name = invite_data.name or email.split('@')[0].replace('.', ' ').title()
+    
+    user_doc = {
+        'id': user_id,
+        'email': email,
+        'password': hash_password(temp_password),
+        'name': name,
+        'role': RoleType.SALES_REP.value,
+        'organization_id': user['organization_id'],
+        'is_active': True,
+        'created_at': now,
+        'invited_by': user['id'],
+        'needs_password_reset': True
+    }
+    
+    await db.users.insert_one(user_doc)
+    
+    # Update organization member count
+    await db.organizations.update_one(
+        {'id': user['organization_id']},
+        {'$inc': {'member_count': 1}}
+    )
+    
+    return {
+        "success": True,
+        "message": f"Invitation sent to {email}",
+        "is_new": True,
+        "temp_password": temp_password,
+        "user": {
+            "id": user_id,
+            "email": email,
+            "name": name,
+            "role": RoleType.SALES_REP.value
+        }
+    }
+
+@api_router.get("/organization/team")
+async def get_team_members(user: dict = Depends(get_current_user)):
+    """Get all team members in the organization"""
+    if not user.get('organization_id'):
+        return {"members": [], "total": 0}
+    
+    members = await db.users.find(
+        {'organization_id': user['organization_id']},
+        {'_id': 0, 'password': 0}
+    ).to_list(200)
+    
+    # Add stats for each member
+    result = []
+    for member in members:
+        # Count leads assigned to this user
+        lead_count = await db.leads.count_documents({
+            'organization_id': user['organization_id'],
+            'assigned_to': member['id']
+        })
+        
+        # Count tasks for this user
+        task_count = await db.tasks.count_documents({
+            'organization_id': user['organization_id'],
+            'created_by': member['id']
+        })
+        
+        # Count AI calls made by this user
+        call_count = await db.ai_calls.count_documents({
+            'organization_id': user['organization_id'],
+            'initiated_by': member['id']
+        })
+        
+        result.append({
+            **member,
+            'stats': {
+                'leads': lead_count,
+                'tasks': task_count,
+                'ai_calls': call_count
+            },
+            'is_current_user': member['id'] == user['id']
+        })
+    
+    return {"members": result, "total": len(result)}
+
+@api_router.post("/organization/team/{member_id}/impersonate")
+async def impersonate_team_member(member_id: str, user: dict = Depends(get_current_user)):
+    """Admin can impersonate (login as) a team member to view their dashboard"""
+    # Only org admin can impersonate
+    if user.get('role') not in [RoleType.ORG_ADMIN.value, RoleType.SUPER_ADMIN.value]:
+        raise HTTPException(status_code=403, detail="Only organization admins can impersonate team members")
+    
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="No organization found")
+    
+    # Get the member
+    member = await db.users.find_one(
+        {'id': member_id, 'organization_id': user['organization_id']},
+        {'_id': 0, 'password': 0}
+    )
+    
+    if not member:
+        raise HTTPException(status_code=404, detail="Team member not found")
+    
+    # Can't impersonate yourself
+    if member['id'] == user['id']:
+        raise HTTPException(status_code=400, detail="Cannot impersonate yourself")
+    
+    # Generate a special impersonation token
+    token_data = {
+        'user_id': member['id'],
+        'impersonated_by': user['id'],
+        'impersonated_by_name': user.get('name', user.get('email')),
+        'original_role': user['role'],
+        'is_impersonation': True,
+        'exp': datetime.now(timezone.utc) + timedelta(hours=2)
+    }
+    
+    impersonation_token = jwt.encode(token_data, JWT_SECRET, algorithm='HS256')
+    
+    # Get organization name
+    org = await db.organizations.find_one({'id': user['organization_id']}, {'_id': 0, 'name': 1})
+    
+    # Log impersonation activity
+    await db.activities.insert_one({
+        'id': str(uuid.uuid4()),
+        'organization_id': user['organization_id'],
+        'type': 'admin_action',
+        'action': 'impersonation',
+        'description': f"{user.get('name', user['email'])} started viewing as {member.get('name', member['email'])}",
+        'user_id': user['id'],
+        'target_user_id': member['id'],
+        'created_at': datetime.now(timezone.utc).isoformat()
+    })
+    
+    permissions = [p.value for p in ROLE_PERMISSIONS.get(RoleType(member['role']), [])]
+    
+    return {
+        "token": impersonation_token,
+        "user": {
+            "id": member['id'],
+            "email": member['email'],
+            "name": member.get('name'),
+            "role": member['role'],
+            "organization_id": member['organization_id'],
+            "organization_name": org['name'] if org else None,
+            "permissions": permissions
+        },
+        "impersonation": {
+            "is_impersonated": True,
+            "original_admin": user.get('name', user.get('email')),
+            "original_admin_id": user['id']
+        }
+    }
+
+@api_router.delete("/organization/team/{member_id}")
+async def remove_team_member(member_id: str, user: dict = Depends(get_current_user)):
+    """Remove a team member from the organization"""
+    # Only org admin can remove members
+    if user.get('role') not in [RoleType.ORG_ADMIN.value, RoleType.SUPER_ADMIN.value]:
+        raise HTTPException(status_code=403, detail="Only organization admins can remove team members")
+    
+    if not user.get('organization_id'):
+        raise HTTPException(status_code=400, detail="No organization found")
+    
+    # Get the member
+    member = await db.users.find_one(
+        {'id': member_id, 'organization_id': user['organization_id']},
+        {'_id': 0}
+    )
+    
+    if not member:
+        raise HTTPException(status_code=404, detail="Team member not found")
+    
+    # Can't remove yourself
+    if member['id'] == user['id']:
+        raise HTTPException(status_code=400, detail="Cannot remove yourself from the organization")
+    
+    # Can't remove another admin
+    if member['role'] == RoleType.ORG_ADMIN.value:
+        raise HTTPException(status_code=400, detail="Cannot remove another organization admin")
+    
+    # Remove from organization
+    await db.users.update_one(
+        {'id': member_id},
+        {'$unset': {'organization_id': ''}, '$set': {'updated_at': datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    # Update organization member count
+    await db.organizations.update_one(
+        {'id': user['organization_id']},
+        {'$inc': {'member_count': -1}}
+    )
+    
+    return {"success": True, "message": f"{member.get('name', member['email'])} has been removed from the organization"}
+
 @api_router.put("/users/{user_id}", response_model=UserResponse)
 async def update_user(user_id: str, user_data: UserUpdate, user: dict = Depends(get_current_user)):
     """Update user (role, status)"""
