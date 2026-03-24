@@ -63,6 +63,13 @@ export default function CustomerDetailPage() {
       });
       if (response.ok) {
         const data = await response.json();
+        
+        // If customer has a lead_id, redirect to the Lead Detail Page
+        if (data.lead_id) {
+          navigate(`/leads/${data.lead_id}`, { replace: true });
+          return;
+        }
+        
         setCustomer(data);
         setPipelineStatus(data.pipeline_status || 'lead');
       } else {
