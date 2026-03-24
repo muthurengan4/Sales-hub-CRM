@@ -439,8 +439,8 @@ export default function Tasks() {
                           {String((currentPage - 1) * pageSize + index + 1).padStart(4, '0')}
                         </td>
                         <td className="px-4 py-4">
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1">
+                          <div>
+                            <div className="flex items-center gap-1">
                               <button 
                                 onClick={() => goToLeadDetail(task.lead_id)}
                                 className="font-medium text-sm text-primary hover:underline cursor-pointer text-left"
@@ -448,19 +448,19 @@ export default function Tasks() {
                               >
                                 {task.company_name || task.title}
                               </button>
-                              {/* Show PIC on mobile below company name */}
-                              {task.pic_name && (
-                                <p className="text-xs text-muted-foreground lg:hidden mt-0.5">{task.pic_name}</p>
+                              {task.lead_id && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); openLeadPreview(task.lead_id); }}
+                                  className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-primary transition-colors shrink-0"
+                                  title="Quick preview"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                </button>
                               )}
                             </div>
-                            {task.lead_id && (
-                              <button
-                                onClick={() => openLeadPreview(task.lead_id)}
-                                className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-primary transition-colors"
-                                title="Quick preview"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
+                            {/* Show PIC on mobile below company name */}
+                            {task.pic_name && (
+                              <p className="text-xs text-muted-foreground lg:hidden mt-0.5">{task.pic_name}</p>
                             )}
                           </div>
                         </td>
