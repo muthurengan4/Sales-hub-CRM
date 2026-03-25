@@ -44,7 +44,7 @@ const lifecycleStages = [
 export default function CustomerProfile() {
   const { type, id } = useParams();
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, orgSettings } = useAuth();
   
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
@@ -412,7 +412,7 @@ export default function CustomerProfile() {
                             <p className="text-sm text-muted-foreground">{deal.company}</p>
                           </div>
                           <div className="text-right">
-                            <p className="font-bold text-primary">${deal.value?.toLocaleString()}</p>
+                            <p className="font-bold text-primary">{orgSettings?.currency_symbol || '$'}{deal.value?.toLocaleString()}</p>
                             <span className="elstar-badge elstar-badge-info">{deal.stage}</span>
                           </div>
                         </div>

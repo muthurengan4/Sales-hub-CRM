@@ -19,7 +19,7 @@ const serviceStatusColors = {
 };
 
 export default function Clients() {
-  const { token } = useAuth();
+  const { token, orgSettings } = useAuth();
   const navigate = useNavigate();
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +27,6 @@ export default function Clients() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedClient, setSelectedClient] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [orgSettings, setOrgSettings] = useState({ currency_symbol: '$' });
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -46,7 +45,6 @@ export default function Clients() {
 
   useEffect(() => {
     fetchClients();
-    fetchOrgSettings();
   }, [currentPage, pageSize, debouncedSearch]);
 
   const fetchClients = async () => {
@@ -71,20 +69,6 @@ export default function Clients() {
       toast.error('Failed to fetch clients');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchOrgSettings = async () => {
-    try {
-      const response = await fetch(`${API}/api/organization-settings`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setOrgSettings(data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch org settings:', error);
     }
   };
 

@@ -243,7 +243,7 @@ const DealFormFields = memo(({ data, onChange, isEdit = false, companies = [], c
 DealFormFields.displayName = 'DealFormFields';
 
 export default function Pipeline() {
-  const { token } = useAuth();
+  const { token, orgSettings } = useAuth();
   const navigate = useNavigate();
   const [deals, setDeals] = useState([]);
   const [linkages, setLinkages] = useState([]); // Lead-deal linkages for the Kanban
@@ -563,7 +563,12 @@ export default function Pipeline() {
   };
   const getLinkageStageValue = (stageId) => getLinkagesByStage(stageId).reduce((sum, l) => sum + (l.deal_value || 0), 0);
   
-  const formatCurrency = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(value);
+  const formatCurrency = (value) => {
+    const currency = orgSettings?.currency || 'USD';
+    const symbol = orgSettings?.currency_symbol || '$';
+    // Use symbol directly for cleaner display
+    return `${symbol}${parseFloat(value || 0).toLocaleString()}`;
+  };
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
 

@@ -22,7 +22,7 @@ const PIPELINE_STAGES = [
 export default function CustomerDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, orgSettings } = useAuth();
   
   const [loading, setLoading] = useState(true);
   const [customer, setCustomer] = useState(null);
@@ -427,7 +427,7 @@ export default function CustomerDetailPage() {
               >
                 <option value="">Select a deal (required)</option>
                 {allDeals.map(deal => (
-                  <option key={deal.id} value={deal.id}>{deal.title} - RM {(deal.value || 0).toLocaleString()}</option>
+                  <option key={deal.id} value={deal.id}>{deal.title} - {orgSettings?.currency_symbol || 'RM'}{(deal.value || 0).toLocaleString()}</option>
                 ))}
               </select>
               {!selectedDealId && (
@@ -519,7 +519,7 @@ export default function CustomerDetailPage() {
               <h3 className="text-xs font-semibold text-red-500 uppercase tracking-wider">DEALS ({deals.length})</h3>
               {deals.length > 0 && (
                 <p className="text-sm font-bold text-green-600">
-                  Total: RM {deals.reduce((sum, d) => sum + (d.value || 0), 0).toLocaleString()}
+                  Total: {orgSettings?.currency_symbol || 'RM'}{deals.reduce((sum, d) => sum + (d.value || 0), 0).toLocaleString()}
                 </p>
               )}
             </div>
@@ -531,7 +531,7 @@ export default function CustomerDetailPage() {
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold text-sm truncate">{deal.title}</p>
                         <p className="text-lg font-bold text-primary mt-1">
-                          RM {(deal.value || 0).toLocaleString()}
+                          {orgSettings?.currency_symbol || 'RM'}{(deal.value || 0).toLocaleString()}
                         </p>
                       </div>
                       <span className="shrink-0 inline-block px-2 py-0.5 text-xs font-medium rounded bg-amber-500/20 text-amber-600">
@@ -701,7 +701,7 @@ export default function CustomerDetailPage() {
               <option value="">Choose a deal...</option>
               {allDeals.map(deal => (
                 <option key={deal.id} value={deal.id}>
-                  {deal.title} - RM {(deal.value || 0).toLocaleString()}
+                  {deal.title} - {orgSettings?.currency_symbol || 'RM'}{(deal.value || 0).toLocaleString()}
                 </option>
               ))}
             </select>

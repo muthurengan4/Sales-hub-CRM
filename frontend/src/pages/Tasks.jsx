@@ -39,7 +39,7 @@ const initialFormData = {
 };
 
 export default function Tasks() {
-  const { token } = useAuth();
+  const { token, orgSettings } = useAuth();
   const navigate = useNavigate();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -484,7 +484,7 @@ export default function Tasks() {
                             <div>
                               <span className="text-primary font-medium text-sm">{task.deal_name}</span>
                               {task.deal_value && (
-                                <p className="text-xs text-muted-foreground mt-0.5">RM {task.deal_value?.toLocaleString()}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">{orgSettings?.currency_symbol || 'RM'}{task.deal_value?.toLocaleString()}</p>
                               )}
                             </div>
                           ) : (
@@ -582,7 +582,7 @@ export default function Tasks() {
             >
               <option value="">Select deal...</option>
               {deals.map(deal => (
-                <option key={deal.id} value={deal.id}>{deal.title} - RM {(deal.value || 0).toLocaleString()}</option>
+                <option key={deal.id} value={deal.id}>{deal.title} - {orgSettings?.currency_symbol || 'RM'}{(deal.value || 0).toLocaleString()}</option>
               ))}
             </select>
           </div>

@@ -34,6 +34,10 @@ const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
+  const [orgSettings, setOrgSettings] = useState({
+    currency: 'USD',
+    currency_symbol: '$'
+  });
 
   useEffect(() => {
     const verifyToken = async () => {
@@ -45,6 +49,8 @@ const AuthProvider = ({ children }) => {
           if (response.ok) {
             const userData = await response.json();
             setUser(userData);
+            // Fetch organization settings for currency
+            fetchOrgSettings(token);
           } else {
             localStorage.removeItem('token');
             setToken(null);
@@ -59,6 +65,30 @@ const AuthProvider = ({ children }) => {
     };
     verifyToken();
   }, [token]);
+
+  const fetchOrgSettings = async (authToken) => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/organization-settings`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setOrgSettings(prev => ({
+          ...prev,
+          currency: data.currency || 'USD',
+          currency_symbol: data.currency_symbol || '$'
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to fetch org settings:', error);
+    }
+  };
+
+  const refreshOrgSettings = () => {
+    if (token) {
+      fetchOrgSettings(token);
+    }
+  };
 
   const login = (newToken, userData) => {
     localStorage.setItem('token', newToken);
@@ -97,7 +127,7 @@ const AuthProvider = ({ children }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!token, hasPermission, refreshUser }}>
+    <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!token, hasPermission, refreshUser, orgSettings, refreshOrgSettings }}>
       {children}
     </AuthContext.Provider>
   );

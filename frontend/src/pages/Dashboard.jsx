@@ -210,7 +210,7 @@ const FilterDropdown = ({ label, value, options, onChange, icon: Icon }) => {
 };
 
 export default function Dashboard() {
-  const { token, user, hasPermission } = useAuth();
+  const { token, user, hasPermission, orgSettings } = useAuth();
   const navigate = useNavigate();
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -287,7 +287,10 @@ export default function Dashboard() {
     setDateRange('all');
   };
 
-  const formatCurrency = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(value);
+  const formatCurrency = (value) => {
+    const symbol = orgSettings?.currency_symbol || '$';
+    return `${symbol}${parseFloat(value || 0).toLocaleString()}`;
+  };
   const formatNumber = (num) => num >= 1000 ? `${(num/1000).toFixed(1)}K` : num;
 
   const needsOrganization = !user?.organization_id;

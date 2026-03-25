@@ -10,7 +10,7 @@ import {
 const API = process.env.REACT_APP_BACKEND_URL;
 
 export default function Settings() {
-  const { user, token, hasPermission } = useAuth();
+  const { user, token, hasPermission, refreshOrgSettings } = useAuth();
   const { theme, toggleTheme } = useTheme();
   
   const [loading, setLoading] = useState(true);
@@ -174,6 +174,7 @@ export default function Settings() {
       if (response.ok) {
         toast.success('Settings saved successfully');
         fetchSettings(); // Refresh to get updated connected status
+        refreshOrgSettings(); // Update currency globally
       } else {
         toast.error('Failed to save settings');
       }
