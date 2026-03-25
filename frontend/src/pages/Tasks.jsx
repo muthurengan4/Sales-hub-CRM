@@ -49,8 +49,9 @@ export default function Tasks() {
   const [formLoading, setFormLoading] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
   
-  // Preview modal state
-  const [previewModal, setPreviewModal] = useState({ isOpen: false, lead: null });
+  // Preview panel state (changed from modal to slide-in panel)
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewLead, setPreviewLead] = useState(null);
   
   // Data for dropdowns
   const [leads, setLeads] = useState([]);
@@ -276,7 +277,8 @@ export default function Tasks() {
       });
       if (response.ok) {
         const lead = await response.json();
-        setPreviewModal({ isOpen: true, lead });
+        setPreviewLead(lead);
+        setIsPreviewOpen(true);
       }
     } catch (error) {
       console.error('Failed to fetch lead details');
@@ -652,77 +654,130 @@ export default function Tasks() {
         </form>
       </SlideInPanel>
 
-      {/* Lead Preview Modal */}
-      <Modal
-        isOpen={previewModal.isOpen}
-        onClose={() => setPreviewModal({ isOpen: false, lead: null })}
-        title="Lead Preview"
-        size="md"
+      {/* Lead Preview Slide-In Panel */}
+      <SlideInPanel
+        isOpen={isPreviewOpen}
+        onClose={() => { setIsPreviewOpen(false); setPreviewLead(null); }}
+        title=""
+        width="w-[420px]"
       >
-        {previewModal.lead && (
-          <div className="elstar-modal-body space-y-4">
-            {/* Header */}
-            <div className="flex items-center gap-4 pb-4 border-b border-border">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center text-white font-bold text-xl">
-                {(previewModal.lead.company || previewModal.lead.pic_name || 'L').charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-lg">{previewModal.lead.company || previewModal.lead.name}</h3>
-                <p className="text-sm text-muted-foreground">{previewModal.lead.pic_name || 'No PIC'}</p>
-              </div>
-            </div>
-
-            {/* Details Grid */}
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Email</p>
-                <p className="font-medium">{previewModal.lead.email || '-'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Phone</p>
-                <p className="font-medium">{previewModal.lead.phone || '-'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Industry</p>
-                <p className="font-medium">{previewModal.lead.industry || '-'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Status</p>
-                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-                  previewModal.lead.status === 'customer' ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'
-                }`}>
-                  {previewModal.lead.status || 'Lead'}
-                </span>
-              </div>
-              <div className="col-span-2">
-                <p className="text-xs text-muted-foreground mb-1">Address</p>
-                <p className="font-medium">
-                  {[previewModal.lead.address, previewModal.lead.city, previewModal.lead.state, previewModal.lead.postcode].filter(Boolean).join(', ') || '-'}
-                </p>
+        {previewLead && (
+          <div className="flex flex-col h-full -m-6">
+            {/* Green Header */}
+            <div className="bg-emerald-700 px-6 py-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-xl">
+                  {(previewLead.company || previewLead.name || 'L').substring(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold text-lg">{previewLead.company || previewLead.name}</h3>
+                  <p className="text-emerald-200 text-sm">{previewLead.pic_name || previewLead.title || 'No PIC'}</p>
+                  {previewLead.email && (
+                    <a href={`mailto:${previewLead.email}`} className="text-primary text-sm hover:underline">{previewLead.email}</a>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="pt-4 border-t border-border flex gap-2">
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* About This Lead */}
+              <div>
+                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <span className="text-muted-foreground">▾</span> ABOUT THIS LEAD
+                </h4>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Email</p>
+                    {previewLead.email ? (
+                      <a href={`mailto:${previewLead.email}`} className="text-primary text-sm hover:underline">{previewLead.email}</a>
+                    ) : (
+                      <p className="text-sm font-medium">-</p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Company name</p>
+                    <p className="text-sm font-medium">{previewLead.company || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Lead status</p>
+                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                      previewLead.status === 'customer' ? 'bg-green-500/20 text-green-400' : 
+                      previewLead.status === 'contacted' ? 'bg-blue-500/20 text-blue-400' :
+                      'bg-amber-500/20 text-amber-400'
+                    }`}>
+                      {previewLead.status || 'New'}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Industry</p>
+                    <p className="text-sm font-medium">{previewLead.industry || 'Healthcare'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Phone number</p>
+                    <p className="text-sm font-medium">{previewLead.phone || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">PIC / Job Title</p>
+                    <p className="text-sm font-medium">{previewLead.pic_name || previewLead.title || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Address Section */}
+              <div>
+                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <span className="text-muted-foreground">▾</span> ADDRESS
+                </h4>
+                <div className="space-y-2">
+                  <p className="text-sm">
+                    {[previewLead.address, previewLead.city, previewLead.state, previewLead.postcode, previewLead.country].filter(Boolean).join(', ') || 'No address information'}
+                  </p>
+                </div>
+              </div>
+
+              {/* AI Score Section */}
+              <div>
+                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <span className="text-muted-foreground">▾</span> AI SCORE
+                </h4>
+                <div className="flex items-center gap-3">
+                  <div className="text-3xl font-bold text-amber-500">{previewLead.ai_score || 50}</div>
+                  <div className="flex-1">
+                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-amber-500 rounded-full transition-all"
+                        style={{ width: `${previewLead.ai_score || 50}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">Lead Health Score</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-border px-6 py-4 flex items-center gap-3">
               <button
                 onClick={() => {
-                  setPreviewModal({ isOpen: false, lead: null });
-                  goToLeadDetail(previewModal.lead.id);
+                  setIsPreviewOpen(false);
+                  goToLeadDetail(previewLead.id);
+                  setPreviewLead(null);
                 }}
-                className="elstar-btn-primary flex items-center gap-2 flex-1"
+                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
               >
-                <ExternalLink className="w-4 h-4" /> View Full Profile
+                <ExternalLink className="w-4 h-4" /> Open Full Profile
               </button>
               <button
-                onClick={() => setPreviewModal({ isOpen: false, lead: null })}
-                className="elstar-btn-ghost"
+                onClick={() => { setIsPreviewOpen(false); setPreviewLead(null); }}
+                className="px-6 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
-                Close
+                Cancel
               </button>
             </div>
           </div>
         )}
-      </Modal>
+      </SlideInPanel>
     </div>
   );
 }
