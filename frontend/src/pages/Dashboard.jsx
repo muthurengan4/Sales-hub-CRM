@@ -323,7 +323,7 @@ export default function Dashboard() {
   const stats = filteredAnalytics ? [
     { title: 'Total Leads', value: filteredAnalytics.total_leads, icon: Users, change: '+12%', positive: true, iconBg: '#FEE4D6', iconColor: '#E67E22' },
     { title: 'Active Deals', value: filteredAnalytics.total_deals, icon: Briefcase, change: '+8%', positive: true, iconBg: '#D1F2EB', iconColor: '#27AE60' },
-    { title: 'Pipeline Value', value: formatCurrency(filteredAnalytics.total_pipeline_value), icon: DollarSign, change: '+15%', positive: true, iconBg: '#D1F2EB', iconColor: '#27AE60' },
+    { title: 'Pipeline Value', value: formatCurrency(filteredAnalytics.total_pipeline_value), icon: null, currencyIcon: true, change: '+15%', positive: true, iconBg: '#D1F2EB', iconColor: '#27AE60' },
     { title: 'Won Revenue', value: formatCurrency(filteredAnalytics.won_deals_value), icon: TrendingUp, change: '+23%', positive: true, iconBg: '#D1F2EB', iconColor: '#27AE60' },
     { title: 'Conversion', value: `${filteredAnalytics.conversion_rate}%`, icon: Percent, change: filteredAnalytics.conversion_rate >= 20 ? '+5%' : '-5%', positive: filteredAnalytics.conversion_rate >= 20, iconBg: '#FEE4D6', iconColor: '#E67E22' }
   ] : [];
@@ -470,7 +470,13 @@ export default function Dashboard() {
           >
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: stat.iconBg }}>
-                <stat.icon className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: stat.iconColor }} />
+                {stat.currencyIcon ? (
+                  <span className="text-sm sm:text-base font-bold" style={{ color: stat.iconColor }}>
+                    {orgSettings?.currency_symbol || '$'}
+                  </span>
+                ) : (
+                  <stat.icon className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: stat.iconColor }} />
+                )}
               </div>
               <div className={`flex items-center text-xs font-medium ${stat.positive ? 'text-emerald-500' : 'text-red-500'}`}>
                 {stat.positive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
