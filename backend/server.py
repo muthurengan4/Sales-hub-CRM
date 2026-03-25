@@ -1814,6 +1814,67 @@ async def delete_customer(customer_id: str, user: dict = Depends(get_current_use
     
     return {"message": "Customer deleted successfully"}
 
+@api_router.post("/customers/{customer_id}/migrate-to-lead")
+async def migrate_single_customer_to_lead(customer_id: str, user: dict = Depends(get_current_user)):
+    """Migrate a single customer to a lead record (creates lead if not exists)"""
+    check_permission(user, Permission.VIEW_CONTACTS)
+    
+    # Find the customer
+    customer = await db.contacts.find_one(
+        {'id': customer_id, 'organization_id': user.get('organization_id')},
+        {'_id': 0}
+    )
+    
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    # If customer already has lead_id, return it
+    if customer.get('lead_id'):
+        return {"lead_id": customer['lead_id'], "message": "Lead already exists"}
+    
+    # Create a new lead for this customer
+    now = datetime.now(timezone.utc).isoformat()
+    lead_id = str(uuid.uuid4())
+    
+    lead_data = {
+        'id': lead_id,
+        'name': f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip() or customer.get('company', 'Unknown'),
+        'email': customer.get('email'),
+        'phone': customer.get('phone'),
+        'company': customer.get('company'),
+        'title': customer.get('job_title'),
+        'industry': customer.get('industry'),
+        'address': customer.get('address'),
+        'postcode': customer.get('postcode'),
+        'city': customer.get('city'),
+        'state': customer.get('state'),
+        'country': customer.get('country'),
+        'notes': customer.get('notes'),
+        'source': 'Customer Migration',
+        'status': 'customer',
+        'pipeline_stage': 'sales_closed',
+        'lifecycle_stage': 'customer',
+        'ai_score': 50,
+        'organization_id': user.get('organization_id'),
+        'owner_id': customer.get('owner_id') or user.get('user_id'),
+        'owner_name': user.get('name'),
+        'is_public': customer.get('is_public', False),
+        'converted_to_client': True,
+        'created_at': now,
+        'updated_at': now
+    }
+    
+    # Insert the lead
+    await db.leads.insert_one(lead_data)
+    
+    # Update customer with lead_id
+    await db.contacts.update_one(
+        {'id': customer_id},
+        {'$set': {'lead_id': lead_id, 'updated_at': now}}
+    )
+    
+    return {"lead_id": lead_id, "message": "Lead created successfully"}
+
 @api_router.post("/customers/migrate-to-leads")
 async def migrate_customers_to_leads(user: dict = Depends(get_current_user)):
     """One-time migration: Create lead records for existing customers without lead_id"""

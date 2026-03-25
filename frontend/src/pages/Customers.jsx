@@ -172,6 +172,29 @@ export default function Customers() {
     }
   };
 
+  // Navigate to lead detail page - auto-migrate if needed
+  const navigateToLeadDetail = async (customer) => {
+    if (customer.lead_id) {
+      navigate(`/leads/${customer.lead_id}`);
+    } else {
+      // Auto-migrate: call backend to create lead for this customer
+      try {
+        const response = await fetch(`${API}/api/customers/${customer.id}/migrate-to-lead`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          navigate(`/leads/${data.lead_id}`);
+        } else {
+          toast.error('Failed to open profile. Please try again.');
+        }
+      } catch (error) {
+        toast.error('Failed to open profile');
+      }
+    }
+  };
+
   const handleInputChange = useCallback((field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   }, []);
@@ -350,15 +373,7 @@ export default function Customers() {
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
                                 <button
-                                  onClick={() => {
-                                    // Navigate to lead detail page
-                                    if (customer.lead_id) {
-                                      navigate(`/leads/${customer.lead_id}`);
-                                    } else {
-                                      // For legacy customers without lead_id, open preview
-                                      openPreviewPanel(customer);
-                                    }
-                                  }}
+                                  onClick={() => navigateToLeadDetail(customer)}
                                   className="font-medium text-sm text-primary hover:underline cursor-pointer transition-colors truncate max-w-[120px] sm:max-w-none"
                                   data-testid={`company-name-${customer.id}`}
                                   title="View full profile"
@@ -430,13 +445,7 @@ export default function Customers() {
                                 </div>
                                 <button onClick={() => { 
                                   closeDropdown();
-                                  // If customer has a linked lead_id, navigate to lead detail
-                                  // Otherwise open the preview panel
-                                  if (customer.lead_id) {
-                                    navigate(`/leads/${customer.lead_id}`);
-                                  } else {
-                                    openPreviewPanel(customer);
-                                  }
+                                  navigateToLeadDetail(customer);
                                 }} className="w-full text-left px-3 py-2 text-sm hover:bg-secondary flex items-center gap-2 rounded">
                                   <User className="w-4 h-4" /> View Profile
                                 </button>
@@ -612,14 +621,9 @@ export default function Customers() {
             {/* Footer */}
             <div className="border-t border-border px-6 py-4 flex items-center gap-3">
               <button
-                onClick={() => {
+                onClick={async () => {
                   setIsPreviewOpen(false);
-                  // Navigate to lead detail page
-                  if (selectedCustomer.lead_id) {
-                    navigate(`/leads/${selectedCustomer.lead_id}`);
-                  } else {
-                    toast.info('This customer needs to be migrated. Please contact admin.');
-                  }
+                  await navigateToLeadDetail(selectedCustomer);
                   setSelectedCustomer(null);
                 }}
                 className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 rounded-lg text-sm font-medium transition-colors"
