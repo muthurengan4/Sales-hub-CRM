@@ -347,10 +347,10 @@ class LeadResponse(BaseModel):
     industry: Optional[str] = None
     source: Optional[str] = None
     notes: Optional[str] = None
-    status: str
+    status: Optional[str] = "new"
     pipeline_stage: Optional[str] = "new"
     lifecycle_stage: Optional[str] = "lead"
-    ai_score: int
+    ai_score: Optional[int] = 50
     ai_insights: Optional[str] = None
     contact_id: Optional[str] = None
     address: Optional[str] = None
@@ -362,7 +362,7 @@ class LeadResponse(BaseModel):
     converted_to_client: Optional[bool] = False
     client_id: Optional[str] = None
     organization_id: Optional[str] = None
-    owner_id: str
+    owner_id: Optional[str] = None
     owner_name: Optional[str] = None
     assigned_to: Optional[str] = None
     assigned_to_name: Optional[str] = None
