@@ -272,8 +272,8 @@ export default function Pipeline() {
   const [manageDealMode, setManageDealMode] = useState('new'); // 'new' or 'edit'
   const [selectedExistingDeal, setSelectedExistingDeal] = useState(null);
 
-  // Sales Closed filter - hide deals older than X days
-  const [salesClosedFilter, setSalesClosedFilter] = useState('5'); // '5', '10', '20', '30', 'all'
+  // Pipeline date filter - filter deals by when they were last updated
+  const [pipelineFilter, setPipelineFilter] = useState('all'); // '5', '10', '20', '30', 'all'
 
   useEffect(() => { fetchDeals(); fetchLinkages(); fetchCompanies(); fetchAiAgents(); }, []);
 
@@ -542,18 +542,18 @@ export default function Pipeline() {
   };
 
   // Get linkages by pipeline_status (each lead-deal combination as individual tile)
-  // For sales_closed stage, filter based on the salesClosedFilter (hide old ones)
+  // Apply date filter to ALL stages based on pipelineFilter
   const getLinkagesByStage = (stageId) => {
     let stageLinkages = linkages.filter(l => l.pipeline_status === stageId);
     
-    // Apply date filter for sales_closed stage
-    if (stageId === 'sales_closed' && salesClosedFilter !== 'all') {
-      const daysFilter = parseInt(salesClosedFilter, 10);
+    // Apply date filter to all stages
+    if (pipelineFilter !== 'all') {
+      const daysFilter = parseInt(pipelineFilter, 10);
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - daysFilter);
       
       stageLinkages = stageLinkages.filter(l => {
-        // Use updated_at as the date when the deal was moved to sales_closed
+        // Use updated_at as the date when the deal was last modified
         const updatedDate = l.updated_at ? new Date(l.updated_at) : new Date(l.created_at);
         return updatedDate >= cutoffDate;
       });
@@ -576,14 +576,14 @@ export default function Pipeline() {
           <p className="text-muted-foreground mt-1">Drag and drop to update stages</p>
         </div>
         <div className="flex items-center gap-3">
-          {/* Sales Closed Filter */}
+          {/* Pipeline Date Filter */}
           <div className="flex items-center gap-2">
-            <label className="text-sm text-muted-foreground whitespace-nowrap">Sales Closed:</label>
+            <label className="text-sm text-muted-foreground whitespace-nowrap">Show:</label>
             <select
-              value={salesClosedFilter}
-              onChange={(e) => setSalesClosedFilter(e.target.value)}
+              value={pipelineFilter}
+              onChange={(e) => setPipelineFilter(e.target.value)}
               className="bg-card border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
-              data-testid="sales-closed-filter"
+              data-testid="pipeline-date-filter"
             >
               <option value="5">Last 5 days</option>
               <option value="10">Last 10 days</option>
