@@ -755,25 +755,6 @@ export default function Tasks() {
                 </div>
               </div>
 
-              {/* AI Score Section */}
-              <div>
-                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <span className="text-muted-foreground">▾</span> AI SCORE
-                </h4>
-                <div className="flex items-center gap-3">
-                  <div className="text-3xl font-bold text-amber-500">{previewLead.ai_score || 50}</div>
-                  <div className="flex-1">
-                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-amber-500 rounded-full transition-all"
-                        style={{ width: `${previewLead.ai_score || 50}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">Lead Health Score</p>
-                  </div>
-                </div>
-              </div>
-
               {/* Deals Section */}
               <div>
                 <div className="flex items-center justify-between mb-4">
@@ -824,6 +805,25 @@ export default function Tasks() {
                 ) : (
                   <p className="text-sm text-muted-foreground">No deals associated with this lead</p>
                 )}
+              </div>
+
+              {/* AI Score Section */}
+              <div>
+                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <span className="text-muted-foreground">▾</span> AI SCORE
+                </h4>
+                <div className="flex items-center gap-3">
+                  <div className="text-3xl font-bold text-amber-500">{previewLead.ai_score || 50}</div>
+                  <div className="flex-1">
+                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-amber-500 rounded-full transition-all"
+                        style={{ width: `${previewLead.ai_score || 50}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">Lead Health Score</p>
+                  </div>
+                </div>
               </div>
             </div>
 
