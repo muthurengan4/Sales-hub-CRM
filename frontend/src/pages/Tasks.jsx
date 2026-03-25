@@ -444,9 +444,9 @@ export default function Tasks() {
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">COMPANY NAME</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">PIC NAME</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">PIPELINE</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">PAYMENT</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">DATE & TIME</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden xl:table-cell">PAYMENT</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden xl:table-cell">DEAL</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden xl:table-cell">DATE & TIME</th>
                     <th className="w-12"></th>
                   </tr>
                 </thead>
@@ -493,7 +493,13 @@ export default function Tasks() {
                             {statusDisplay.label}
                           </span>
                         </td>
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-4 text-sm text-muted-foreground">
+                          {task.due_date || task.updated_at || task.created_at ? 
+                            new Date(task.due_date || task.updated_at || task.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) + ' ' +
+                            new Date(task.due_date || task.updated_at || task.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+                            : '-'}
+                        </td>
+                        <td className="px-4 py-4 hidden xl:table-cell">
                           <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${paymentDisplay.class}`}>
                             {paymentDisplay.label}
                           </span>
@@ -509,12 +515,6 @@ export default function Tasks() {
                           ) : (
                             <span className="text-muted-foreground">-</span>
                           )}
-                        </td>
-                        <td className="px-4 py-4 text-sm text-muted-foreground hidden xl:table-cell">
-                          {task.updated_at || task.created_at ? 
-                            new Date(task.updated_at || task.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' +
-                            new Date(task.updated_at || task.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-                            : '-'}
                         </td>
                         <td className="px-4 py-2">
                           <ActionDropdown testId={`task-actions-${task.id}`}>
