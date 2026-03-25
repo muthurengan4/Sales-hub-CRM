@@ -52,6 +52,7 @@ export default function Tasks() {
   // Preview panel state (changed from modal to slide-in panel)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewLead, setPreviewLead] = useState(null);
+  const [previewDeals, setPreviewDeals] = useState([]);
   
   // Data for dropdowns
   const [leads, setLeads] = useState([]);
@@ -279,9 +280,27 @@ export default function Tasks() {
         const lead = await response.json();
         setPreviewLead(lead);
         setIsPreviewOpen(true);
+        // Fetch deals for this lead
+        fetchLeadDeals(leadId);
       }
     } catch (error) {
       console.error('Failed to fetch lead details');
+    }
+  };
+
+  // Fetch deals associated with a lead
+  const fetchLeadDeals = async (leadId) => {
+    try {
+      const response = await fetch(`${API}/api/lead-deal-linkages?lead_id=${leadId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const linkages = await response.json();
+        setPreviewDeals(linkages || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch lead deals');
+      setPreviewDeals([]);
     }
   };
 
@@ -753,6 +772,58 @@ export default function Tasks() {
                     <p className="text-xs text-muted-foreground mt-1">Lead Health Score</p>
                   </div>
                 </div>
+              </div>
+
+              {/* Deals Section */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                    <span className="text-muted-foreground">▾</span> DEALS
+                  </h4>
+                  <button
+                    onClick={() => {
+                      setIsPreviewOpen(false);
+                      navigate(`/leads/${previewLead.id}`);
+                    }}
+                    className="text-xs text-primary hover:underline font-medium"
+                  >
+                    + Add Deal
+                  </button>
+                </div>
+                {previewDeals.length > 0 ? (
+                  <div className="space-y-3">
+                    {previewDeals.map((deal) => {
+                      const progress = deal.pipeline_status === 'sales_closed' ? 100 : 
+                                       deal.pipeline_status === 'negotiation' ? 75 :
+                                       deal.pipeline_status === 'proposal' ? 50 :
+                                       deal.pipeline_status === 'qualified' ? 25 : 10;
+                      return (
+                        <div key={deal.id} className="bg-card border border-border rounded-lg p-4">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <p className="font-semibold text-sm">{deal.deal_title || deal.deal_name || 'Untitled Deal'}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {orgSettings?.currency_symbol || 'RM'}{(deal.deal_value || 0).toLocaleString()}
+                                {deal.expected_close_date && ` · Close: ${new Date(deal.expected_close_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`}
+                              </p>
+                            </div>
+                            <span className="px-2 py-0.5 text-xs font-medium rounded bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                              {deal.pipeline_status?.replace('_', ' ') || 'lead'}
+                            </span>
+                          </div>
+                          <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-amber-500 rounded-full transition-all"
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No deals associated with this lead</p>
+                )}
               </div>
             </div>
 
