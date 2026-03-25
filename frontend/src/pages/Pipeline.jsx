@@ -272,6 +272,9 @@ export default function Pipeline() {
   const [manageDealMode, setManageDealMode] = useState('new'); // 'new' or 'edit'
   const [selectedExistingDeal, setSelectedExistingDeal] = useState(null);
 
+  // Sales Closed filter - hide deals older than X days
+  const [salesClosedFilter, setSalesClosedFilter] = useState('5'); // '5', '10', '20', '30', 'all'
+
   useEffect(() => { fetchDeals(); fetchLinkages(); fetchCompanies(); fetchAiAgents(); }, []);
 
   const fetchDeals = async () => {
@@ -539,7 +542,25 @@ export default function Pipeline() {
   };
 
   // Get linkages by pipeline_status (each lead-deal combination as individual tile)
-  const getLinkagesByStage = (stageId) => linkages.filter(l => l.pipeline_status === stageId);
+  // For sales_closed stage, filter based on the salesClosedFilter (hide old ones)
+  const getLinkagesByStage = (stageId) => {
+    let stageLinkages = linkages.filter(l => l.pipeline_status === stageId);
+    
+    // Apply date filter for sales_closed stage
+    if (stageId === 'sales_closed' && salesClosedFilter !== 'all') {
+      const daysFilter = parseInt(salesClosedFilter, 10);
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - daysFilter);
+      
+      stageLinkages = stageLinkages.filter(l => {
+        // Use updated_at as the date when the deal was moved to sales_closed
+        const updatedDate = l.updated_at ? new Date(l.updated_at) : new Date(l.created_at);
+        return updatedDate >= cutoffDate;
+      });
+    }
+    
+    return stageLinkages;
+  };
   const getLinkageStageValue = (stageId) => getLinkagesByStage(stageId).reduce((sum, l) => sum + (l.deal_value || 0), 0);
   
   const formatCurrency = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(value);
@@ -554,9 +575,27 @@ export default function Pipeline() {
           <h1 className="text-2xl font-bold">Pipeline</h1>
           <p className="text-muted-foreground mt-1">Drag and drop to update stages</p>
         </div>
-        <button onClick={() => { setFormData(initialFormData); setIsCreateOpen(true); }} className="elstar-btn-primary flex items-center gap-2" data-testid="add-deal-btn">
-          <Plus className="w-4 h-4" /> Add Deal
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Sales Closed Filter */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-muted-foreground whitespace-nowrap">Sales Closed:</label>
+            <select
+              value={salesClosedFilter}
+              onChange={(e) => setSalesClosedFilter(e.target.value)}
+              className="bg-card border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
+              data-testid="sales-closed-filter"
+            >
+              <option value="5">Last 5 days</option>
+              <option value="10">Last 10 days</option>
+              <option value="20">Last 20 days</option>
+              <option value="30">Last 30 days</option>
+              <option value="all">All time</option>
+            </select>
+          </div>
+          <button onClick={() => { setFormData(initialFormData); setIsCreateOpen(true); }} className="elstar-btn-primary flex items-center gap-2" data-testid="add-deal-btn">
+            <Plus className="w-4 h-4" /> Add Deal
+          </button>
+        </div>
       </div>
 
       {/* Kanban Board - Shows individual lead-deal linkages */}
