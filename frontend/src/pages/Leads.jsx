@@ -936,28 +936,28 @@ export default function Leads() {
         ) : (
           <>
             <div className="w-full">
-              <table className="elstar-table w-full table-fixed text-xs">
+              <table className="elstar-table w-full table-fixed">
                 <thead>
                   <tr>
-                    <th className="w-7 px-1">
+                    <th className="w-8 px-2">
                       <input
                         type="checkbox"
                         checked={selectAll}
                         onChange={handleSelectAll}
-                        className="w-3.5 h-3.5 rounded border-input"
+                        className="w-4 h-4 rounded border-input"
                         data-testid="select-all-checkbox"
                       />
                     </th>
-                    <th className="px-2">Company Name</th>
-                    <th className="px-2 w-[70px]">PIC Name</th>
-                    <th className="px-2 w-[85px]">Mobile / Office</th>
-                    <th className="px-2 w-[110px]">Email</th>
-                    <th className="px-2 w-[65px]">Location</th>
-                    <th className="px-2 w-[55px]">State</th>
-                    <th className="px-2 w-[55px]">Country</th>
-                    <th className="px-2 w-[60px]">Status</th>
-                    <th className="px-1 w-[45px] text-center">AI Score</th>
-                    <th className="w-8"></th>
+                    <th className="px-2 w-[140px]">Company Name</th>
+                    <th className="px-2 w-[90px]">PIC Name</th>
+                    <th className="px-2 w-[100px]">Mobile / Office</th>
+                    <th className="px-2 w-[130px]">Email</th>
+                    <th className="px-2 w-[80px]">Location</th>
+                    <th className="px-2 w-[70px]">State</th>
+                    <th className="px-2 w-[70px]">Country</th>
+                    <th className="px-2 w-[75px]">Status</th>
+                    <th className="px-2 w-[55px] text-center">AI Score</th>
+                    <th className="w-10"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -971,55 +971,55 @@ export default function Leads() {
                         navigate(`/leads/${lead.id}`);
                       }}
                     >
-                      <td className="px-1" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-2" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={selectedLeads.has(lead.id)}
                           onChange={() => handleSelectLead(lead.id)}
-                          className="w-3.5 h-3.5 rounded border-input"
+                          className="w-4 h-4 rounded border-input"
                           data-testid={`select-lead-${lead.id}`}
                         />
                       </td>
                       <td className="px-2">
-                        <div className="flex items-center gap-1 min-w-0">
-                          <Building2 className="w-3 h-3 flex-shrink-0 text-muted-foreground" />
-                          <span className="font-medium truncate">{lead.company || lead.name}</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+                          <span className="font-medium text-sm truncate">{lead.company || lead.name}</span>
                         </div>
                       </td>
                       <td className="px-2">
-                        <p className="truncate">{lead.pic_name || '-'}</p>
-                        <p className="text-muted-foreground truncate text-[10px]">{lead.title || ''}</p>
+                        <p className="text-sm truncate">{lead.pic_name || '-'}</p>
+                        <p className="text-xs text-muted-foreground truncate">{lead.title || ''}</p>
                       </td>
                       <td className="px-2">
-                        <div className="text-muted-foreground truncate flex items-center gap-0.5">
-                          <Phone className="w-2.5 h-2.5 shrink-0" />
+                        <div className="text-sm text-muted-foreground truncate flex items-center gap-1">
+                          <Phone className="w-3 h-3 shrink-0" />
                           <span className="truncate">{lead.phone || '-'}</span>
                         </div>
                       </td>
                       <td className="px-2">
-                        <div className="text-muted-foreground truncate flex items-center gap-0.5">
-                          <Mail className="w-2.5 h-2.5 shrink-0" />
+                        <div className="text-sm text-muted-foreground truncate flex items-center gap-1">
+                          <Mail className="w-3 h-3 shrink-0" />
                           <span className="truncate">{lead.email || '-'}</span>
                         </div>
                       </td>
                       <td className="px-2">
-                        <span className="truncate block text-muted-foreground">{lead.city || '-'}</span>
+                        <span className="text-sm truncate block text-muted-foreground">{lead.city || '-'}</span>
                       </td>
                       <td className="px-2">
-                        <span className="truncate block text-muted-foreground">{lead.state || '-'}</span>
+                        <span className="text-sm truncate block text-muted-foreground">{lead.state || '-'}</span>
                       </td>
                       <td className="px-2">
-                        <span className="truncate block text-muted-foreground">{lead.country || 'Malaysia'}</span>
+                        <span className="text-sm truncate block text-muted-foreground">{lead.country || 'Malaysia'}</span>
                       </td>
                       <td className="px-2">
-                        <span className={`elstar-badge text-[10px] px-1.5 py-0.5 whitespace-nowrap ${statusConfig[lead.status]?.class || 'elstar-badge-info'}`}>
+                        <span className={`elstar-badge text-xs px-2 py-0.5 whitespace-nowrap ${statusConfig[lead.status]?.class || 'elstar-badge-info'}`}>
                           {statusConfig[lead.status]?.label || lead.status}
                         </span>
                       </td>
-                      <td className="px-1 text-center">
+                      <td className="px-2 text-center">
                         <div className="flex items-center justify-center gap-0.5">
-                          <Sparkles className={`w-2.5 h-2.5 ${getScoreClass(lead.ai_score)}`} />
-                          <span className={`font-mono text-[11px] font-bold ${getScoreClass(lead.ai_score)}`}>{lead.ai_score}</span>
+                          <Sparkles className={`w-3 h-3 ${getScoreClass(lead.ai_score)}`} />
+                          <span className={`font-mono text-sm font-bold ${getScoreClass(lead.ai_score)}`}>{lead.ai_score}</span>
                         </div>
                       </td>
                       <td className="px-1" onClick={(e) => e.stopPropagation()}>

@@ -445,17 +445,17 @@ export default function Tasks() {
         ) : (
           <>
             <div className="overflow-x-auto -webkit-overflow-scrolling-touch">
-              <table className="w-full table-fixed text-xs">
+              <table className="w-full table-fixed">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider w-10">NO.</th>
-                    <th className="text-left px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">COMPANY NAME</th>
-                    <th className="text-left px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider w-[70px]">PIC NAME</th>
-                    <th className="text-left px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider w-[90px]">DEAL</th>
-                    <th className="text-left px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider w-[70px]">PIPELINE</th>
-                    <th className="text-left px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider w-[80px]">DATE & TIME</th>
-                    <th className="text-left px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider w-[70px]">PAYMENT</th>
-                    <th className="w-8"></th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-12">NO.</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[150px]">COMPANY NAME</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[90px]">PIC NAME</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[110px]">DEAL</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[85px]">PIPELINE</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[90px]">DATE & TIME</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[75px]">PAYMENT</th>
+                    <th className="w-10"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -464,15 +464,15 @@ export default function Tasks() {
                     const paymentDisplay = paymentStatusConfig[task.payment_status] || { label: task.payment_status || 'Unpaid', class: 'bg-gray-500/20 text-gray-400' };
                     return (
                       <tr key={task.id} className="border-b border-border hover:bg-secondary/30 transition-colors" data-testid={`task-row-${task.id}`}>
-                        <td className="px-2 py-2 text-muted-foreground">
+                        <td className="px-2 py-3 text-sm text-muted-foreground">
                           {String((currentPage - 1) * pageSize + index + 1).padStart(4, '0')}
                         </td>
-                        <td className="px-2 py-2">
+                        <td className="px-2 py-3">
                           <div className="min-w-0">
                             <div className="flex items-center gap-1">
                               <button 
                                 onClick={() => goToLeadDetail(task.lead_id)}
-                                className="font-medium text-primary hover:underline cursor-pointer text-left truncate"
+                                className="font-medium text-sm text-primary hover:underline cursor-pointer text-left truncate"
                                 title="View full profile"
                               >
                                 {task.company_name || task.title}
@@ -483,46 +483,46 @@ export default function Tasks() {
                                   className="p-0.5 hover:bg-secondary rounded text-muted-foreground hover:text-primary transition-colors shrink-0"
                                   title="Quick preview"
                                 >
-                                  <Eye className="w-3 h-3" />
+                                  <Eye className="w-3.5 h-3.5" />
                                 </button>
                               )}
                             </div>
                           </div>
                         </td>
-                        <td className="px-2 py-2">
-                          <span className="truncate block">{task.pic_name || ''}</span>
+                        <td className="px-2 py-3 text-sm">
+                          <span className="truncate block">{task.pic_name || '-'}</span>
                         </td>
-                        <td className="px-2 py-2">
+                        <td className="px-2 py-3">
                           {task.deal_name ? (
                             <div>
-                              <span className="text-primary font-medium truncate block">{task.deal_name}</span>
+                              <span className="text-sm text-primary font-medium truncate block">{task.deal_name}</span>
                               {task.deal_value && (
-                                <p className="text-[10px] text-muted-foreground">{orgSettings?.currency_symbol || 'RM'}{task.deal_value?.toLocaleString()}</p>
+                                <p className="text-xs text-muted-foreground">{orgSettings?.currency_symbol || 'RM'}{task.deal_value?.toLocaleString()}</p>
                               )}
                             </div>
                           ) : (
-                            <span className="text-muted-foreground">-</span>
+                            <span className="text-sm text-muted-foreground">-</span>
                           )}
                         </td>
-                        <td className="px-2 py-2">
-                          <span className={`inline-flex px-1.5 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap ${statusDisplay.class}`}>
+                        <td className="px-2 py-3">
+                          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${statusDisplay.class}`}>
                             {statusDisplay.label}
                           </span>
                         </td>
-                        <td className="px-2 py-2 text-muted-foreground">
+                        <td className="px-2 py-3 text-sm text-muted-foreground">
                           {task.due_date || task.updated_at || task.created_at ? 
                             <>
                               <span className="block">{new Date(task.due_date || task.updated_at || task.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</span>
-                              <span className="block text-[10px]">{new Date(task.due_date || task.updated_at || task.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
+                              <span className="block text-xs">{new Date(task.due_date || task.updated_at || task.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
                             </>
                             : '-'}
                         </td>
-                        <td className="px-2 py-2">
-                          <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium ${paymentDisplay.class}`}>
+                        <td className="px-2 py-3">
+                          <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${paymentDisplay.class}`}>
                             {paymentDisplay.label}
                           </span>
                         </td>
-                        <td className="px-1 py-2">
+                        <td className="px-2 py-2">
                           <ActionDropdown testId={`task-actions-${task.id}`}>
                             {(closeDropdown) => (
                               <>
