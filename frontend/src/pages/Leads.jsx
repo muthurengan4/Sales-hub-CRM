@@ -935,11 +935,22 @@ export default function Leads() {
           </div>
         ) : (
           <>
-            <div className="w-full">
-              <table className="elstar-table w-full table-fixed">
+            <div className="w-full overflow-hidden">
+              <table className="elstar-table w-full" style={{ tableLayout: 'fixed' }}>
+                <colgroup>
+                  <col style={{ width: '32px' }} />
+                  <col style={{ width: '22%' }} />
+                  <col className="hidden sm:table-column" style={{ width: '12%' }} />
+                  <col className="hidden lg:table-column" style={{ width: '13%' }} />
+                  <col className="hidden xl:table-column" style={{ width: '18%' }} />
+                  <col className="hidden 2xl:table-column" style={{ width: '10%' }} />
+                  <col style={{ width: '10%' }} />
+                  <col className="hidden sm:table-column" style={{ width: '8%' }} />
+                  <col style={{ width: '32px' }} />
+                </colgroup>
                 <thead>
                   <tr>
-                    <th className="w-8 px-2">
+                    <th className="px-1">
                       <input
                         type="checkbox"
                         checked={selectAll}
@@ -948,14 +959,14 @@ export default function Leads() {
                         data-testid="select-all-checkbox"
                       />
                     </th>
-                    <th className="px-2">Company</th>
-                    <th className="px-2 hidden sm:table-cell w-24">PIC</th>
-                    <th className="px-2 hidden lg:table-cell w-28">Mobile</th>
-                    <th className="px-2 hidden xl:table-cell w-32">Email</th>
-                    <th className="px-2 hidden 2xl:table-cell w-20">Location</th>
-                    <th className="px-2 w-16 sm:w-20">Status</th>
-                    <th className="px-1 w-12 text-center hidden sm:table-cell">Score</th>
-                    <th className="w-8"></th>
+                    <th className="px-2 text-left">Company</th>
+                    <th className="px-2 text-left hidden sm:table-cell">PIC</th>
+                    <th className="px-2 text-left hidden lg:table-cell">Mobile</th>
+                    <th className="px-2 text-left hidden xl:table-cell">Email</th>
+                    <th className="px-2 text-left hidden 2xl:table-cell">Location</th>
+                    <th className="px-2 text-left">Status</th>
+                    <th className="px-1 text-center hidden sm:table-cell">Score</th>
+                    <th className="px-1"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -969,7 +980,7 @@ export default function Leads() {
                         navigate(`/leads/${lead.id}`);
                       }}
                     >
-                      <td className="px-2" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-1" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={selectedLeads.has(lead.id)}
@@ -979,28 +990,28 @@ export default function Leads() {
                         />
                       </td>
                       <td className="px-2">
-                        <div className="flex items-center gap-1 min-w-0">
+                        <div className="flex items-center gap-1 min-w-0 overflow-hidden">
                           <Building2 className="w-4 h-4 shrink-0 text-muted-foreground hidden sm:block" />
-                          <div className="min-w-0 flex-1">
+                          <div className="min-w-0 flex-1 overflow-hidden">
                             <span className="font-medium text-sm truncate block">{lead.company || lead.name}</span>
                             <span className="text-xs text-muted-foreground sm:hidden truncate block">{lead.pic_name || ''}</span>
                           </div>
                         </div>
                       </td>
-                      <td className="px-2 hidden sm:table-cell">
+                      <td className="px-2 hidden sm:table-cell overflow-hidden">
                         <span className="text-sm truncate block">{lead.pic_name || '-'}</span>
                       </td>
-                      <td className="px-2 hidden lg:table-cell">
+                      <td className="px-2 hidden lg:table-cell overflow-hidden">
                         <span className="text-sm text-muted-foreground truncate block">{lead.phone || '-'}</span>
                       </td>
-                      <td className="px-2 hidden xl:table-cell">
+                      <td className="px-2 hidden xl:table-cell overflow-hidden">
                         <span className="text-sm text-muted-foreground truncate block">{lead.email || '-'}</span>
                       </td>
-                      <td className="px-2 hidden 2xl:table-cell">
+                      <td className="px-2 hidden 2xl:table-cell overflow-hidden">
                         <span className="text-sm text-muted-foreground truncate block">{lead.city || '-'}</span>
                       </td>
-                      <td className="px-2">
-                        <span className={`elstar-badge text-[10px] px-1.5 py-0.5 ${statusConfig[lead.status]?.class || 'elstar-badge-info'}`}>
+                      <td className="px-2 overflow-hidden">
+                        <span className={`elstar-badge text-[10px] px-1.5 py-0.5 whitespace-nowrap ${statusConfig[lead.status]?.class || 'elstar-badge-info'}`}>
                           {statusConfig[lead.status]?.label || lead.status}
                         </span>
                       </td>

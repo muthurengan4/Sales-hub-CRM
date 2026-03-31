@@ -1,231 +1,133 @@
-# AI CRM Application - Product Requirements Document
+# AISalesTask CRM - Product Requirements Document
 
 ## Original Problem Statement
-Build a comprehensive AI-powered CRM system with the following core features:
-- Lead management with AI scoring
-- Deal pipeline management with per-lead status tracking
-- Customer relationship tracking
-- Task management with auto-sync to deals
-- AI calling integration with ElevenLabs
-- WhatsApp messaging via Twilio
-- Google Calendar integration
+Build an AI-powered CRM system with lead management, deal pipeline, team organization, AI calling integration (ElevenLabs), WhatsApp messaging (Twilio), and Google Calendar scheduling.
 
-## Architecture
-- **Frontend:** React with Tailwind CSS, Shadcn UI, Framer Motion
-- **Backend:** FastAPI (Python) with MongoDB
-- **Database:** MongoDB via motor (async driver)
+## Tech Stack
+- **Frontend**: React with Tailwind CSS, Shadcn/UI components
+- **Backend**: FastAPI with Motor (async MongoDB driver)
+- **Database**: MongoDB
+- **AI Integration**: ElevenLabs for voice AI calling
+- **Messaging**: Twilio for WhatsApp/SMS (BLOCKED - awaiting valid credentials)
+- **Scheduling**: Google Calendar OAuth integration
 
-## Key Data Models
+## Core Features Implemented
 
-### Lead-Deal Linkage System (NEW)
-The system now supports **per-lead pipeline status** for deals:
-- A deal can be assigned to multiple leads
-- Each lead maintains its own `pipeline_status` for that deal
-- Updating one lead's status does NOT affect other leads
+### Lead Management
+- Full CRUD operations for leads
+- Lead import from Excel files
+- AI Score calculation
+- Lead to Customer conversion
+- Auto-migration of legacy customers to leads
+- Pagination and filtering by status/state
 
-**Collection:** `lead_deal_linkages`
-```json
-{
-  "id": "uuid",
-  "lead_id": "lead-uuid",
-  "deal_id": "deal-uuid",
-  "pipeline_status": "lead|qualified|proposal|negotiation|sales_closed|lost",
-  "notes": "optional notes",
-  "organization_id": "org-uuid",
-  "created_at": "ISO date",
-  "updated_at": "ISO date"
-}
-```
+### Deal Pipeline
+- Kanban-style pipeline board
+- Drag-and-drop deal management
+- Time-based filtering (5 days, 10 days, 30 days, all time)
+- Dynamic currency display based on organization settings
 
-### Key Collections
-- `users` - User accounts
-- `organizations` - Organization settings
-- `organization_settings` - Includes `ai_agents` array for ElevenLabs
-- `leads` - Lead records
-- `deals` - Deal templates/products
-- `lead_deal_linkages` - Per-lead deal status (NEW)
-- `tasks` - Task records with `pipeline_status`
-- `customers` - Customer records
-- `ai_calls` - AI call logs
+### Tasks Management
+- Slide-in preview panel with Deals and AI Score sections
+- Task creation and management
+- Payment tracking
 
-## Key Pages
-1. Dashboard - Overview metrics and charts with interactive filters (Pipeline, Lead Status, Date Range)
-2. Leads - Lead management with AI calling
-3. Pipeline - Kanban view of lead-deal linkages
-4. Tasks - Task management with deal auto-sync
-5. Customers - Customer profiles with colored avatars
-6. Calendar - Event scheduling
-7. Settings - Organization configuration (including AI agents)
+### Customer Management
+- Customer profiles linked to leads
+- Auto-migration endpoint for legacy customers
+- Service tracking
 
-## What's Been Implemented (as of March 2026)
+### AI Calling (ElevenLabs)
+- AI agent configuration
+- Call initiation to leads
+- Batch calling support
 
-### Core Features
-- [x] User authentication (JWT-based)
-- [x] Organization management
-- [x] Lead CRUD operations
-- [x] Deal pipeline with drag-and-drop
-- [x] **Lead-Deal Linkage System** - Per-lead pipeline status
-- [x] Task management with deal auto-sync
-- [x] Customer management with profile views
-- [x] Dashboard with metrics
+### Organization Features
+- Team management with roles (admin, member)
+- Dynamic currency settings
+- Organization-level configurations via Settings page
 
-### AI Features
-- [x] AI Score calculation based on pipeline stages
-- [x] AI Calling UI on LeadDetailPage
-- [x] AI Calling UI on Leads page (batch/individual)
-- [x] Dynamic AI Agent configuration in Settings
+### UI/UX
+- Responsive design with mobile/tablet adaptations
+- iOS Safari scroll bug fixes
+- Dynamic global currency via Context API
+- Slide-in panels for entity previews
 
-### Integrations
-- [x] Twilio WhatsApp configuration UI
-- [x] ElevenLabs AI Agent configuration
-- [x] Google Calendar placeholder UI
+## Database Schema
 
-### Mobile Responsiveness
-- [x] Dashboard - 2x2 stat grid on mobile, filters hidden
-- [x] Leads page - Simplified table: Checkbox, Company, Status, AI Score, Actions
-- [x] Tasks page - Company Name, Pipeline, Payment columns with expandable dropdown showing Deal, Date, Notes
-- [x] Customers page - Company Name with avatar, Role, Status with expandable dropdown showing PIC, Phone, Email
-- [x] Pipeline page - Horizontally scrollable kanban board
-- [x] LeadDetailPage - responsive layout
-
-### Recent Updates (March 18, 2026)
-- Implemented Lead-Deal Linkage system
-- Same deal can now have different statuses for different leads
-- Pipeline shows lead-deal combinations with individual statuses
-- Tasks track pipeline_status per lead-deal combination
-- **Dashboard Filters** - Added interactive filters for Pipeline Status, Lead Status, and Date Range
-  - Filters update all dashboard metrics (Total Leads, Active Deals, Pipeline Value, Won Revenue)
-  - Charts and data visualizations respond to filter selections
-  - Clear Filters button to reset all filters to default
-  - **Lead Status filter now shows Pipeline stages** (Lead, Qualified, Proposal, Negotiation, Sales Closed, Lost) - matching Pipeline page tabs
-- **Leads Page Filter Fixed** - Status filter now correctly filters by `pipeline_status` field
-
-### Recent Updates (March 21, 2026)
-- **AI Call Audio Player Fixed** ✅
-  - Fixed audio playback issue where browser `<audio>` tags couldn't send JWT headers
-  - Implemented blob-based audio loading with fetch + Authorization header
-  - Added Play/Pause button, progress indicator, volume control
-  - Removed download option per user request
-  - Audio successfully loads and plays from ElevenLabs recordings
-- **Client Interest Level Feature** ✅
-  - Added interest level tracking for AI calls (Interested, Not Interested, Maybe, Follow-up Needed)
-  - Interest level buttons in Call Details modal with visual selection feedback
-  - Backend endpoint `PUT /api/ai-calls/{call_id}/interest` stores interest data
-  - Interest level persisted in database with timestamps and user attribution
-- **Meeting Scheduling Feature** ✅
-  - Added "Schedule Meeting" button on Lead Detail page header
-  - Full meeting scheduling modal with:
-    - Meeting title (pre-filled with lead name)
-    - Meeting type toggle (Online / In-Person)
-    - Date picker and time selector
-    - Duration dropdown (15min - 2hrs)
-    - Location field for in-person meetings
-    - Description/agenda field
-    - Send calendar invite checkbox
-  - Google Calendar integration:
-    - Creates event in user's Google Calendar
-    - Auto-generates Google Meet link for online meetings
-    - Sends email invite to client (via Gmail/Google Calendar)
-  - Meeting activity logged in lead timeline
-  - Backend endpoints: `POST /api/meetings/schedule`, `GET /api/meetings/lead/{id}`, `PUT /api/meetings/{id}/cancel`
-
-- **Multi-Agent AI Calling with Dynamic Selection** ✅
-  - Enhanced Deal configuration to assign multiple AI agents
-  - Three selection modes: Round Robin, Random, Manual
-  - Deal form now shows "AI CALLING AGENTS" section to:
-    - Select which agents can be used for the deal
-    - Choose selection mode (how agent is picked)
-  - AI Call modal enhanced:
-    - Shows "Use Deal's Auto-Selection" toggle when deal has agents configured
-    - Displays which agents are assigned to the selected deal
-    - Supports both manual agent selection and dynamic auto-selection
-  - Backend endpoints:
-    - `GET /api/deals/{deal_id}/agents` - Get deal's agent configuration
-    - `PUT /api/deals/{deal_id}/agents` - Update deal's agent assignment
-    - `GET /api/deals/{deal_id}/preview-agent` - Preview which agent would be selected
-  - Round-robin counter persisted per deal for fair agent rotation
+### Collections:
+- `users`: User accounts with auth
+- `organizations`: Organization settings including currency_symbol
+- `leads`: Core lead entity with ai_score, status, pipeline_status
+- `customers`: Customer profiles with lead_id linkage
+- `deals`: Deal records with value, stage
+- `lead-deal-linkages`: Links between leads and deals with updated_at
+- `tasks`: Task records
+- `ai-agents`: Configured AI calling agents
 
 ## API Endpoints
 
-### AI Calls
-- `POST /api/ai-calls/initiate` - Start AI call with ElevenLabs
-- `GET /api/ai-calls/lead/{lead_id}` - Get all AI calls for a lead
-- `GET /api/ai-calls/{call_id}/details` - Get call details with transcript and summary
-- `GET /api/ai-calls/{call_id}/audio` - Stream audio recording (requires JWT auth)
-- `PUT /api/ai-calls/{call_id}/interest` - Update client interest level
+### Leads
+- `GET /api/leads` - List with pagination/filters
+- `POST /api/leads` - Create lead
+- `PUT /api/leads/{id}` - Update lead
+- `DELETE /api/leads/{id}` - Delete lead
+- `POST /api/leads/import` - Excel import
+- `POST /api/leads/{id}/convert` - Convert to customer
 
-### Meetings
-- `POST /api/meetings/schedule` - Schedule a meeting (Google Calendar + email invite)
-- `GET /api/meetings/lead/{lead_id}` - Get all meetings for a lead
-- `PUT /api/meetings/{meeting_id}/cancel` - Cancel a meeting
+### Customers
+- `POST /api/customers/{id}/migrate-to-lead` - Migrate legacy customer to lead
 
-### Lead-Deal Linkages (NEW)
-- `GET /api/lead-deal-linkages` - Get all linkages (filter by lead_id, deal_id)
-- `POST /api/lead-deal-linkages` - Create or update linkage
-- `PUT /api/lead-deal-linkages/{id}` - Update linkage
-- `DELETE /api/lead-deal-linkages/{id}` - Delete linkage
+### Deals
+- `GET /api/deals` - List deals
+- Pipeline management endpoints
 
-### Other Key Endpoints
-- `/api/auth/*` - Authentication
-- `/api/leads/*` - Lead management
-- `/api/deals/*` - Deal management
-- `/api/tasks/*` - Task management
-- `/api/customers/*` - Customer management
-- `/api/ai-agents` - AI Agent CRUD
+### AI Calling
+- `POST /api/ai-calls/initiate` - Start AI call
+- `GET /api/ai-agents` - List configured agents
 
-## Prioritized Backlog
+## Pending Issues
 
-### P0 - Critical
-- [x] Per-lead pipeline status system ✅ DONE
-- [x] ElevenLabs AI Calling Integration ✅ DONE
-- [x] Twilio WhatsApp Integration ✅ DONE
+### P1: Twilio WhatsApp 401 Error
+- **Status**: BLOCKED
+- **Root Cause**: Invalid API credentials
+- **Action Needed**: User must provide valid Twilio Account SID and Auth Token
 
-### P1 - High Priority
-- [x] Implement Google Calendar sync logic ✅ DONE (Meeting scheduling with invites)
-- [ ] Backend for Knowledge Base file processing
-- [ ] ElevenLabs Conversational AI dashboard setup (requires ElevenLabs account configuration)
+### P2: Mobile Table Readability
+- **Status**: CSS fix applied, needs user verification
+- **Description**: Tables forced to fit mobile screens without horizontal scrolling
+- **Risk**: May be visually cramped on very small screens
 
-### P2 - Medium Priority
-- [x] Populate AI Call Detail modal with real data ✅ DONE
-- [ ] Export to CSV functionality
-- [ ] Custom report builder
+## Technical Debt
 
-## AI Integration Details
+### Critical: server.py Refactoring
+- Current file: 5700+ lines
+- Need to split into modular APIRouter files:
+  - `routes/leads.py`
+  - `routes/deals.py`
+  - `routes/customers.py`
+  - `routes/ai_calls.py`
+  - `routes/organization.py`
 
-### ElevenLabs Conversational AI (CONFIGURED)
-- **API Key:** Configured in backend/.env
-- **Available Voices:** 44+ voices available via `/api/elevenlabs/voices`
-- **Endpoints:**
-  - `POST /api/ai-calls/initiate` - Start single AI call with context
-  - `POST /api/ai-calls/batch` - Batch AI calls to multiple leads
-  - `GET /api/elevenlabs/voices` - List available voices
-- **Features:**
-  - Dynamic script generation from lead/deal context
-  - Knowledge base integration from deals
-  - Call purpose types: follow_up, appointment, qualification, custom
-  
-### Twilio WhatsApp (CONFIGURED)
-- **Account SID & Auth Token:** Configured in backend/.env
-- **Endpoints:**
-  - `POST /api/whatsapp/send` - Manual message sending
-  - `POST /api/whatsapp/ai-send` - AI-powered personalized messages
-  - `POST /api/whatsapp/batch` - Batch messaging to multiple leads
-- **Features:**
-  - AI-generated personalized messages
-  - Message types: follow_up, appointment, introduction, thank_you
-  - Full message history tracking
+## Upcoming Tasks
+1. Verify Twilio messaging once credentials provided
+2. Data export to CSV
+3. Custom report builder
+4. server.py modularization
 
-### Technical Debt
-- [ ] **CRITICAL:** Refactor server.py (4000+ lines) into modular APIRouter files
-  - routes/auth.py
-  - routes/leads.py
-  - routes/deals.py
-  - routes/tasks.py
-  - routes/customers.py
-  - routes/ai_agents.py
-  - routes/linkages.py
-  - routes/settings.py
+## Session Changelog
 
-## Test Credentials
-- Email: test@test.com
-- Password: Password123!
+### 2026-03-31
+- Fixed Leads table layout - columns no longer cut off on right side
+- Used colgroup with percentage-based widths for proper scaling
+- Updated CSS to prevent horizontal overflow
+
+### Previous Session
+- Fixed ValidationError in LeadResponse Pydantic model
+- Created migrate-to-lead endpoint for legacy customers
+- Implemented auto-redirect from customer URLs to lead profiles
+- Converted Tasks preview to Slide-In panel with Deals/AI Score
+- Added time-based filter to Pipeline board
+- Integrated dynamic global currency via AuthContext
+- Fixed iOS Safari white-screen scroll bug
+- Applied responsive table fixes across Leads, Tasks, Customers

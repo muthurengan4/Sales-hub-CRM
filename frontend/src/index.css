@@ -904,12 +904,13 @@ div[style*="position: fixed"][style*="right: 16px"][style*="bottom: 16px"] {
 /* Fix for content overflow on all devices */
 .space-y-6 {
   max-width: 100%;
+  overflow-x: hidden;
 }
 
 /* Ensure tables don't cause horizontal overflow */
 .elstar-card {
   max-width: 100%;
-  overflow-x: auto;
+  overflow: hidden;
 }
 
 /* Fix flex containers from overflowing */
@@ -931,14 +932,10 @@ div[style*="position: fixed"][style*="right: 16px"][style*="bottom: 16px"] {
   }
 }
 
-/* Prevent horizontal scroll on all pages */
-.space-y-6 {
-  overflow-x: hidden;
-}
-
 /* Make tables fit within viewport */
-table {
-  table-layout: fixed;
+.elstar-table {
+  width: 100%;
+  max-width: 100%;
 }
 
 /* Ensure text truncates properly */
@@ -946,4 +943,9 @@ td, th {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Ensure the header action buttons don't overflow */
+.shrink-0 {
+  flex-shrink: 0;
 }
