@@ -341,15 +341,16 @@ export default function Customers() {
         ) : (
           <>
             <div className="w-full">
-              <table className="w-full">
+              <table className="w-full table-fixed text-xs">
                 <thead>
                   <tr className="border-b border-border bg-secondary/30">
-                    <th className="text-left px-3 sm:px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">COMPANY</th>
-                    <th className="text-left px-3 sm:px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell">PIC</th>
-                    <th className="text-left px-3 sm:px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">ROLE</th>
-                    <th className="text-left px-3 sm:px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">STATUS</th>
-                    <th className="text-left px-3 sm:px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden xl:table-cell">MOBILE</th>
-                    <th className="w-12"></th>
+                    <th className="text-left px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">COMPANY NAME</th>
+                    <th className="text-left px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider w-[80px]">PIC / DOCTOR</th>
+                    <th className="text-left px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider w-[50px]">ROLE</th>
+                    <th className="text-left px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider w-[65px]">STATUS</th>
+                    <th className="text-left px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider w-[85px]">MOBILE</th>
+                    <th className="text-left px-2 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider w-[100px]">EMAIL</th>
+                    <th className="w-8"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -363,17 +364,17 @@ export default function Customers() {
                     return (
                       <tr key={customer.id} className="border-b border-border hover:bg-secondary/20 transition-colors" data-testid={`customer-row-${customer.id}`}>
                         {/* Company Name Column */}
-                        <td className="px-3 sm:px-4 py-3 sm:py-4">
-                          <div className="flex items-center gap-2 sm:gap-3">
+                        <td className="px-2 py-2">
+                          <div className="flex items-center gap-2">
                             {/* Colored Avatar */}
-                            <div className={`w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-lg ${avatarColor.bg} border-2 ${avatarColor.border} flex items-center justify-center text-white font-bold text-sm sm:text-lg`}>
+                            <div className={`w-8 h-8 shrink-0 rounded-lg ${avatarColor.bg} border-2 ${avatarColor.border} flex items-center justify-center text-white font-bold text-sm`}>
                               {companyName.charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-1 sm:gap-2">
+                              <div className="flex items-center gap-1">
                                 <button
                                   onClick={() => navigateToLeadDetail(customer)}
-                                  className="font-medium text-xs sm:text-sm text-primary hover:underline cursor-pointer transition-colors truncate max-w-[80px] sm:max-w-[120px] md:max-w-[180px]"
+                                  className="font-medium text-primary hover:underline cursor-pointer transition-colors truncate"
                                   data-testid={`company-name-${customer.id}`}
                                   title="View full profile"
                                 >
@@ -382,26 +383,21 @@ export default function Customers() {
                                 {/* Preview Icon */}
                                 <button
                                   onClick={() => openPreviewPanel(customer)}
-                                  className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-primary transition-colors"
+                                  className="p-0.5 hover:bg-secondary rounded text-muted-foreground hover:text-primary transition-colors shrink-0"
                                   title="Quick preview"
                                 >
-                                  <Eye className="w-3.5 h-3.5" />
+                                  <Eye className="w-3 h-3" />
                                 </button>
                               </div>
-                              {/* Show PIC on mobile below company */}
-                              <p className="text-xs text-muted-foreground mt-0.5 truncate md:hidden">
-                                {(customer.first_name && customer.first_name !== customer.company) 
-                                  ? `${customer.first_name}${customer.last_name ? ' ' + customer.last_name : ''}`
-                                  : industry}
-                              </p>
-                              <p className="text-xs text-muted-foreground mt-0.5 truncate hidden md:block">{industry} - {country}</p>
+                              <p className="text-[10px] text-muted-foreground truncate">{industry} - {country}</p>
                             </div>
                           </div>
                         </td>
                         
                         {/* PIC/Doctor Column */}
-                        <td className="px-3 sm:px-4 py-3 sm:py-4 hidden md:table-cell">
-                          <span className="text-sm truncate block max-w-[100px] lg:max-w-[150px]">
+                        {/* PIC/Doctor Column */}
+                        <td className="px-2 py-2">
+                          <span className="truncate block">
                             {(customer.first_name && customer.first_name !== customer.company && customer.first_name !== companyName) 
                               ? `${customer.first_name}${customer.last_name ? ' ' + customer.last_name : ''}`
                               : ''}
@@ -409,39 +405,34 @@ export default function Customers() {
                         </td>
                         
                         {/* Role Column */}
-                        <td className="px-3 sm:px-4 py-3 sm:py-4 hidden lg:table-cell">
-                          <span className={`inline-flex px-2 py-1 rounded text-xs font-medium ${roleBadge.class}`}>
+                        <td className="px-2 py-2">
+                          <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium ${roleBadge.class}`}>
                             {roleBadge.label}
                           </span>
                         </td>
                         
                         {/* Status Column */}
-                        <td className="px-3 sm:px-4 py-3 sm:py-4">
-                          <span className="inline-flex px-2 py-1 rounded-lg text-[10px] sm:text-xs font-medium bg-blue-600/20 text-blue-400 border border-blue-500/30">
+                        <td className="px-2 py-2">
+                          <span className="inline-flex px-1.5 py-0.5 rounded-lg text-[10px] font-medium bg-blue-600/20 text-blue-400 border border-blue-500/30">
                             Customer
                           </span>
                         </td>
                         
                         {/* Mobile Column */}
-                        <td className="px-3 sm:px-4 py-3 sm:py-4 hidden xl:table-cell">
-                          <span className="text-sm text-muted-foreground truncate block max-w-[100px]">{customer.phone || '-'}</span>
+                        <td className="px-2 py-2">
+                          <span className="text-muted-foreground truncate block">{customer.phone || '-'}</span>
+                        </td>
+                        
+                        {/* Email Column */}
+                        <td className="px-2 py-2">
+                          <span className="text-muted-foreground truncate block">{customer.email || '-'}</span>
                         </td>
                         
                         {/* Actions Column */}
-                        <td className="px-2 py-3 sm:py-4">
+                        <td className="px-1 py-2">
                           <ActionDropdown testId={`customer-actions-${customer.id}`}>
                             {(closeDropdown) => (
                               <>
-                                {/* Mobile-only expanded info */}
-                                <div className="sm:hidden px-3 py-2 border-b border-border mb-1">
-                                  <p className="text-xs text-muted-foreground mb-1">PIC: <span className="text-foreground">
-                                    {(customer.first_name && customer.first_name !== customer.company && customer.first_name !== companyName) 
-                                      ? `${customer.first_name}${customer.last_name ? ' ' + customer.last_name : ''}`
-                                      : '-'}
-                                  </span></p>
-                                  <p className="text-xs text-muted-foreground mb-1">Phone: <span className="text-foreground">{customer.phone || '-'}</span></p>
-                                  <p className="text-xs text-muted-foreground">Email: <span className="text-foreground">{customer.email || '-'}</span></p>
-                                </div>
                                 <button onClick={() => { 
                                   closeDropdown();
                                   navigateToLeadDetail(customer);
