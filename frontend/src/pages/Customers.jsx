@@ -340,17 +340,17 @@ export default function Customers() {
           </div>
         ) : (
           <>
-            <div className="w-full overflow-x-auto">
-              <table className="w-full min-w-[400px]">
+            <div className="w-full">
+              <table className="w-full table-fixed">
                 <thead>
                   <tr className="border-b border-border bg-secondary/30">
-                    <th className="text-left px-3 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">COMPANY NAME</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden sm:table-cell">PIC / DOCTOR</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell w-[60px]">ROLE</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[80px]">STATUS</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">MOBILE</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden xl:table-cell">EMAIL</th>
-                    <th className="w-10"></th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase">COMPANY</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase hidden sm:table-cell w-24">PIC</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase hidden lg:table-cell w-16">ROLE</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase w-20">STATUS</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase hidden xl:table-cell w-24">MOBILE</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase hidden 2xl:table-cell w-32">EMAIL</th>
+                    <th className="w-8"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -360,82 +360,46 @@ export default function Customers() {
                     const companyName = customer.company || `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
                     const industry = customer.industry || 'Healthcare';
                     const country = customer.country || 'Malaysia';
+                    const picName = (customer.first_name && customer.first_name !== customer.company && customer.first_name !== companyName) 
+                      ? `${customer.first_name}${customer.last_name ? ' ' + customer.last_name : ''}` : '';
                     
                     return (
                       <tr key={customer.id} className="border-b border-border hover:bg-secondary/20 transition-colors" data-testid={`customer-row-${customer.id}`}>
-                        {/* Company Name Column */}
-                        <td className="px-3 py-3">
+                        <td className="px-2 py-3">
                           <div className="flex items-center gap-2">
-                            {/* Colored Avatar */}
-                            <div className={`w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-lg ${avatarColor.bg} border-2 ${avatarColor.border} flex items-center justify-center text-white font-bold text-sm`}>
+                            <div className={`w-8 h-8 shrink-0 rounded-lg ${avatarColor.bg} border-2 ${avatarColor.border} flex items-center justify-center text-white font-bold text-sm`}>
                               {companyName.charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() => navigateToLeadDetail(customer)}
-                                  className="font-medium text-sm text-primary hover:underline cursor-pointer transition-colors truncate"
-                                  data-testid={`company-name-${customer.id}`}
-                                  title="View full profile"
-                                >
+                                <button onClick={() => navigateToLeadDetail(customer)} className="font-medium text-sm text-primary hover:underline truncate" data-testid={`company-name-${customer.id}`}>
                                   {companyName}
                                 </button>
-                                {/* Preview Icon */}
-                                <button
-                                  onClick={() => openPreviewPanel(customer)}
-                                  className="p-0.5 hover:bg-secondary rounded text-muted-foreground hover:text-primary transition-colors shrink-0"
-                                  title="Quick preview"
-                                >
-                                  <Eye className="w-3.5 h-3.5" />
+                                <button onClick={() => openPreviewPanel(customer)} className="p-0.5 hover:bg-secondary rounded text-muted-foreground hover:text-primary shrink-0">
+                                  <Eye className="w-3 h-3" />
                                 </button>
                               </div>
-                              <p className="text-xs text-muted-foreground truncate">{industry} - {country}</p>
-                              {/* Show PIC on mobile */}
-                              <p className="text-xs text-muted-foreground sm:hidden truncate">
-                                {(customer.first_name && customer.first_name !== customer.company && customer.first_name !== companyName) 
-                                  ? `${customer.first_name}${customer.last_name ? ' ' + customer.last_name : ''}`
-                                  : ''}
-                              </p>
+                              <p className="text-[10px] text-muted-foreground truncate">{industry}</p>
+                              <p className="text-[10px] text-muted-foreground sm:hidden truncate">{picName}</p>
                             </div>
                           </div>
                         </td>
-                        
-                        {/* PIC/Doctor Column */}
-                        {/* PIC/Doctor Column */}
                         <td className="px-2 py-3 hidden sm:table-cell">
-                          <span className="text-sm truncate block">
-                            {(customer.first_name && customer.first_name !== customer.company && customer.first_name !== companyName) 
-                              ? `${customer.first_name}${customer.last_name ? ' ' + customer.last_name : ''}`
-                              : '-'}
-                          </span>
+                          <span className="text-sm truncate block">{picName || '-'}</span>
                         </td>
-                        
-                        {/* Role Column */}
-                        <td className="px-2 py-3 hidden md:table-cell">
-                          <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${roleBadge.class}`}>
-                            {roleBadge.label}
-                          </span>
-                        </td>
-                        
-                        {/* Status Column */}
-                        <td className="px-2 py-3">
-                          <span className="inline-flex px-1.5 sm:px-2 py-0.5 rounded-lg text-[10px] sm:text-xs font-medium bg-blue-600/20 text-blue-400 border border-blue-500/30">
-                            Customer
-                          </span>
-                        </td>
-                        
-                        {/* Mobile Column */}
                         <td className="px-2 py-3 hidden lg:table-cell">
+                          <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium ${roleBadge.class}`}>{roleBadge.label}</span>
+                        </td>
+                        <td className="px-2 py-3">
+                          <span className="inline-flex px-1.5 py-0.5 rounded-lg text-[10px] font-medium bg-blue-600/20 text-blue-400 border border-blue-500/30">Customer</span>
+                        </td>
+                        <td className="px-2 py-3 hidden xl:table-cell">
                           <span className="text-sm text-muted-foreground truncate block">{customer.phone || '-'}</span>
                         </td>
-                        
-                        {/* Email Column */}
-                        <td className="px-2 py-3 hidden xl:table-cell">
+                        <td className="px-2 py-3 hidden 2xl:table-cell">
                           <span className="text-sm text-muted-foreground truncate block">{customer.email || '-'}</span>
                         </td>
-                        
-                        {/* Actions Column */}
-                        <td className="px-2 py-3">
+                        <td className="px-1 py-3">
                           <ActionDropdown testId={`customer-actions-${customer.id}`}>
                             {(closeDropdown) => (
                               <>

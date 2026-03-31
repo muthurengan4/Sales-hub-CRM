@@ -445,17 +445,17 @@ export default function Tasks() {
         ) : (
           <>
             <div className="overflow-x-auto -webkit-overflow-scrolling-touch">
-              <table className="w-full">
+              <table className="w-full table-fixed">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-12 hidden sm:table-cell">NO.</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">COMPANY</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">PIC</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell">DEAL</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[80px]">PIPELINE</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden sm:table-cell">DATE</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden xl:table-cell">PAYMENT</th>
-                    <th className="w-10"></th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase w-10 hidden sm:table-cell">NO.</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase">COMPANY</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase hidden lg:table-cell w-24">PIC</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase hidden xl:table-cell w-28">DEAL</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase w-20">STATUS</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase hidden sm:table-cell w-16">DATE</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase hidden 2xl:table-cell w-20">PAYMENT</th>
+                    <th className="w-8"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -473,22 +473,19 @@ export default function Tasks() {
                               <button 
                                 onClick={() => goToLeadDetail(task.lead_id)}
                                 className="font-medium text-sm text-primary hover:underline cursor-pointer text-left truncate"
-                                title="View full profile"
                               >
                                 {task.company_name || task.title}
                               </button>
                               {task.lead_id && (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); openLeadPreview(task.lead_id); }}
-                                  className="p-0.5 hover:bg-secondary rounded text-muted-foreground hover:text-primary transition-colors shrink-0"
-                                  title="Quick preview"
+                                  className="p-0.5 hover:bg-secondary rounded text-muted-foreground hover:text-primary shrink-0"
                                 >
-                                  <Eye className="w-3.5 h-3.5" />
+                                  <Eye className="w-3 h-3" />
                                 </button>
                               )}
                             </div>
-                            {/* Show extra info on mobile */}
-                            <p className="text-xs text-muted-foreground sm:hidden mt-0.5">
+                            <p className="text-[10px] text-muted-foreground sm:hidden truncate">
                               {task.pic_name && <span>{task.pic_name} · </span>}
                               {(task.due_date || task.updated_at) && new Date(task.due_date || task.updated_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                             </p>
@@ -497,37 +494,23 @@ export default function Tasks() {
                         <td className="px-2 py-3 text-sm hidden lg:table-cell">
                           <span className="truncate block">{task.pic_name || '-'}</span>
                         </td>
-                        <td className="px-2 py-3 hidden md:table-cell">
-                          {task.deal_name ? (
-                            <div>
-                              <span className="text-sm text-primary font-medium truncate block">{task.deal_name}</span>
-                              {task.deal_value && (
-                                <p className="text-xs text-muted-foreground">{orgSettings?.currency_symbol || 'RM'}{task.deal_value?.toLocaleString()}</p>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">-</span>
-                          )}
+                        <td className="px-2 py-3 hidden xl:table-cell">
+                          <span className="text-sm text-primary truncate block">{task.deal_name || '-'}</span>
                         </td>
                         <td className="px-2 py-3">
-                          <span className={`inline-flex px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium whitespace-nowrap ${statusDisplay.class}`}>
+                          <span className={`inline-flex px-1.5 py-0.5 rounded-full text-[10px] font-medium ${statusDisplay.class}`}>
                             {statusDisplay.label}
                           </span>
                         </td>
-                        <td className="px-2 py-3 text-sm text-muted-foreground hidden sm:table-cell">
-                          {task.due_date || task.updated_at || task.created_at ? 
-                            <>
-                              <span className="block">{new Date(task.due_date || task.updated_at || task.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</span>
-                              <span className="block text-xs">{new Date(task.due_date || task.updated_at || task.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
-                            </>
-                            : '-'}
+                        <td className="px-2 py-3 text-xs text-muted-foreground hidden sm:table-cell">
+                          {(task.due_date || task.updated_at) ? new Date(task.due_date || task.updated_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '-'}
                         </td>
-                        <td className="px-2 py-3 hidden xl:table-cell">
-                          <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${paymentDisplay.class}`}>
+                        <td className="px-2 py-3 hidden 2xl:table-cell">
+                          <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium ${paymentDisplay.class}`}>
                             {paymentDisplay.label}
                           </span>
                         </td>
-                        <td className="px-2 py-2">
+                        <td className="px-1 py-2">
                           <ActionDropdown testId={`task-actions-${task.id}`}>
                             {(closeDropdown) => (
                               <>

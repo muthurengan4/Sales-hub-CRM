@@ -930,3 +930,20 @@ div[style*="position: fixed"][style*="right: 16px"][style*="bottom: 16px"] {
     overflow: hidden;
   }
 }
+
+/* Prevent horizontal scroll on all pages */
+.space-y-6 {
+  overflow-x: hidden;
+}
+
+/* Make tables fit within viewport */
+table {
+  table-layout: fixed;
+}
+
+/* Ensure text truncates properly */
+td, th {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

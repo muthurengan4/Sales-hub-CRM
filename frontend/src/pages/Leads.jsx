@@ -935,8 +935,8 @@ export default function Leads() {
           </div>
         ) : (
           <>
-            <div className="w-full overflow-x-auto">
-              <table className="elstar-table w-full">
+            <div className="w-full">
+              <table className="elstar-table w-full table-fixed">
                 <thead>
                   <tr>
                     <th className="w-8 px-2">
@@ -948,16 +948,14 @@ export default function Leads() {
                         data-testid="select-all-checkbox"
                       />
                     </th>
-                    <th className="px-2 min-w-[120px]">Company Name</th>
-                    <th className="px-2 hidden sm:table-cell">PIC Name</th>
-                    <th className="px-2 hidden md:table-cell">Mobile</th>
-                    <th className="px-2 hidden lg:table-cell">Email</th>
-                    <th className="px-2 hidden xl:table-cell">Location</th>
-                    <th className="px-2 hidden xl:table-cell">State</th>
-                    <th className="px-2 hidden 2xl:table-cell">Country</th>
-                    <th className="px-2 w-[70px]">Status</th>
-                    <th className="px-2 w-[55px] text-center hidden sm:table-cell">Score</th>
-                    <th className="w-10"></th>
+                    <th className="px-2">Company</th>
+                    <th className="px-2 hidden sm:table-cell w-24">PIC</th>
+                    <th className="px-2 hidden lg:table-cell w-28">Mobile</th>
+                    <th className="px-2 hidden xl:table-cell w-32">Email</th>
+                    <th className="px-2 hidden 2xl:table-cell w-20">Location</th>
+                    <th className="px-2 w-16 sm:w-20">Status</th>
+                    <th className="px-1 w-12 text-center hidden sm:table-cell">Score</th>
+                    <th className="w-8"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -981,42 +979,33 @@ export default function Leads() {
                         />
                       </td>
                       <td className="px-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground hidden sm:block" />
-                          <div className="min-w-0">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <Building2 className="w-4 h-4 shrink-0 text-muted-foreground hidden sm:block" />
+                          <div className="min-w-0 flex-1">
                             <span className="font-medium text-sm truncate block">{lead.company || lead.name}</span>
                             <span className="text-xs text-muted-foreground sm:hidden truncate block">{lead.pic_name || ''}</span>
                           </div>
                         </div>
                       </td>
                       <td className="px-2 hidden sm:table-cell">
-                        <p className="text-sm truncate">{lead.pic_name || '-'}</p>
-                      </td>
-                      <td className="px-2 hidden md:table-cell">
-                        <span className="text-sm text-muted-foreground truncate block">{lead.phone || '-'}</span>
+                        <span className="text-sm truncate block">{lead.pic_name || '-'}</span>
                       </td>
                       <td className="px-2 hidden lg:table-cell">
+                        <span className="text-sm text-muted-foreground truncate block">{lead.phone || '-'}</span>
+                      </td>
+                      <td className="px-2 hidden xl:table-cell">
                         <span className="text-sm text-muted-foreground truncate block">{lead.email || '-'}</span>
                       </td>
-                      <td className="px-2 hidden xl:table-cell">
+                      <td className="px-2 hidden 2xl:table-cell">
                         <span className="text-sm text-muted-foreground truncate block">{lead.city || '-'}</span>
                       </td>
-                      <td className="px-2 hidden xl:table-cell">
-                        <span className="text-sm text-muted-foreground truncate block">{lead.state || '-'}</span>
-                      </td>
-                      <td className="px-2 hidden 2xl:table-cell">
-                        <span className="text-sm text-muted-foreground truncate block">{lead.country || 'MY'}</span>
-                      </td>
                       <td className="px-2">
-                        <span className={`elstar-badge text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 whitespace-nowrap ${statusConfig[lead.status]?.class || 'elstar-badge-info'}`}>
+                        <span className={`elstar-badge text-[10px] px-1.5 py-0.5 ${statusConfig[lead.status]?.class || 'elstar-badge-info'}`}>
                           {statusConfig[lead.status]?.label || lead.status}
                         </span>
                       </td>
-                      <td className="px-2 text-center hidden sm:table-cell">
-                        <div className="flex items-center justify-center gap-0.5">
-                          <Sparkles className={`w-3 h-3 ${getScoreClass(lead.ai_score)}`} />
-                          <span className={`font-mono text-sm font-bold ${getScoreClass(lead.ai_score)}`}>{lead.ai_score}</span>
-                        </div>
+                      <td className="px-1 text-center hidden sm:table-cell">
+                        <span className={`font-mono text-xs font-bold ${getScoreClass(lead.ai_score)}`}>{lead.ai_score}</span>
                       </td>
                       <td className="px-1" onClick={(e) => e.stopPropagation()}>
                         <ActionDropdown testId={`lead-actions-${lead.id}`}>
