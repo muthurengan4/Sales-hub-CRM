@@ -936,10 +936,10 @@ export default function Leads() {
         ) : (
           <>
             <div className="w-full">
-              <table className="elstar-table w-full">
+              <table className="elstar-table w-full table-fixed">
                 <thead>
                   <tr>
-                    <th className="w-8 sm:w-10">
+                    <th className="w-8">
                       <input
                         type="checkbox"
                         checked={selectAll}
@@ -948,13 +948,11 @@ export default function Leads() {
                         data-testid="select-all-checkbox"
                       />
                     </th>
-                    <th>Company Name</th>
-                    <th className="hidden md:table-cell">PIC Name</th>
-                    <th className="hidden lg:table-cell">Mobile / Office</th>
-                    <th className="hidden xl:table-cell">Email</th>
-                    <th className="hidden 2xl:table-cell">Location</th>
-                    <th className="w-20 sm:w-24">Status</th>
-                    <th className="w-14 sm:w-16 text-center hidden sm:table-cell">AI Score</th>
+                    <th className="w-auto">Company</th>
+                    <th className="hidden lg:table-cell w-[120px]">PIC</th>
+                    <th className="hidden xl:table-cell w-[120px]">Mobile</th>
+                    <th className="w-[80px] sm:w-[90px]">Status</th>
+                    <th className="w-[50px] text-center hidden sm:table-cell">Score</th>
                     <th className="w-10"></th>
                   </tr>
                 </thead>
@@ -980,47 +978,32 @@ export default function Leads() {
                         />
                       </td>
                       <td>
-                        <div className="flex items-center gap-1 sm:gap-2">
+                        <div className="flex items-center gap-1 sm:gap-2 min-w-0">
                           <Building2 className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0 text-muted-foreground" />
-                          <div className="min-w-0">
-                            <span className="font-medium truncate block max-w-[100px] sm:max-w-[150px] md:max-w-[200px] text-xs sm:text-sm">{lead.company || lead.name}</span>
-                            {/* Show PIC name on mobile below company */}
-                            <span className="text-xs text-muted-foreground md:hidden truncate block">{lead.pic_name || ''}</span>
+                          <div className="min-w-0 flex-1">
+                            <span className="font-medium truncate block text-xs sm:text-sm">{lead.company || lead.name}</span>
+                            {/* Show PIC name below company on smaller screens */}
+                            <span className="text-xs text-muted-foreground lg:hidden truncate block">{lead.pic_name || ''}</span>
                           </div>
                         </div>
-                      </td>
-                      <td className="hidden md:table-cell">
-                        <p className="font-medium text-sm truncate max-w-[100px] lg:max-w-[150px]">{lead.pic_name || '-'}</p>
-                        <p className="text-xs text-muted-foreground truncate">{lead.title || ''}</p>
                       </td>
                       <td className="hidden lg:table-cell">
-                        <div className="space-y-1 text-xs text-muted-foreground">
-                          {lead.phone && <div className="flex items-center gap-1"><Phone className="w-3 h-3" /><span className="truncate max-w-[100px]">{lead.phone}</span></div>}
-                          {!lead.phone && '-'}
-                        </div>
+                        <p className="font-medium text-sm truncate">{lead.pic_name || '-'}</p>
                       </td>
                       <td className="hidden xl:table-cell">
-                        {lead.email ? (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Mail className="w-3 h-3" />
-                            <span className="truncate max-w-[120px]">{lead.email}</span>
-                          </div>
-                        ) : '-'}
-                      </td>
-                      <td className="hidden 2xl:table-cell">
-                        <div className="text-xs text-muted-foreground truncate max-w-[100px]">
-                          {lead.city || '-'}
+                        <div className="text-xs text-muted-foreground truncate">
+                          {lead.phone || '-'}
                         </div>
                       </td>
                       <td>
-                        <span className={`elstar-badge text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 ${statusConfig[lead.status]?.class || 'elstar-badge-info'}`}>
+                        <span className={`elstar-badge text-[10px] sm:text-xs px-1 sm:px-2 py-0.5 whitespace-nowrap ${statusConfig[lead.status]?.class || 'elstar-badge-info'}`}>
                           {statusConfig[lead.status]?.label || lead.status}
                         </span>
                       </td>
                       <td className="text-center hidden sm:table-cell">
-                        <div className="flex items-center justify-center gap-0.5 sm:gap-1">
+                        <div className="flex items-center justify-center gap-0.5">
                           <Sparkles className={`w-3 h-3 ${getScoreClass(lead.ai_score)}`} />
-                          <span className={`font-mono text-xs sm:text-sm font-bold ${getScoreClass(lead.ai_score)}`}>{lead.ai_score}</span>
+                          <span className={`font-mono text-xs font-bold ${getScoreClass(lead.ai_score)}`}>{lead.ai_score}</span>
                         </div>
                       </td>
                       <td onClick={(e) => e.stopPropagation()}>
