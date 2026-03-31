@@ -935,8 +935,8 @@ export default function Leads() {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto -webkit-overflow-scrolling-touch">
-              <table className="elstar-table w-full min-w-[600px]">
+            <div className="w-full">
+              <table className="elstar-table w-full">
                 <thead>
                   <tr>
                     <th className="w-8 sm:w-10">
@@ -948,15 +948,13 @@ export default function Leads() {
                         data-testid="select-all-checkbox"
                       />
                     </th>
-                    <th className="min-w-[100px]">Company Name</th>
-                    <th className="hidden sm:table-cell">PIC Name</th>
-                    <th className="hidden md:table-cell">Mobile / Office</th>
-                    <th className="hidden lg:table-cell">Email</th>
-                    <th className="hidden lg:table-cell">Location</th>
-                    <th className="hidden xl:table-cell">State</th>
-                    <th className="hidden xl:table-cell">Country</th>
+                    <th>Company Name</th>
+                    <th className="hidden md:table-cell">PIC Name</th>
+                    <th className="hidden lg:table-cell">Mobile / Office</th>
+                    <th className="hidden xl:table-cell">Email</th>
+                    <th className="hidden 2xl:table-cell">Location</th>
                     <th className="w-20 sm:w-24">Status</th>
-                    <th className="w-14 sm:w-20 text-center">AI Score</th>
+                    <th className="w-14 sm:w-16 text-center hidden sm:table-cell">AI Score</th>
                     <th className="w-10"></th>
                   </tr>
                 </thead>
@@ -984,45 +982,42 @@ export default function Leads() {
                       <td>
                         <div className="flex items-center gap-1 sm:gap-2">
                           <Building2 className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0 text-muted-foreground" />
-                          <span className="font-medium truncate max-w-[80px] sm:max-w-[180px] text-xs sm:text-sm">{lead.company || lead.name}</span>
+                          <div className="min-w-0">
+                            <span className="font-medium truncate block max-w-[100px] sm:max-w-[150px] md:max-w-[200px] text-xs sm:text-sm">{lead.company || lead.name}</span>
+                            {/* Show PIC name on mobile below company */}
+                            <span className="text-xs text-muted-foreground md:hidden truncate block">{lead.pic_name || ''}</span>
+                          </div>
                         </div>
-                      </td>
-                      <td className="hidden sm:table-cell">
-                        <p className="font-medium text-sm">{lead.pic_name || '-'}</p>
-                        <p className="text-xs text-muted-foreground">{lead.title || ''}</p>
                       </td>
                       <td className="hidden md:table-cell">
-                        <div className="space-y-1 text-xs text-muted-foreground">
-                          {lead.phone && <div className="flex items-center gap-1"><Phone className="w-3 h-3" />{lead.phone}</div>}
-                          {lead.office_number && <div className="flex items-center gap-1"><Phone className="w-3 h-3" />{lead.office_number}</div>}
-                          {!lead.phone && !lead.office_number && '-'}
-                        </div>
+                        <p className="font-medium text-sm truncate max-w-[100px] lg:max-w-[150px]">{lead.pic_name || '-'}</p>
+                        <p className="text-xs text-muted-foreground truncate">{lead.title || ''}</p>
                       </td>
                       <td className="hidden lg:table-cell">
+                        <div className="space-y-1 text-xs text-muted-foreground">
+                          {lead.phone && <div className="flex items-center gap-1"><Phone className="w-3 h-3" /><span className="truncate max-w-[100px]">{lead.phone}</span></div>}
+                          {!lead.phone && '-'}
+                        </div>
+                      </td>
+                      <td className="hidden xl:table-cell">
                         {lead.email ? (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Mail className="w-3 h-3" />
-                            <span className="truncate max-w-[150px]">{lead.email}</span>
+                            <span className="truncate max-w-[120px]">{lead.email}</span>
                           </div>
                         ) : '-'}
                       </td>
-                      <td className="hidden lg:table-cell">
-                        <div className="text-xs text-muted-foreground">
+                      <td className="hidden 2xl:table-cell">
+                        <div className="text-xs text-muted-foreground truncate max-w-[100px]">
                           {lead.city || '-'}
                         </div>
-                      </td>
-                      <td className="hidden xl:table-cell">
-                        <div className="text-xs text-muted-foreground">{lead.state || '-'}</div>
-                      </td>
-                      <td className="hidden xl:table-cell">
-                        <div className="text-xs text-muted-foreground">{lead.country || 'Malaysia'}</div>
                       </td>
                       <td>
                         <span className={`elstar-badge text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 ${statusConfig[lead.status]?.class || 'elstar-badge-info'}`}>
                           {statusConfig[lead.status]?.label || lead.status}
                         </span>
                       </td>
-                      <td className="text-center">
+                      <td className="text-center hidden sm:table-cell">
                         <div className="flex items-center justify-center gap-0.5 sm:gap-1">
                           <Sparkles className={`w-3 h-3 ${getScoreClass(lead.ai_score)}`} />
                           <span className={`font-mono text-xs sm:text-sm font-bold ${getScoreClass(lead.ai_score)}`}>{lead.ai_score}</span>
