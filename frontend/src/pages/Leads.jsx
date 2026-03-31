@@ -802,21 +802,22 @@ export default function Leads() {
   };
 
   return (
-    <div className="space-y-6" data-testid="leads-page">
+    <div className="space-y-6 overflow-x-hidden" data-testid="leads-page">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold">Leads</h1>
           <p className="text-muted-foreground mt-1">Manage and track your sales leads</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <button 
             onClick={() => setIsImportOpen(true)} 
             className="elstar-btn-ghost flex items-center gap-2"
             data-testid="import-lead-btn"
           >
             <Upload className="w-4 h-4" />
-            Import Excel
+            <span className="hidden sm:inline">Import Excel</span>
+            <span className="sm:hidden">Import</span>
           </button>
           <button 
             onClick={openCreateDialog} 
@@ -824,7 +825,8 @@ export default function Leads() {
             data-testid="add-lead-btn"
           >
             <Plus className="w-4 h-4" />
-            Add Lead
+            <span className="hidden sm:inline">Add Lead</span>
+            <span className="sm:hidden">Add</span>
           </button>
         </div>
       </div>
@@ -908,7 +910,7 @@ export default function Leads() {
       </div>
 
       {/* Leads Table */}
-      <div className="elstar-card overflow-hidden">
+      <div className="elstar-card overflow-hidden max-w-full">
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -933,8 +935,8 @@ export default function Leads() {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="elstar-table w-full">
+            <div className="overflow-x-auto -webkit-overflow-scrolling-touch">
+              <table className="elstar-table w-full min-w-[600px]">
                 <thead>
                   <tr>
                     <th className="w-8 sm:w-10">

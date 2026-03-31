@@ -50,11 +50,11 @@ export default function Layout() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex overflow-x-hidden">
       {/* Sidebar */}
       <aside className={`
         fixed lg:static inset-y-0 left-0 z-40 w-64 bg-card border-r border-border
-        transform transition-transform duration-200 ease-in-out flex flex-col
+        transform transition-transform duration-200 ease-in-out flex flex-col shrink-0
         ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         {/* Logo */}
@@ -120,9 +120,9 @@ export default function Layout() {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-h-screen min-w-0 overflow-x-hidden">
         {/* Header */}
-        <header className="h-16 bg-card border-b border-border px-4 lg:px-6 flex items-center justify-between sticky top-0 z-20">
+        <header className="h-16 bg-card border-b border-border px-4 lg:px-6 flex items-center justify-between sticky top-0 z-20 shrink-0">
           <div className="flex items-center gap-4">
             <button className="lg:hidden p-2 hover:bg-secondary rounded-lg" onClick={() => setMobileOpen(!mobileOpen)} data-testid="mobile-menu-btn">
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}

@@ -379,10 +379,10 @@ export default function Tasks() {
   };
 
   return (
-    <div className="space-y-6" data-testid="tasks-page">
+    <div className="space-y-6 overflow-x-hidden" data-testid="tasks-page">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold">Tasks</h1>
           <p className="text-muted-foreground mt-1">Your daily work list - all follow-ups and visits</p>
         </div>
@@ -444,8 +444,8 @@ export default function Tasks() {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="overflow-x-auto -webkit-overflow-scrolling-touch">
+              <table className="w-full min-w-[500px]">
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-16 hidden sm:table-cell">NO.</th>

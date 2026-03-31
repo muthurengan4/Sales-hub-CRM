@@ -900,3 +900,33 @@ div[style*="position: fixed"][style*="right: 16px"][style*="bottom: 16px"] {
     scroll-behavior: auto !important;
   }
 }
+
+/* Fix for content overflow on all devices */
+.space-y-6 {
+  max-width: 100%;
+}
+
+/* Ensure tables don't cause horizontal overflow */
+.elstar-card {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* Fix flex containers from overflowing */
+.flex-1 {
+  min-width: 0;
+}
+
+/* iPad and tablet specific fixes */
+@media screen and (min-width: 768px) and (max-width: 1024px) {
+  .lg\:px-6 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  /* Ensure header doesn't overflow */
+  header {
+    max-width: 100%;
+    overflow: hidden;
+  }
+}
