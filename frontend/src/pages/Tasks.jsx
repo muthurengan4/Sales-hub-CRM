@@ -69,6 +69,14 @@ export default function Tasks() {
   // Filter
   const [dealFilter, setDealFilter] = useState('');
 
+  // Fix for iOS Safari scroll restoration issue - scroll to top on mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    // Also reset any body scroll issues
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
+  }, []);
+
   useEffect(() => {
     fetchTasks();
     fetchDropdownData();

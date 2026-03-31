@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth, useTheme } from '../App';
 import NotificationsDropdown from './NotificationsDropdown';
 import { 
@@ -11,8 +11,16 @@ export default function Layout() {
   const { user, logout, hasPermission } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  // Fix for iOS Safari scroll restoration - scroll to top on route change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    // Close mobile menu on route change
+    setMobileOpen(false);
+  }, [location.pathname]);
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
@@ -158,7 +166,7 @@ export default function Layout() {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-4 lg:p-6">
+        <main className="flex-1 p-4 lg:p-6 main-content">
           <Outlet />
         </main>
       </div>

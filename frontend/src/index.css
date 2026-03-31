@@ -879,3 +879,24 @@ div[style*="position: fixed"][style*="right: 16px"][style*="bottom: 16px"] {
     justify-content: center;
   }
 }
+
+/* iOS Safari scroll restoration fix */
+@supports (-webkit-touch-callout: none) {
+  /* iOS only */
+  html, body {
+    height: 100%;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Prevent white space on back navigation */
+  .main-content {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+  
+  /* Fix for scroll position restoration */
+  html {
+    scroll-behavior: auto !important;
+  }
+}
