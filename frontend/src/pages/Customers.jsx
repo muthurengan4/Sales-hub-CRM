@@ -340,16 +340,16 @@ export default function Customers() {
           </div>
         ) : (
           <>
-            <div className="w-full">
-              <table className="w-full table-fixed">
+            <div className="w-full overflow-x-auto">
+              <table className="w-full min-w-[400px]">
                 <thead>
                   <tr className="border-b border-border bg-secondary/30">
-                    <th className="text-left px-3 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[180px]">COMPANY NAME</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[100px]">PIC / DOCTOR</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[60px]">ROLE</th>
+                    <th className="text-left px-3 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">COMPANY NAME</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden sm:table-cell">PIC / DOCTOR</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell w-[60px]">ROLE</th>
                     <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[80px]">STATUS</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[100px]">MOBILE</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[130px]">EMAIL</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">MOBILE</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden xl:table-cell">EMAIL</th>
                     <th className="w-10"></th>
                   </tr>
                 </thead>
@@ -367,7 +367,7 @@ export default function Customers() {
                         <td className="px-3 py-3">
                           <div className="flex items-center gap-2">
                             {/* Colored Avatar */}
-                            <div className={`w-9 h-9 shrink-0 rounded-lg ${avatarColor.bg} border-2 ${avatarColor.border} flex items-center justify-center text-white font-bold text-sm`}>
+                            <div className={`w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-lg ${avatarColor.bg} border-2 ${avatarColor.border} flex items-center justify-center text-white font-bold text-sm`}>
                               {companyName.charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0 flex-1">
@@ -390,13 +390,19 @@ export default function Customers() {
                                 </button>
                               </div>
                               <p className="text-xs text-muted-foreground truncate">{industry} - {country}</p>
+                              {/* Show PIC on mobile */}
+                              <p className="text-xs text-muted-foreground sm:hidden truncate">
+                                {(customer.first_name && customer.first_name !== customer.company && customer.first_name !== companyName) 
+                                  ? `${customer.first_name}${customer.last_name ? ' ' + customer.last_name : ''}`
+                                  : ''}
+                              </p>
                             </div>
                           </div>
                         </td>
                         
                         {/* PIC/Doctor Column */}
                         {/* PIC/Doctor Column */}
-                        <td className="px-2 py-3">
+                        <td className="px-2 py-3 hidden sm:table-cell">
                           <span className="text-sm truncate block">
                             {(customer.first_name && customer.first_name !== customer.company && customer.first_name !== companyName) 
                               ? `${customer.first_name}${customer.last_name ? ' ' + customer.last_name : ''}`
@@ -405,7 +411,7 @@ export default function Customers() {
                         </td>
                         
                         {/* Role Column */}
-                        <td className="px-2 py-3">
+                        <td className="px-2 py-3 hidden md:table-cell">
                           <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${roleBadge.class}`}>
                             {roleBadge.label}
                           </span>
@@ -413,18 +419,18 @@ export default function Customers() {
                         
                         {/* Status Column */}
                         <td className="px-2 py-3">
-                          <span className="inline-flex px-2 py-0.5 rounded-lg text-xs font-medium bg-blue-600/20 text-blue-400 border border-blue-500/30">
+                          <span className="inline-flex px-1.5 sm:px-2 py-0.5 rounded-lg text-[10px] sm:text-xs font-medium bg-blue-600/20 text-blue-400 border border-blue-500/30">
                             Customer
                           </span>
                         </td>
                         
                         {/* Mobile Column */}
-                        <td className="px-2 py-3">
+                        <td className="px-2 py-3 hidden lg:table-cell">
                           <span className="text-sm text-muted-foreground truncate block">{customer.phone || '-'}</span>
                         </td>
                         
                         {/* Email Column */}
-                        <td className="px-2 py-3">
+                        <td className="px-2 py-3 hidden xl:table-cell">
                           <span className="text-sm text-muted-foreground truncate block">{customer.email || '-'}</span>
                         </td>
                         

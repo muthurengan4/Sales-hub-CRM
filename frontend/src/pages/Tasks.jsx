@@ -445,16 +445,16 @@ export default function Tasks() {
         ) : (
           <>
             <div className="overflow-x-auto -webkit-overflow-scrolling-touch">
-              <table className="w-full table-fixed">
+              <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-12">NO.</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[150px]">COMPANY NAME</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[90px]">PIC NAME</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[110px]">DEAL</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[85px]">PIPELINE</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[90px]">DATE & TIME</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[75px]">PAYMENT</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-12 hidden sm:table-cell">NO.</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">COMPANY</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">PIC</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell">DEAL</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[80px]">PIPELINE</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden sm:table-cell">DATE</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden xl:table-cell">PAYMENT</th>
                     <th className="w-10"></th>
                   </tr>
                 </thead>
@@ -464,7 +464,7 @@ export default function Tasks() {
                     const paymentDisplay = paymentStatusConfig[task.payment_status] || { label: task.payment_status || 'Unpaid', class: 'bg-gray-500/20 text-gray-400' };
                     return (
                       <tr key={task.id} className="border-b border-border hover:bg-secondary/30 transition-colors" data-testid={`task-row-${task.id}`}>
-                        <td className="px-2 py-3 text-sm text-muted-foreground">
+                        <td className="px-2 py-3 text-sm text-muted-foreground hidden sm:table-cell">
                           {String((currentPage - 1) * pageSize + index + 1).padStart(4, '0')}
                         </td>
                         <td className="px-2 py-3">
@@ -487,12 +487,17 @@ export default function Tasks() {
                                 </button>
                               )}
                             </div>
+                            {/* Show extra info on mobile */}
+                            <p className="text-xs text-muted-foreground sm:hidden mt-0.5">
+                              {task.pic_name && <span>{task.pic_name} · </span>}
+                              {(task.due_date || task.updated_at) && new Date(task.due_date || task.updated_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                            </p>
                           </div>
                         </td>
-                        <td className="px-2 py-3 text-sm">
+                        <td className="px-2 py-3 text-sm hidden lg:table-cell">
                           <span className="truncate block">{task.pic_name || '-'}</span>
                         </td>
-                        <td className="px-2 py-3">
+                        <td className="px-2 py-3 hidden md:table-cell">
                           {task.deal_name ? (
                             <div>
                               <span className="text-sm text-primary font-medium truncate block">{task.deal_name}</span>
@@ -505,11 +510,11 @@ export default function Tasks() {
                           )}
                         </td>
                         <td className="px-2 py-3">
-                          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${statusDisplay.class}`}>
+                          <span className={`inline-flex px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium whitespace-nowrap ${statusDisplay.class}`}>
                             {statusDisplay.label}
                           </span>
                         </td>
-                        <td className="px-2 py-3 text-sm text-muted-foreground">
+                        <td className="px-2 py-3 text-sm text-muted-foreground hidden sm:table-cell">
                           {task.due_date || task.updated_at || task.created_at ? 
                             <>
                               <span className="block">{new Date(task.due_date || task.updated_at || task.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</span>
@@ -517,7 +522,7 @@ export default function Tasks() {
                             </>
                             : '-'}
                         </td>
-                        <td className="px-2 py-3">
+                        <td className="px-2 py-3 hidden xl:table-cell">
                           <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${paymentDisplay.class}`}>
                             {paymentDisplay.label}
                           </span>
