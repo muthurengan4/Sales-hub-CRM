@@ -573,7 +573,7 @@ export default function Pipeline() {
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
 
   return (
-    <div className="space-y-6" data-testid="pipeline-page">
+    <div className="space-y-6" data-testid="pipeline-page" data-page="pipeline">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -604,7 +604,7 @@ export default function Pipeline() {
       </div>
 
       {/* Kanban Board - Shows individual lead-deal linkages */}
-      <div className="pipeline-kanban-wrapper overflow-x-auto pb-4 -mx-4 px-4 sm:-mx-6 sm:px-6">
+      <div className="pipeline-board overflow-x-auto pb-4 -mx-4 px-4 sm:-mx-6 sm:px-6">
         <div className="flex gap-4" style={{ minWidth: 'max-content' }}>
           {STAGES.map((stage) => (
             <div
