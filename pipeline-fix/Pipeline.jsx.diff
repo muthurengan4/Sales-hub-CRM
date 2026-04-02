@@ -1,0 +1,35 @@
+Pipeline.jsx Changes
+====================
+
+This file shows the exact changes needed in frontend/src/pages/Pipeline.jsx
+
+
+CHANGE 1: Add data-page attribute to main container
+---------------------------------------------------
+Location: Around line 575-576 (the main return statement)
+
+BEFORE:
+  return (
+    <div className="space-y-6" data-testid="pipeline-page">
+
+AFTER:
+  return (
+    <div className="space-y-6" data-testid="pipeline-page" data-page="pipeline">
+
+
+CHANGE 2: Add pipeline-board class to kanban container  
+------------------------------------------------------
+Location: Around line 606-607 (the kanban board wrapper)
+
+BEFORE:
+      {/* Kanban Board - Shows individual lead-deal linkages */}
+      <div className="overflow-x-auto pb-4">
+
+AFTER:
+      {/* Kanban Board - Shows individual lead-deal linkages */}
+      <div className="pipeline-board overflow-x-auto pb-4 -mx-4 px-4 sm:-mx-6 sm:px-6">
+
+
+SUMMARY OF CHANGES:
+- Line ~576: Added data-page="pipeline" attribute
+- Line ~607: Added pipeline-board class and padding adjustments

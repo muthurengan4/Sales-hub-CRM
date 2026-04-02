@@ -1,0 +1,17 @@
+/* ============================================
+   PIPELINE PAGE FIX - ADD TO END OF index.css
+   ============================================
+   
+   Copy everything below this comment and paste 
+   at the END of your frontend/src/index.css file
+   ============================================ */
+
+/* Pipeline page specific - allow horizontal scroll for kanban board */
+[data-page="pipeline"] {
+  overflow-x: visible !important;
+}
+
+[data-page="pipeline"] .pipeline-board {
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
