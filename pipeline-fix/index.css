@@ -983,3 +983,33 @@ td, th {
 .shrink-0 {
   flex-shrink: 0;
 }
+
+/* Layout wrapper - hide overflow by default, allow on Pipeline */
+.layout-wrapper {
+  overflow-x: hidden;
+}
+
+.main-content-wrapper {
+  overflow-x: hidden;
+}
+
+/* Pipeline page - allow horizontal scroll */
+.layout-wrapper:has([data-page="pipeline"]) {
+  overflow-x: visible;
+}
+
+.main-content-wrapper:has([data-page="pipeline"]) {
+  overflow-x: visible;
+}
+
+/* Pipeline kanban board scroll */
+.pipeline-board {
+  overflow-x: scroll !important;
+  -webkit-overflow-scrolling: touch !important;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.pipeline-board::-webkit-scrollbar {
+  display: none;
+}
