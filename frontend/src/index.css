@@ -862,12 +862,6 @@ div[style*="position: fixed"][style*="right: 16px"][style*="bottom: 16px"] {
     font-size: 14px;
   }
   
-  /* Pipeline cards stack vertically */
-  .flex.gap-4.overflow-x-auto {
-    flex-direction: column;
-    overflow-x: visible;
-  }
-  
   /* Action buttons wrap */
   .flex.gap-2.flex-wrap {
     gap: 0.5rem;
@@ -905,6 +899,17 @@ div[style*="position: fixed"][style*="right: 16px"][style*="bottom: 16px"] {
 .space-y-6 {
   max-width: 100%;
   overflow-x: hidden;
+}
+
+/* Exception: Allow horizontal scroll for Pipeline kanban board */
+.pipeline-kanban-wrapper {
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
+.pipeline-kanban-wrapper .space-y-6 {
+  overflow-x: visible;
 }
 
 /* Ensure tables don't cause horizontal overflow */

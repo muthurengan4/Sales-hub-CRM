@@ -604,7 +604,7 @@ export default function Pipeline() {
       </div>
 
       {/* Kanban Board - Shows individual lead-deal linkages */}
-      <div className="overflow-x-auto pb-4">
+      <div className="pipeline-kanban-wrapper overflow-x-auto pb-4 -mx-4 px-4 sm:-mx-6 sm:px-6">
         <div className="flex gap-4" style={{ minWidth: 'max-content' }}>
           {STAGES.map((stage) => (
             <div
