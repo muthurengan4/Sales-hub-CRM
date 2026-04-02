@@ -340,17 +340,26 @@ export default function Customers() {
           </div>
         ) : (
           <>
-            <div className="w-full">
-              <table className="w-full table-fixed">
+            <div className="w-full overflow-hidden">
+              <table className="w-full elstar-table" style={{ tableLayout: 'fixed' }}>
+                <colgroup>
+                  <col style={{ width: '25%' }} />
+                  <col className="hidden sm:table-column" style={{ width: '14%' }} />
+                  <col className="hidden lg:table-column" style={{ width: '9%' }} />
+                  <col style={{ width: '10%' }} />
+                  <col className="hidden xl:table-column" style={{ width: '14%' }} />
+                  <col className="hidden 2xl:table-column" style={{ width: '18%' }} />
+                  <col style={{ width: '40px' }} />
+                </colgroup>
                 <thead>
                   <tr className="border-b border-border bg-secondary/30">
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase">COMPANY</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase hidden sm:table-cell w-24">PIC</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase hidden lg:table-cell w-16">ROLE</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase w-20">STATUS</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase hidden xl:table-cell w-24">MOBILE</th>
-                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase hidden 2xl:table-cell w-32">EMAIL</th>
-                    <th className="w-8"></th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase">COMPANY NAME</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase hidden sm:table-cell">PIC / DOCTOR</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase hidden lg:table-cell">ROLE</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase">STATUS</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase hidden xl:table-cell">MOBILE</th>
+                    <th className="text-left px-2 py-3 text-xs font-medium text-muted-foreground uppercase hidden 2xl:table-column">EMAIL</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -365,38 +374,38 @@ export default function Customers() {
                     
                     return (
                       <tr key={customer.id} className="border-b border-border hover:bg-secondary/20 transition-colors" data-testid={`customer-row-${customer.id}`}>
-                        <td className="px-2 py-3">
-                          <div className="flex items-center gap-2">
+                        <td className="px-2 py-3 overflow-hidden">
+                          <div className="flex items-center gap-2 overflow-hidden">
                             <div className={`w-8 h-8 shrink-0 rounded-lg ${avatarColor.bg} border-2 ${avatarColor.border} flex items-center justify-center text-white font-bold text-sm`}>
                               {companyName.charAt(0).toUpperCase()}
                             </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-1">
-                                <button onClick={() => navigateToLeadDetail(customer)} className="font-medium text-sm text-primary hover:underline truncate" data-testid={`company-name-${customer.id}`}>
+                            <div className="min-w-0 flex-1 overflow-hidden">
+                              <div className="flex items-center gap-1 overflow-hidden">
+                                <button onClick={() => navigateToLeadDetail(customer)} className="font-medium text-sm text-primary hover:underline truncate max-w-full" data-testid={`company-name-${customer.id}`}>
                                   {companyName}
                                 </button>
                                 <button onClick={() => openPreviewPanel(customer)} className="p-0.5 hover:bg-secondary rounded text-muted-foreground hover:text-primary shrink-0">
                                   <Eye className="w-3 h-3" />
                                 </button>
                               </div>
-                              <p className="text-[10px] text-muted-foreground truncate">{industry}</p>
+                              <p className="text-[10px] text-muted-foreground truncate">{industry} - {country}</p>
                               <p className="text-[10px] text-muted-foreground sm:hidden truncate">{picName}</p>
                             </div>
                           </div>
                         </td>
-                        <td className="px-2 py-3 hidden sm:table-cell">
+                        <td className="px-2 py-3 hidden sm:table-cell overflow-hidden">
                           <span className="text-sm truncate block">{picName || '-'}</span>
                         </td>
-                        <td className="px-2 py-3 hidden lg:table-cell">
-                          <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium ${roleBadge.class}`}>{roleBadge.label}</span>
+                        <td className="px-2 py-3 hidden lg:table-cell overflow-hidden">
+                          <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap ${roleBadge.class}`}>{roleBadge.label}</span>
                         </td>
-                        <td className="px-2 py-3">
-                          <span className="inline-flex px-1.5 py-0.5 rounded-lg text-[10px] font-medium bg-blue-600/20 text-blue-400 border border-blue-500/30">Customer</span>
+                        <td className="px-2 py-3 overflow-hidden">
+                          <span className="inline-flex px-1.5 py-0.5 rounded-lg text-[10px] font-medium bg-blue-600/20 text-blue-400 border border-blue-500/30 whitespace-nowrap">Customer</span>
                         </td>
-                        <td className="px-2 py-3 hidden xl:table-cell">
+                        <td className="px-2 py-3 hidden xl:table-cell overflow-hidden">
                           <span className="text-sm text-muted-foreground truncate block">{customer.phone || '-'}</span>
                         </td>
-                        <td className="px-2 py-3 hidden 2xl:table-cell">
+                        <td className="px-2 py-3 hidden 2xl:table-cell overflow-hidden">
                           <span className="text-sm text-muted-foreground truncate block">{customer.email || '-'}</span>
                         </td>
                         <td className="px-1 py-3">

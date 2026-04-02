@@ -930,6 +930,36 @@ div[style*="position: fixed"][style*="right: 16px"][style*="bottom: 16px"] {
     max-width: 100%;
     overflow: hidden;
   }
+  
+  /* iPad table adjustments - force all visible columns to fit */
+  .elstar-table {
+    table-layout: fixed;
+    width: 100%;
+  }
+  
+  /* Reduce table cell padding on iPad */
+  .elstar-table th,
+  .elstar-table td {
+    padding-left: 0.375rem !important;
+    padding-right: 0.375rem !important;
+    font-size: 0.75rem;
+  }
+  
+  /* Make text truncate properly in table cells on iPad */
+  .elstar-table td > span,
+  .elstar-table td > div,
+  .elstar-table td > a,
+  .elstar-table td > button {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  /* Ensure company name column truncates properly */
+  .elstar-table td:first-child .min-w-0 {
+    max-width: 140px;
+  }
 }
 
 /* Make tables fit within viewport */
