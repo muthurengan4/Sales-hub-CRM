@@ -1,0 +1,985 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Elstar Light Theme - White & Gold */
+    --background: 0 0% 98%;
+    --foreground: 30 10% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 30 10% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 30 10% 10%;
+    --primary: 43 74% 52%; /* Gold #D4A017 */
+    --primary-foreground: 30 10% 10%;
+    --secondary: 40 20% 96%;
+    --secondary-foreground: 30 10% 40%;
+    --muted: 40 15% 96%;
+    --muted-foreground: 30 10% 45%;
+    --accent: 40 20% 96%;
+    --accent-foreground: 30 10% 10%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 40 15% 88%;
+    --input: 40 15% 88%;
+    --ring: 43 74% 52%;
+    --radius: 0.5rem;
+    
+    /* Gold theme specific colors */
+    --sidebar-bg: 0 0% 100%;
+    --header-bg: 0 0% 100%;
+    --success: 152 69% 45%;
+    --warning: 38 92% 50%;
+    --info: 199 89% 48%;
+    --gold: 43 74% 52%;
+    --gold-dark: 43 74% 42%;
+  }
+
+  .dark {
+    /* Elstar Dark Theme - Dark & Gold */
+    --background: 30 12% 8%;
+    --foreground: 40 20% 90%;
+    --card: 30 12% 10%;
+    --card-foreground: 40 20% 90%;
+    --popover: 30 12% 8%;
+    --popover-foreground: 40 20% 90%;
+    --primary: 43 74% 52%; /* Gold #D4A017 */
+    --primary-foreground: 30 10% 10%;
+    --secondary: 30 12% 12%;
+    --secondary-foreground: 40 15% 65%;
+    --muted: 30 12% 12%;
+    --muted-foreground: 40 15% 60%;
+    --accent: 30 12% 12%;
+    --accent-foreground: 40 20% 90%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 30 10% 20%;
+    --input: 30 10% 20%;
+    --ring: 43 74% 52%;
+    
+    --sidebar-bg: 30 12% 7%;
+    --header-bg: 30 12% 10%;
+    --gold: 43 74% 52%;
+    --gold-dark: 43 74% 42%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+}
+
+/* Elstar Component Styles */
+@layer components {
+  /* Card with soft shadow - Elstar signature */
+  .elstar-card {
+    @apply bg-card rounded-lg border border-border;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .elstar-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px -5px rgba(160, 196, 255, 0.2), 0 4px 10px -6px rgba(160, 196, 255, 0.15);
+    border-color: hsl(var(--primary) / 0.3);
+  }
+  
+  .dark .elstar-card {
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3);
+  }
+  
+  .dark .elstar-card:hover {
+    box-shadow: 0 8px 25px -5px #f5c77a / 0.2), 0 4px 10px -6px #f5c77a / 0.15);
+  }
+  
+  /* Primary button with premium gold glow effect */
+  .elstar-btn-primary {
+    @apply bg-primary text-primary-foreground font-medium px-4 py-2 rounded-lg;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px -2px #f5c77a / 0.4);
+  }
+  
+  .elstar-btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px -4px #f5c77a / 0.5), 0 0 20px -4px #f5c77a / 0.3);
+    filter: brightness(1.1);
+  }
+  
+  .elstar-btn-primary:active {
+    transform: translateY(0) scale(0.98);
+    box-shadow: 0 2px 8px -2px #f5c77a / 0.4);
+  }
+  
+  /* Secondary/Ghost button */
+  .elstar-btn-ghost {
+    @apply bg-transparent text-foreground font-medium px-4 py-2 rounded-lg;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .elstar-btn-ghost:hover {
+    @apply bg-secondary;
+    transform: translateY(-1px);
+  }
+  
+  /* Input field styling with focus glow */
+  .elstar-input {
+    @apply w-full h-11 px-3 bg-background border border-input rounded-lg text-sm;
+    @apply placeholder:text-muted-foreground;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .elstar-input:hover {
+    border-color: hsl(var(--primary) / 0.5);
+  }
+  
+  .elstar-input:focus {
+    @apply outline-none ring-2 ring-primary/20 border-primary;
+    box-shadow: 0 0 15px -3px #f5c77a / 0.2);
+  }
+  
+  /* Select dropdown with hover effect */
+  .elstar-select {
+    @apply w-full h-11 px-3 bg-background border border-input rounded-lg text-sm cursor-pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .elstar-select:hover {
+    border-color: hsl(var(--primary) / 0.5);
+  }
+  
+  .elstar-select:focus {
+    @apply outline-none ring-2 ring-primary/20 border-primary;
+    box-shadow: 0 0 15px -3px #f5c77a / 0.2);
+  }
+  
+  /* Sidebar navigation item with slide effect */
+  .elstar-nav-item {
+    @apply flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium;
+    @apply text-muted-foreground;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .elstar-nav-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 3px;
+    background: hsl(var(--primary));
+    transform: scaleY(0);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .elstar-nav-item:hover {
+    @apply text-foreground bg-secondary;
+    padding-left: 1.25rem;
+  }
+  
+  .elstar-nav-item:hover::before {
+    transform: scaleY(1);
+  }
+  
+  .elstar-nav-item.active {
+    @apply bg-primary/10 text-primary;
+    padding-left: 1.25rem;
+  }
+  
+  .elstar-nav-item.active::before {
+    transform: scaleY(1);
+  }
+  
+  /* Stat card with enhanced hover */
+  .elstar-stat-card {
+    @apply elstar-card p-5;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .elstar-stat-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, hsl(43 74% 52%), hsl(45 93% 58%));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .elstar-stat-card:hover::after {
+    transform: scaleX(1);
+  }
+  
+  /* Table styling with row highlight */
+  .elstar-table {
+    @apply w-full text-sm;
+  }
+  
+  .elstar-table th {
+    @apply text-left font-semibold text-muted-foreground py-3 px-4 border-b border-border;
+  }
+  
+  .elstar-table td {
+    @apply py-3 px-4 border-b border-border;
+    transition: all 0.2s ease;
+  }
+  
+  .elstar-table tbody tr {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .elstar-table tbody tr:hover {
+    @apply bg-primary/5;
+  }
+  
+  .elstar-table tbody tr:hover td {
+    @apply text-foreground;
+  }
+  
+  /* Badge/Tag with subtle pulse on hover */
+  .elstar-badge {
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .elstar-badge:hover {
+    transform: scale(1.05);
+  }
+  
+  .elstar-badge-primary {
+    @apply bg-primary/10 text-primary;
+  }
+  
+  .elstar-badge-primary:hover {
+    @apply bg-primary/20;
+    box-shadow: 0 0 10px -2px #f5c77a / 0.4);
+  }
+  
+  .elstar-badge-success {
+    background-color: rgba(212, 160, 23, 0.15);
+    color: hsl(var(--primary));
+  }
+  
+  .elstar-badge-success:hover {
+    background-color: rgba(212, 160, 23, 0.25);
+    box-shadow: 0 0 10px -2px rgba(212, 160, 23, 0.4);
+  }
+  
+  .elstar-badge-warning {
+    @apply bg-amber-500/10 text-amber-500;
+  }
+  
+  .elstar-badge-warning:hover {
+    @apply bg-amber-500/20;
+    box-shadow: 0 0 10px -2px rgb(245 158 11 / 0.4);
+  }
+  
+  .elstar-badge-danger {
+    @apply bg-red-500/10 text-red-500;
+  }
+  
+  .elstar-badge-danger:hover {
+    @apply bg-red-500/20;
+    box-shadow: 0 0 10px -2px rgb(239 68 68 / 0.4);
+  }
+  
+  .elstar-badge-info {
+    @apply bg-amber-500/10 text-amber-600;
+  }
+  
+  .elstar-badge-info:hover {
+    @apply bg-amber-500/20;
+    box-shadow: 0 0 10px -2px #f5c77a / 0.4);
+  }
+  
+  /* Modal/Dialog with smooth entrance */
+  .elstar-modal-overlay {
+    @apply fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4;
+    z-index: 9998;
+    animation: overlayFadeIn 0.2s ease-out;
+  }
+  
+  .elstar-modal {
+    @apply bg-card rounded-xl shadow-xl w-full;
+    max-width: 500px;
+    max-height: calc(100vh - 2rem);
+    z-index: 9999;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 30px -5px rgba(212, 160, 23, 0.2);
+    animation: modalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: visible;
+    border: 1px solid hsl(var(--border));
+  }
+  
+  .elstar-modal-header {
+    @apply px-6 py-4 border-b border-border rounded-t-xl;
+    background: hsl(var(--card));
+  }
+  
+  .elstar-modal-body {
+    @apply px-6 py-4 overflow-y-auto;
+    max-height: calc(100vh - 14rem);
+    background: hsl(var(--card));
+  }
+  
+  .elstar-modal-footer {
+    @apply px-6 py-4 border-t border-border flex justify-end gap-3 rounded-b-xl;
+    background: hsl(var(--card));
+  }
+  
+  /* Kanban column */
+  .elstar-kanban-column {
+    @apply w-72 flex-shrink-0 bg-secondary/30 rounded-lg p-3;
+    transition: all 0.3s ease;
+  }
+  
+  .elstar-kanban-column:hover {
+    @apply bg-secondary/50;
+  }
+  
+  /* Kanban card with drag effect */
+  .elstar-kanban-card {
+    @apply elstar-card p-4 mb-3 cursor-grab active:cursor-grabbing;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .elstar-kanban-card:hover {
+    @apply border-primary/30;
+    transform: translateY(-4px) rotate(1deg);
+    box-shadow: 0 12px 30px -8px #f5c77a / 0.2), 0 4px 10px -4px rgb(0 0 0 / 0.1);
+  }
+  
+  .elstar-kanban-card:active {
+    transform: scale(1.02) rotate(2deg);
+    box-shadow: 0 20px 40px -10px #f5c77a / 0.3);
+  }
+  
+  /* Avatar with glow effect */
+  .elstar-avatar {
+    @apply flex items-center justify-center rounded-full bg-primary/10 text-primary font-semibold;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .elstar-avatar:hover {
+    @apply bg-primary/20;
+    box-shadow: 0 0 15px -3px #f5c77a / 0.5);
+    transform: scale(1.1);
+  }
+  
+  /* Dropdown with slide effect */
+  .elstar-dropdown {
+    @apply absolute right-0 mt-2 w-48 bg-card rounded-lg border border-border shadow-lg z-50 overflow-hidden;
+    animation: dropdownSlide 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 10px 40px -10px rgb(0 0 0 / 0.3), 0 0 20px -5px #f5c77a / 0.1);
+  }
+  
+  .elstar-dropdown-item {
+    @apply px-4 py-2.5 text-sm text-foreground cursor-pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .elstar-dropdown-item:hover {
+    @apply bg-primary/10 text-primary;
+    padding-left: 1.25rem;
+  }
+}
+
+/* Score colors - Using Gold for success/high */
+.score-high { color: hsl(var(--primary)); }
+.score-medium { @apply text-amber-500; }
+.score-low { @apply text-red-500; }
+
+/* Gold accent color classes */
+.text-accent-gold { color: hsl(var(--primary)); }
+.bg-accent-gold { background-color: hsl(var(--primary)); }
+.border-accent-gold { border-color: hsl(var(--primary)); }
+
+/* AI Gradient - Gold accent */
+.ai-gradient {
+  background: linear-gradient(135deg, #D4A017 0%, #F5C77A 100%);
+}
+
+.ai-text {
+  background: linear-gradient(135deg, #D4A017 0%, #F5C77A 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Custom scrollbar - Elstar style */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-border rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/30;
+}
+
+/* Hide Emergent badge */
+#emergent-badge,
+[id^="emergent-badge"],
+div[style*="Made with Emergent"],
+[class*="emergent"],
+div[style*="position: fixed"][style*="right: 16px"][style*="bottom: 16px"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalSlideIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(-20px) scale(0.95); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0) scale(1); 
+  }
+}
+
+@keyframes dropdownSlide {
+  from { 
+    opacity: 0; 
+    transform: translateY(-8px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-gold {
+  0%, 100% { 
+    box-shadow: 0 0 0 0 #f5c77a / 0.4);
+  }
+  50% { 
+    box-shadow: 0 0 0 8px #f5c77a / 0);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes glow {
+  0%, 100% { 
+    filter: drop-shadow(0 0 5px #f5c77a / 0.3));
+  }
+  50% { 
+    filter: drop-shadow(0 0 15px #f5c77a / 0.5));
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-pulse-gold {
+  animation: pulse-gold 2s infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* Premium shimmer loading effect */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--secondary)) 0%,
+    hsl(var(--primary) / 0.1) 50%,
+    hsl(var(--secondary)) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Gold gradient text on hover */
+.hover-gold-text {
+  transition: all 0.3s ease;
+}
+
+.hover-gold-text:hover {
+  background: linear-gradient(135deg, hsl(43 74% 52%) 0%, hsl(45 93% 58%) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Premium link underline animation */
+.premium-link {
+  position: relative;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.premium-link::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, hsl(43 74% 52%), hsl(45 93% 58%));
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.premium-link:hover::after {
+  width: 100%;
+}
+
+.premium-link:hover {
+  color: hsl(var(--primary));
+}
+
+/* Icon hover effects */
+.icon-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.icon-hover:hover {
+  transform: scale(1.2);
+  filter: drop-shadow(0 0 8px #f5c77a / 0.5));
+}
+
+.icon-hover-rotate:hover {
+  transform: rotate(15deg) scale(1.1);
+}
+
+.icon-hover-bounce:hover {
+  animation: float 0.5s ease-in-out;
+}
+
+/* Chart bar hover effect */
+.chart-bar {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: bottom;
+}
+
+.chart-bar:hover {
+  filter: brightness(1.2);
+  transform: scaleY(1.05);
+}
+
+/* Glassmorphism premium card */
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(212, 175, 55, 0.3);
+  box-shadow: 0 8px 32px rgba(212, 175, 55, 0.15);
+}
+
+/* Luxury border gradient */
+.border-gold-gradient {
+  position: relative;
+  background: hsl(var(--card));
+  border-radius: 0.5rem;
+}
+
+.border-gold-gradient::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, hsl(43 74% 52%), hsl(45 93% 58%), hsl(43 74% 42%));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.border-gold-gradient:hover::before {
+  opacity: 1;
+}
+
+/* Activity item hover */
+.activity-item {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.activity-item:hover {
+  transform: translateX(4px);
+  background: hsl(var(--primary) / 0.05);
+}
+
+/* Stat value counter animation */
+.stat-value {
+  transition: all 0.3s ease;
+}
+
+.elstar-stat-card:hover .stat-value {
+  transform: scale(1.05);
+  color: hsl(var(--primary));
+}
+
+/* Chart tooltip */
+.chart-tooltip {
+  opacity: 0;
+  transform: translateY(5px);
+  transition: all 0.2s ease;
+  pointer-events: none;
+}
+
+.chart-bar:hover + .chart-tooltip,
+.chart-bar:hover .chart-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Premium scroll indicator */
+.scroll-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, hsl(43 74% 52%), hsl(45 93% 58%));
+  z-index: 1000;
+  transition: width 0.1s linear;
+}
+
+/* Selection highlight */
+::selection {
+  background: hsl(var(--primary) / 0.3);
+  color: hsl(var(--foreground));
+}
+
+/* Focus visible for accessibility */
+:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+/* Smooth page transitions */
+.page-transition {
+  animation: fadeIn 0.4s ease-out;
+}
+
+/* Ripple effect on click */
+.ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: hsl(var(--primary) / 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease, height 0.4s ease;
+}
+
+.ripple:active::after {
+  width: 200px;
+  height: 200px;
+}
+
+/* FadeIn animation for dropdowns */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.15s ease-out forwards;
+}
+
+/* Dynamic gradient backgrounds for dashboard */
+.gradient-gold {
+  background: linear-gradient(135deg, #D4A017 0%, #F5C77A 100%);
+}
+
+.gradient-green {
+  background: linear-gradient(135deg, #A8E6CF 0%, #7DD8A8 100%);
+}
+
+.gradient-purple {
+  background: linear-gradient(135deg, #C5B3FF 0%, #A893FF 100%);
+}
+
+.gradient-orange {
+  background: linear-gradient(135deg, #FFCFA8 0%, #FFB87D 100%);
+}
+
+.gradient-pink {
+  background: linear-gradient(135deg, #FFB8D1 0%, #FF9BB8 100%);
+}
+
+.gradient-teal {
+  background: linear-gradient(135deg, #A8E6E6 0%, #7DD8D8 100%);
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  /* General mobile adjustments */
+  .elstar-card {
+    padding: 1rem;
+  }
+  
+  /* Make tables horizontally scrollable */
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Reduce font sizes on mobile */
+  h1 {
+    font-size: 1.5rem !important;
+  }
+  
+  h2 {
+    font-size: 1.25rem !important;
+  }
+  
+  /* Adjust sidebar for mobile */
+  .sidebar-container {
+    width: 100% !important;
+    position: fixed;
+    z-index: 50;
+  }
+  
+  /* Form inputs full width on mobile */
+  .elstar-input,
+  .elstar-select {
+    font-size: 16px !important; /* Prevent zoom on iOS */
+  }
+  
+  /* Button adjustments */
+  .elstar-btn-primary,
+  .elstar-btn-ghost {
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+  }
+  
+  /* Table cell padding reduction */
+  table th,
+  table td {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.75rem;
+  }
+  
+  /* Slide panel full width on mobile */
+  [data-testid="slide-panel"] {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  /* Modal full width on mobile */
+  .elstar-modal {
+    width: 95% !important;
+    max-width: 100% !important;
+    margin: 1rem;
+  }
+  
+  /* Grid adjustments */
+  .grid-cols-12 {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  }
+  
+  /* Card grid for dashboard */
+  .grid-cols-2,
+  .grid-cols-3,
+  .grid-cols-4 {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* Tablet adjustments */
+  .grid-cols-12 {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  }
+  
+  .grid-cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Ensure viewport scaling works properly */
+@media screen and (max-width: 480px) {
+  html {
+    font-size: 14px;
+  }
+  
+  /* Action buttons wrap */
+  .flex.gap-2.flex-wrap {
+    gap: 0.5rem;
+  }
+  
+  .flex.gap-2.flex-wrap > button {
+    flex: 1 1 calc(50% - 0.25rem);
+    min-width: 0;
+    justify-content: center;
+  }
+}
+
+/* iOS Safari scroll restoration fix */
+@supports (-webkit-touch-callout: none) {
+  /* iOS only */
+  html, body {
+    height: 100%;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Prevent white space on back navigation */
+  .main-content {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+  
+  /* Fix for scroll position restoration */
+  html {
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Fix for content overflow on all devices */
+.space-y-6 {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Exception: Allow horizontal scroll for Pipeline kanban board */
+[data-page="pipeline"] {
+  overflow-x: visible !important;
+}
+
+[data-page="pipeline"] .pipeline-board {
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure tables don't cause horizontal overflow */
+.elstar-card {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Fix flex containers from overflowing */
+.flex-1 {
+  min-width: 0;
+}
+
+/* iPad and tablet specific fixes */
+@media screen and (min-width: 768px) and (max-width: 1024px) {
+  .lg\:px-6 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  /* Ensure header doesn't overflow */
+  header {
+    max-width: 100%;
+    overflow: hidden;
+  }
+  
+  /* iPad table adjustments - force all visible columns to fit */
+  .elstar-table {
+    table-layout: fixed;
+    width: 100%;
+  }
+  
+  /* Reduce table cell padding on iPad */
+  .elstar-table th,
+  .elstar-table td {
+    padding-left: 0.375rem !important;
+    padding-right: 0.375rem !important;
+    font-size: 0.75rem;
+  }
+  
+  /* Make text truncate properly in table cells on iPad */
+  .elstar-table td > span,
+  .elstar-table td > div,
+  .elstar-table td > a,
+  .elstar-table td > button {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  /* Ensure company name column truncates properly */
+  .elstar-table td:first-child .min-w-0 {
+    max-width: 140px;
+  }
+}
+
+/* Make tables fit within viewport */
+.elstar-table {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Ensure text truncates properly */
+td, th {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Ensure the header action buttons don't overflow */
+.shrink-0 {
+  flex-shrink: 0;
+}
